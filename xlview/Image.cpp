@@ -36,6 +36,11 @@ xl::uint CImage::getImageDelay (xl::uint index) {
 	return m_bads[index]->delay;
 }
 
+HBITMAP CImage::getImage (xl::uint index) {
+	assert(index < getImageCount());
+	return m_bads[index]->bitmap;
+}
+
 void CImage::insertImage (HBITMAP bitmap, xl::uint delay) {
 	assert(bitmap != NULL);
 

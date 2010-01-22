@@ -1,3 +1,8 @@
+#include <assert.h>
+
+#include <Windows.h>
+#include <GdiPlus.h>
+
 #include "libxl/include/ui/Gdi.h"
 #include "libxl/include/ui/ResMgr.h"
 #include "MainWindow.h"
@@ -31,7 +36,8 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
 	gestureCtrl->setStyle(_T("color:#ff0000"));
 
-	m_ctrlMain->insertChild(xl::ui::CControlPtr(new CImageView()));
+	CImageView *pView = new CImageView();
+	m_ctrlMain->insertChild(xl::ui::CControlPtr(pView));
 	
 	xl::ui::CControlPtr slider(new CSlider());
 	slider->setStyle(_T("margin:0 auto; py:bottom; width:480; float:true;"));
@@ -39,6 +45,26 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	m_ctrlMain->insertChild(slider);
 
 	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance(); // start gdiplus
+
+	// test: load image
+	xl::tchar *p = _tgetenv(_T("xlview_test_image"));
+	assert(p != NULL);
+	xl::tstring file(p);
+	DWORD tick = ::GetTickCount();
+	Gdiplus::Bitmap bitmap(file);
+	assert(bitmap.GetLastStatus() == Gdiplus::Ok);
+	Gdiplus::Color clr;
+	HBITMAP hBitmap = NULL;
+	if (bitmap.GetHBITMAP(clr, &hBitmap) != Gdiplus::Ok) {
+		assert(false);
+		return FALSE;
+	}
+	tick = GetTickCount() - tick;
+	ATLTRACE(_T("Load image cost: %dms\n"), tick);
+	CImagePtr image(new CImage());
+	image->insertImage(hBitmap, 100000);
+	pView->setImage(image);
+
 
 	return TRUE;
 }

@@ -39,12 +39,13 @@ public:
 	xl::uint getImageCount ();
 	xl::uint getImageDelay (xl::uint index);
 
-	void insertImage (HBITMAP bitmap, xl::uint delay);
-
-// 	HBITMAP getImage (xl::uint index);
+ 	HBITMAP getImage (xl::uint index);
 // 	HBITMAP getImage (xl::uint index, xl::uint x, xl::uint y);
+
+	void insertImage (HBITMAP bitmap, xl::uint delay);
 };
 
+typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
 
 #ifdef RESTORE_MIN_MAX

@@ -1,13 +1,18 @@
 #define _WTL_NO_CSTRING
+#include <stdlib.h>
 #include "libxl/include/ui/Application.h"
 #include "MainWindow.h"
+
+#pragma warning (disable:4996)
 
 class CXLViewApp : public xl::ui::CApplicationT<CXLViewApp>
 {
 	CMainWindow m_wndMain;
 public:
+
 	virtual HWND createMainWindow (LPCTSTR, int) {
-		return m_wndMain.Create(NULL, 0, _T("xl / view"));
+		xl::tstring title = _T("xl / view");
+		return m_wndMain.Create(NULL, 0, title);
 	}
 
 	virtual void preRun () {
@@ -18,7 +23,6 @@ public:
 
 	}
 };
-
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nCmdShow) {
 
