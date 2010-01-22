@@ -1,5 +1,5 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#ifndef XL_VIEW_MAIN_WINDOW_H
+#define XL_VIEW_MAIN_WINDOW_H
 
 #include "libxl/include/ui/MainWindow.h"
 
@@ -14,7 +14,7 @@ public:
 	virtual xl::tstring onGesture (const xl::tstring &gesture, bool release);
 
 public:
-	DECLARE_WND_CLASS_EX (_T("xl / view / MainWindow"), 0, COLOR_WINDOW)
+	DECLARE_WND_CLASS_EX (_T("xlview / MainWindow"), 0, COLOR_WINDOW)
 	BEGIN_MSG_MAP (CMainWindow)
 		MESSAGE_HANDLER (WM_CREATE, OnCreate)
 		MESSAGE_HANDLER (WM_SIZE, OnSize)

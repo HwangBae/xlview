@@ -179,7 +179,19 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Image.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageView.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\MainWindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\Slider.cpp"
 				>
 			</File>
 		</Filter>
@@ -189,7 +201,19 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
+				RelativePath=".\Image.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageView.h"
+				>
+			</File>
+			<File
 				RelativePath=".\MainWindow.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Slider.h"
 				>
 			</File>
 		</Filter>
