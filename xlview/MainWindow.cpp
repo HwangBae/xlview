@@ -48,22 +48,22 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 
 	// test: load image
 	xl::tchar *p = _tgetenv(_T("xlview_test_image"));
-	assert(p != NULL);
-	xl::tstring file(p);
-	DWORD tick = ::GetTickCount();
-	Gdiplus::Bitmap bitmap(file);
-	assert(bitmap.GetLastStatus() == Gdiplus::Ok);
-	Gdiplus::Color clr;
-	HBITMAP hBitmap = NULL;
-	if (bitmap.GetHBITMAP(clr, &hBitmap) != Gdiplus::Ok) {
-		assert(false);
+	if (!p) {
+		bHandled = false;
+		MessageBox(_T("Please set env: xlview_test_image to an image"));
 		return FALSE;
 	}
-	tick = GetTickCount() - tick;
-	ATLTRACE(_T("Load image cost: %dms\n"), tick);
-	CImagePtr image(new CImage());
-	image->insertImage(hBitmap, 100000);
-	pView->setImage(image);
+	xl::tstring file(p);
+	DWORD tick = ::GetTickCount();
+	CImagePtr image = CImage::loadFromFile(file);
+	tick = ::GetTickCount() - tick;
+	// ATLTRACE(_T("Load image cost: %dms\n"), tick);
+	xl::tchar buf[65];
+	_stprintf_s(buf, 64, _T("load image use: %dms"), tick);
+	MessageBox(buf, _T("time:"));
+	if (image != NULL) {
+		pView->setImage(image);
+	}
 
 
 	return TRUE;

@@ -4,6 +4,7 @@
 #include <memory>
 #include <limits>
 #include "libxl/include/common.h"
+#include "libxl/include/string.h"
 #include <Windows.h>
 
 #ifdef max // <windows.h> defines max & min
@@ -14,12 +15,17 @@
 #undef min
 #endif
 
+class CImage;
+typedef std::tr1::shared_ptr<CImage>    CImagePtr;
+
 
 class CImage
 {
 protected:
 	typedef struct BitmapAndDelay {
-		// static const xl::uint INFINITE = std::numeric_limits<xl::uint>::max();
+		enum {
+			DELAY_INFINITE = 0
+		};
 		HBITMAP bitmap;
 		xl::uint delay;
 
@@ -43,9 +49,11 @@ public:
 // 	HBITMAP getImage (xl::uint index, xl::uint x, xl::uint y);
 
 	void insertImage (HBITMAP bitmap, xl::uint delay);
+
+	static CImagePtr loadFromFile (const xl::tstring &file);
+	static SIZE getProperSize (SIZE szArea, SIZE szImage);
 };
 
-typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
 
 #ifdef RESTORE_MIN_MAX
