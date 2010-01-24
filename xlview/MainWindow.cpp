@@ -21,6 +21,42 @@ void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tra
 xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, bool release) {
 	if (gesture == _T("canceled")) {
 		return _T("timeout");
+	} else if (gesture == _T("UR")) {
+		if (release) {
+			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
+			assert(ctrl);
+			CImageView *view = (CImageView *)ctrl.get();
+			assert(view);
+			view->showNormalSize();
+		}
+		return _T("show normal size");
+	} else if (gesture == _T("UL")) {
+		if (release) {
+			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
+			assert(ctrl);
+			CImageView *view = (CImageView *)ctrl.get();
+			assert(view);
+			view->showSuitable();
+		}
+		return _T("show suitable size");
+	} else if (gesture == _T("U")) {
+		if (release) {
+			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
+			assert(ctrl);
+			CImageView *view = (CImageView *)ctrl.get();
+			assert(view);
+			view->showLarger();
+		}
+		return _T("show larger");
+	} else if (gesture == _T("D")) {
+		if (release) {
+			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
+			assert(ctrl);
+			CImageView *view = (CImageView *)ctrl.get();
+			assert(view);
+			view->showSmaller();
+		}
+		return _T("show smaller");
 	}
 	return xl::ui::CCtrlTarget::onGesture(gesture, release);
 }

@@ -37,12 +37,15 @@ protected:
 	typedef std::vector<_BADPtr>         _BADContainer;
 
 	_BADContainer m_bads;
+	int m_width;
+	int m_height;
 
 public:
 	CImage ();
 	virtual ~CImage ();
 
 	xl::uint getImageCount ();
+	SIZE getImageSize ();
 	xl::uint getImageDelay (xl::uint index);
 
  	HBITMAP getImage (xl::uint index);
@@ -51,7 +54,7 @@ public:
 	void insertImage (HBITMAP bitmap, xl::uint delay);
 
 	static CImagePtr loadFromFile (const xl::tstring &file);
-	static SIZE getProperSize (SIZE szArea, SIZE szImage);
+	static SIZE getSuitableSize (SIZE szArea, SIZE szImage);
 };
 
 

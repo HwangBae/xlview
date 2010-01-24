@@ -21,7 +21,7 @@ CImage::BitmapAndDelay::~BitmapAndDelay () {
 
 //////////////////////////////////////////////////////////////////////////
 // CImage
-CImage::CImage () {
+CImage::CImage () : m_width(-1), m_height(-1) {
 
 }
 
@@ -31,6 +31,13 @@ CImage::~CImage () {
 
 xl::uint CImage::getImageCount () {
 	return m_bads.size();
+}
+
+SIZE CImage::getImageSize () {
+	SIZE sz;
+	sz.cx = m_width;
+	sz.cy = m_height;
+	return sz;
 }
 
 xl::uint CImage::getImageDelay (xl::uint index) {
@@ -45,6 +52,14 @@ HBITMAP CImage::getImage (xl::uint index) {
 
 void CImage::insertImage (HBITMAP bitmap, xl::uint delay) {
 	assert(bitmap != NULL);
+	BITMAP bm;
+	VERIFY(::GetObject(bitmap, sizeof(bm), &bm) == sizeof(bm));
+	if (m_width != -1 || m_height != -1) {
+		assert(m_width == bm.bmWidth && m_height == bm.bmHeight);
+	} else {
+		m_width = bm.bmWidth;
+		m_height = bm.bmHeight;
+	}
 
 	_BADPtr bad(new _BAD());
 	bad->bitmap = bitmap;
@@ -175,9 +190,12 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	return CImagePtr();
 }
 
-SIZE CImage::getProperSize (SIZE szArea, SIZE szImage) {
+SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 	SIZE sz;
-	if ((szArea.cx * szImage.cy) > (szImage.cx * szArea.cy)) {
+	if (szArea.cx * szArea.cy == 0 || szImage.cx * szImage.cy == 0) {
+		sz.cx = 1;
+		sz.cy = 1;
+	} else if ((szArea.cx * szImage.cy) > (szImage.cx * szArea.cy)) {
 		sz.cx = szImage.cx * szArea.cy / szImage.cy;
 		sz.cy = szArea.cy;
 	} else {
