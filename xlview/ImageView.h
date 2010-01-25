@@ -27,6 +27,8 @@ protected:
 	bool _CheckCondition ();
 	void _CalacuteDisplayParameter ();
 	void _CreateSourceBitmap ();
+	SIZE _BeforeZoom (CPoint);
+	void _AfterZoom (CPoint, SIZE);
 
 public:
 	CImageView(void);
@@ -34,10 +36,10 @@ public:
 
 	void setImage (CImagePtr image = CImagePtr());
 
-	void showNormalSize ();
-	void showSuitable ();
-	void showLarger ();
-	void showSmaller ();
+	void showNormalSize (CPoint pt);
+	void showSuitable (CPoint);
+	void showLarger (CPoint pt);
+	void showSmaller (CPoint pt);
 
 	//////////////////////////////////////////////////////////////////////////
 	// virtual

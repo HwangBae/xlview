@@ -69,11 +69,20 @@ void CImageView::_CalacuteDisplayParameter () {
 		if (m_dstY == 0 && m_srcY + rc.Height() > m_imgH) {
 			m_srcY = m_imgH - rc.Height();
 		}
+
+		if (m_srcX < 0) {
+			m_srcX = 0;
+		}
+
+		if (m_srcY < 0) {
+			m_srcY = 0;
+		}
 	}
 
 }
 
 void CImageView::_CreateSourceBitmap () {
+	DWORD tick = ::GetTickCount();
 	if (m_pMemoryDC) {
 		m_pMemoryDC.reset();
 	}
@@ -108,11 +117,45 @@ void CImageView::_CreateSourceBitmap () {
 	mdc.CreateCompatibleDC(hdc);
 	HBITMAP oldMBmp = mdc.SelectBitmap(m_image->getImage(0));
 
-	int oldMode = m_pMemoryDC->SetStretchBltMode(HALFTONE);//COLORONCOLOR);//HALFTONE);
-	m_pMemoryDC->StretchBlt(0, 0, w, h, mdc.m_hDC, 0, 0, sz.cx, sz.cy, SRCCOPY);
-	m_pMemoryDC->SetStretchBltMode(oldMode);
+	if (w == sz.cx && h == sz.cy) {
+		m_pMemoryDC->BitBlt(0, 0, w, h, mdc.m_hDC, 0, 0, SRCCOPY);
+	} else {
+		int oldMode = m_pMemoryDC->SetStretchBltMode(COLORONCOLOR);//HALFTONE);
+		m_pMemoryDC->StretchBlt(0, 0, w, h, mdc.m_hDC, 0, 0, sz.cx, sz.cy, SRCCOPY);
+		m_pMemoryDC->SetStretchBltMode(oldMode);
+	}
 
 	mdc.SelectBitmap(oldMBmp);
+	tick = ::GetTickCount() - tick;
+	ATLTRACE(_T("_CreateSourceBitmap cost %dms\n"), tick);
+}
+
+SIZE CImageView::_BeforeZoom (CPoint pt) {
+	CRect rc = getClientRect();
+	int x = pt.x - rc.left - m_dstX + m_srcX;
+	x = (int)(x / m_zoomFactor);
+	int y = pt.y - rc.top - m_dstY + m_srcY;
+	y = (int)(y / m_zoomFactor);
+	SIZE sz;
+	sz.cx = x;
+	sz.cy = y;
+	return sz;
+}
+
+void CImageView::_AfterZoom (CPoint pt, SIZE sz) {
+	int x = sz.cx;
+	int y = sz.cy;
+	CRect rc = getClientRect();
+	if (rc.Width() < m_imgW) {
+		x = (int)(x * m_zoomFactor);
+		m_srcX = x - pt.x + rc.left + m_dstX;
+	}
+
+	if (rc.Height() < m_imgH) {
+		y = (int)(y * m_zoomFactor);
+		m_srcY = y - pt.y + rc.top + m_dstY;
+	}
+	_CalacuteDisplayParameter();
 }
 
 
@@ -122,7 +165,7 @@ CImageView::CImageView(void)
 	: xl::ui::CControl(ID_VIEW)
 	, m_index(0)
 {
-	setStyle(_T("px:left;py:top;width:fill;height:fill;"));
+	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
 	setStyle(_T("background-color:#808080;"));
 }
 
@@ -134,26 +177,32 @@ void CImageView::setImage (CImagePtr image) {
 	if (m_image != image) {
 		m_image = image;
 		m_index = 0;
-		showSuitable();
+		showSuitable(CPoint());
 	}
 }
 
-void CImageView::showNormalSize () {
+void CImageView::showNormalSize (CPoint pt) {
 	if (!_CheckCondition()) {
 		return;
 	}
 
-	if (m_suitable == false && abs(m_zoomFactor - 1.0) < 0.001) {
+	SIZE sz = m_image->getImageSize();
+	if (m_suitable == false && m_imgW == sz.cx && m_imgH == sz.cy) {
 		return;
 	}
+
+	SIZE szAdjust = _BeforeZoom(pt);
+
 	m_suitable = false;
 	m_zoomFactor = 1.0;
 	_CalacuteDisplayParameter();
 	_CreateSourceBitmap();
 	invalidate();
+
+	_AfterZoom(pt, szAdjust);
 }
 
-void CImageView::showSuitable () {
+void CImageView::showSuitable (CPoint) {
 	if (!_CheckCondition()) {
 		return;
 	}
@@ -168,14 +217,11 @@ void CImageView::showSuitable () {
 	invalidate();
 }
 
-void CImageView::showLarger () {
+void CImageView::showLarger (CPoint pt) {
 	if (!_CheckCondition()) {
 		return;
 	}
-
-	CRect rc = getClientRect();
-	int imgW = m_imgW;
-	int imgH = m_imgH;
+	SIZE szAdjust = _BeforeZoom(pt);
 
 	m_suitable = false;
 	m_zoomFactor = m_zoomFactor * 1.1;
@@ -183,18 +229,15 @@ void CImageView::showLarger () {
 	_CreateSourceBitmap();
 	invalidate();
 
-	m_dstX += (m_imgW - imgW) / 2;
-	m_dstY += (m_imgH - imgH) / 2;
-	_CalacuteDisplayParameter();
+	_AfterZoom(pt, szAdjust);
 }
 
-void CImageView::showSmaller() {
+void CImageView::showSmaller(CPoint pt) {
 	if (!_CheckCondition()) {
 		return;
 	}
-	CRect rc = getClientRect();
-	int imgW = m_imgW;
-	int imgH = m_imgH;
+
+	SIZE szAdjust = _BeforeZoom(pt);
 
 	m_suitable = false;
 	m_zoomFactor = m_zoomFactor / 1.1;
@@ -202,9 +245,7 @@ void CImageView::showSmaller() {
 	_CreateSourceBitmap();
 	invalidate();
 
-	m_dstX += (m_imgW - imgW) / 2;
-	m_dstY += (m_imgH - imgH) / 2;
-	_CalacuteDisplayParameter();
+	_AfterZoom(pt, szAdjust);
 }
 
 void CImageView::onSize () {
@@ -228,7 +269,21 @@ void CImageView::drawMe (HDC hdc) {
 		int ih = (int)(imageSize.cy * m_zoomFactor);
 
 		xl::ui::CDCHandle dc(hdc);
-		dc.BitBlt(m_dstX, m_dstY, iw - m_srcX, ih - m_srcY, m_pMemoryDC->m_hDC, m_srcX, m_srcY, SRCCOPY);
+		int drawW = iw - m_srcX;
+		if (drawW > rc.Width()) {
+			drawW = rc.Width();
+		}
+		int drawH = iw - m_srcY;
+		if (drawH > rc.Height()) {
+			drawH = rc.Height();
+		}
+		dc.BitBlt(
+		          rc.left + m_dstX, rc.top + m_dstY, 
+		          drawW, drawH,
+		          m_pMemoryDC->m_hDC, 
+		          m_srcX, m_srcY, 
+		          SRCCOPY
+		         );
 	}
 }
 

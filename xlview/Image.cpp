@@ -105,71 +105,12 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	int h = cinfo.image_height;
 	assert(w > 0 && h > 0);
 
-	LONG len = w * h;
-	unsigned char *bits = new unsigned char[len * 4];
-	std::auto_ptr<unsigned char> bits_ptr(bits); 
-
-/* Step 4: set parameters for decompression */
-
-	/**
-	 * In this example, we don't need to change any of the defaults set by
-	 * jpeg_read_header(), so we do nothing here.
-	 */
-
-/* Step 5: Start decompressor */
-
-	(void) jpeg_start_decompress(&cinfo);
-	/* We can ignore the return value since suspension is not possible
-	 * with the stdio data source.
-	 */
-
-	/* We may need to do some setup of our own at this point before reading
-	* the data.  After jpeg_start_decompress() we have the correct scaled
-	* output image dimensions available, as well as the output colormap
-	* if we asked for color quantization.
-	* In this example, we need to make an output work buffer of the right size.
-	*/ 
-	/* JSAMPLEs per row in output buffer */
-	row_stride = cinfo.output_width * cinfo.output_components;
-	/* Make a one-row-high sample array that will go away when done with image */
-	buffer = (*cinfo.mem->alloc_sarray)
-		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-	/* Step 6: while (scan lines remain to be read) */
-	/*           jpeg_read_scanlines(...); */
-
-	/* Here we use the library's state variable cinfo.output_scanline as the
-	* loop counter, so that we don't have to keep track ourselves.
-	*/
-	int y = 0;
-	while (cinfo.output_scanline < cinfo.output_height) {
-		/* jpeg_read_scanlines expects an array of pointers to scanlines.
-		* Here the array is only one element long, but you could ask for
-		* more than one scanline at a time if that's more convenient.
-		*/
-		(void) jpeg_read_scanlines(&cinfo, buffer, 1);
-		/* Assume put_scanline_someplace wants a pointer and sample count. */
-		// put_scanline_someplace(buffer[0], row_stride);
-		unsigned char *p1 = bits + w * 4 * y;
-		unsigned char *p2 = buffer[0];
-		for (int i = 0; i < w; ++ i) {
-			*(unsigned int *)p1 = *(unsigned int *)p2;
-			*(p1 + 3) = 0;
-			p1 += 4;
-			p2 += 3;
-		}
-		++ y;
-	}
-
-	(void) jpeg_finish_decompress(&cinfo);
-	jpeg_destroy_decompress(&cinfo);
-
 	BITMAPINFO bmi;
 	memset(&bmi, 0, sizeof(BITMAPINFO)); 
 	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 	bmi.bmiHeader.biWidth = w;
 	bmi.bmiHeader.biHeight = -h;
-	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biBitCount = 24;
 	bmi.bmiHeader.biPlanes = 1;
 	bmi.bmiHeader.biCompression = BI_RGB;
 	bmi.bmiHeader.biSizeImage     = 0;
@@ -179,9 +120,30 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	bmi.bmiHeader.biClrImportant  = 0;
 
 	HDC hdc = ::GetDC(NULL);
-	HBITMAP hBitmap = ::CreateDIBitmap(hdc, &bmi.bmiHeader, CBM_INIT, bits, &bmi, DIB_RGB_COLORS);
+	void *data = NULL;
+	HBITMAP hBitmap = ::CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &data, NULL, NULL);
 	::ReleaseDC(NULL, hdc);
 	if (hBitmap) {
+		(void) jpeg_start_decompress(&cinfo);
+		row_stride = cinfo.output_width * cinfo.output_components;
+		int win_row_stride = (w * 3 + 3) & (~(unsigned int)3);
+		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+		unsigned char *p1 = (unsigned char *)data;
+		unsigned char *p2 = buffer[0];
+		while (cinfo.output_scanline < cinfo.output_height) {
+			(void) jpeg_read_scanlines(&cinfo, buffer, 1);
+			memcpy (p1, p2, row_stride);
+			p1 += win_row_stride;
+		}
+
+		(void) jpeg_finish_decompress(&cinfo);
+	}
+	jpeg_destroy_decompress(&cinfo);
+
+	if (hBitmap) {
+		BITMAP bm;
+		::GetObject(hBitmap, sizeof(bm), &bm);
 		CImagePtr image(new CImage());
 		image->insertImage(hBitmap, CImage::BitmapAndDelay::DELAY_INFINITE);
 		return image;

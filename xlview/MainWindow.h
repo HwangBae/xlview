@@ -11,7 +11,7 @@ class CMainWindow : public xl::ui::CMainWindowT<CMainWindow>
 public:
 	virtual void onCommand (xl::uint id, xl::ui::CControlPtr ctrl);
 	virtual void onSlider (xl::uint id, int _min, int _max, int _curr, bool tracking, xl::ui::CControlPtr ctrl);
-	virtual xl::tstring onGesture (const xl::tstring &gesture, CPoint ptOrg, CPoint ptNow, bool release);
+	virtual xl::tstring onGesture (const xl::tstring &gesture, CPoint ptDown, bool release);
 
 public:
 	DECLARE_WND_CLASS_EX (_T("xlview / MainWindow"), 0, COLOR_WINDOW)
