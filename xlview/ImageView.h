@@ -13,13 +13,18 @@ class CImageView :
 
 	bool m_suitable;
 	double m_zoomFactor;
-	xl::uint m_srcX;
-	xl::uint m_srcY;
+	int m_imgW; // zoomed size
+	int m_imgH; // zoomed size
+	int m_srcX;
+	int m_srcY;
+	int m_dstX;
+	int m_dstY;
 	std::tr1::shared_ptr<xl::ui::CMemoryDC> m_pMemoryDC;
 
 	CPoint m_ptGrab;
 
 protected:
+	bool _CheckCondition ();
 	void _CalacuteDisplayParameter ();
 	void _CreateSourceBitmap ();
 

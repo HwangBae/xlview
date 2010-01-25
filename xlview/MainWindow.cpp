@@ -18,7 +18,7 @@ void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tra
 }
 
 
-xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, bool release) {
+xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptOrg, CPoint ptNow, bool release) {
 	if (gesture == _T("canceled")) {
 		return _T("timeout");
 	} else if (gesture == _T("UR")) {
@@ -58,7 +58,7 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, bool release) {
 		}
 		return _T("show smaller");
 	}
-	return xl::ui::CCtrlTarget::onGesture(gesture, release);
+	return xl::ui::CCtrlTarget::onGesture(gesture, ptOrg, ptNow, release);
 }
 
 
@@ -96,7 +96,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	// ATLTRACE(_T("Load image cost: %dms\n"), tick);
 	xl::tchar buf[65];
 	_stprintf_s(buf, 64, _T("load image use: %dms"), tick);
-	MessageBox(buf, _T("time:"));
+	// MessageBox(buf, _T("time:"));
 	if (image != NULL) {
 		pView->setImage(image);
 	}

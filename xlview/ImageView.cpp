@@ -5,15 +5,24 @@
 #include "libxl/include/ui/CtrlMain.h"
 #include "ImageView.h"
 
-#define CHECK_CONDITION do {\
-		if (!m_image || m_image->getImageCount() == 0) { \
-			return;\
-		} \
-	}while (0)
+//////////////////////////////////////////////////////////////////////////
+// 
+// static double zoomLevels[] = {
+// };
 
 //////////////////////////////////////////////////////////////////////////
+bool CImageView::_CheckCondition () {
+	if (!m_image || m_image->getImageCount() == 0) {
+		return false;
+	}
+	return true;
+}
+
 void CImageView::_CalacuteDisplayParameter () {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
+	
 	if (_GetMainCtrl() == NULL) {
 		return;
 	}
@@ -33,19 +42,35 @@ void CImageView::_CalacuteDisplayParameter () {
 		SIZE sz = CImage::getSuitableSize(szArea, szImage);
 		m_srcX = m_srcY = 0;
 		m_zoomFactor = (double)sz.cx / (double)w;
+
+		m_imgW = sz.cx;
+		m_imgH = sz.cy;
+		m_dstX = (rc.Width() - sz.cx) / 2;
+		m_dstY = (rc.Height() - sz.cy) / 2;
 	} else {
-		int iw = (int)(imageSize.cx * m_zoomFactor);
-		int ih = (int)(imageSize.cy * m_zoomFactor);
-#if 0
-		if ((int)m_srcX + rc.Width() > iw && rc.Width() < iw) {
-			m_srcX = iw - rc.Width();
+		m_imgW = (int)(imageSize.cx * m_zoomFactor);
+		m_imgH = (int)(imageSize.cy * m_zoomFactor);
+
+		int x = (rc.Width() - m_imgW) / 2;
+		int y = (rc.Height() - m_imgH) / 2;
+		if (x < 0) {
+			x = 0;
+		}
+		if (y < 0) {
+			y = 0;
+		}
+		m_dstX = x;
+		m_dstY = y;
+
+		if (m_dstX == 0 && m_srcX + rc.Width() > m_imgW) {
+			m_srcX = m_imgW - rc.Width();
 		}
 
-		if ((int)m_srcY + rc.Height() > ih && rc.Height() < ih) {
-			m_srcY = ih - rc.Height();
+		if (m_dstY == 0 && m_srcY + rc.Height() > m_imgH) {
+			m_srcY = m_imgH - rc.Height();
 		}
-#endif
 	}
+
 }
 
 void CImageView::_CreateSourceBitmap () {
@@ -83,7 +108,7 @@ void CImageView::_CreateSourceBitmap () {
 	mdc.CreateCompatibleDC(hdc);
 	HBITMAP oldMBmp = mdc.SelectBitmap(m_image->getImage(0));
 
-	int oldMode = m_pMemoryDC->SetStretchBltMode(COLORONCOLOR);//HALFTONE);
+	int oldMode = m_pMemoryDC->SetStretchBltMode(HALFTONE);//COLORONCOLOR);//HALFTONE);
 	m_pMemoryDC->StretchBlt(0, 0, w, h, mdc.m_hDC, 0, 0, sz.cx, sz.cy, SRCCOPY);
 	m_pMemoryDC->SetStretchBltMode(oldMode);
 
@@ -114,7 +139,9 @@ void CImageView::setImage (CImagePtr image) {
 }
 
 void CImageView::showNormalSize () {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 
 	if (m_suitable == false && abs(m_zoomFactor - 1.0) < 0.001) {
 		return;
@@ -127,7 +154,9 @@ void CImageView::showNormalSize () {
 }
 
 void CImageView::showSuitable () {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 
 	if (m_suitable == true) {
 		return;
@@ -140,21 +169,42 @@ void CImageView::showSuitable () {
 }
 
 void CImageView::showLarger () {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
+
+	CRect rc = getClientRect();
+	int imgW = m_imgW;
+	int imgH = m_imgH;
+
 	m_suitable = false;
-	m_zoomFactor = m_zoomFactor * 1.2;
+	m_zoomFactor = m_zoomFactor * 1.1;
 	_CalacuteDisplayParameter();
 	_CreateSourceBitmap();
 	invalidate();
+
+	m_dstX += (m_imgW - imgW) / 2;
+	m_dstY += (m_imgH - imgH) / 2;
+	_CalacuteDisplayParameter();
 }
 
 void CImageView::showSmaller() {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
+	CRect rc = getClientRect();
+	int imgW = m_imgW;
+	int imgH = m_imgH;
+
 	m_suitable = false;
-	m_zoomFactor = m_zoomFactor / 1.2;
+	m_zoomFactor = m_zoomFactor / 1.1;
 	_CalacuteDisplayParameter();
 	_CreateSourceBitmap();
 	invalidate();
+
+	m_dstX += (m_imgW - imgW) / 2;
+	m_dstY += (m_imgH - imgH) / 2;
+	_CalacuteDisplayParameter();
 }
 
 void CImageView::onSize () {
@@ -177,25 +227,15 @@ void CImageView::drawMe (HDC hdc) {
 		int iw = (int)(imageSize.cx * m_zoomFactor);
 		int ih = (int)(imageSize.cy * m_zoomFactor);
 
-		int x = (rc.Width() - iw) / 2;
-		int y = (rc.Height() - ih) / 2;
-		if (x < 0) {
-			// x = m_srcX;
-			x = 0;
-		}
-		if (y < 0) {
-			// y = m_srcY;
-			y = 0;
-		}
-
-		CRect rect(x, y, iw, ih);
 		xl::ui::CDCHandle dc(hdc);
-		dc.BitBlt(x, y, iw - m_srcX, ih - m_srcY, m_pMemoryDC->m_hDC, m_srcX, m_srcY, SRCCOPY);
+		dc.BitBlt(m_dstX, m_dstY, iw - m_srcX, ih - m_srcY, m_pMemoryDC->m_hDC, m_srcX, m_srcY, SRCCOPY);
 	}
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 	SIZE sz = m_image->getImageSize();
 	int iw = (int)(sz.cx * m_zoomFactor);
 	int ih = (int)(sz.cy * m_zoomFactor);
@@ -209,7 +249,9 @@ void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
 }
 
 void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 
 	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
 	assert(pCtrlMain);
@@ -220,7 +262,9 @@ void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
 }
 
 void CImageView::onMouseMove (CPoint pt, xl::uint key) {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
 	assert(pCtrlMain);
 	if (pCtrlMain->getCaptureCtrl() == shared_from_this()) {
@@ -238,13 +282,17 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 		int newY = m_srcY - offY;
 		if (newX < 0) {
 			newX = 0;
-		} else if (newX + rc.Width() > iw && iw > rc.Width()) {
+		} else if (rc.Width() >= iw) {
+			newX = 0;
+		} else if (newX + rc.Width() > iw) {
 			newX = iw - rc.Width();
 		}
 
 		if (newY < 0) {
 			newY = 0;
-		} else if (newY + rc.Height() > ih && ih > rc.Height()) {
+		} else if (rc.Height() >= ih) {
+			newY = 0;
+		} else if (newY + rc.Height() > ih) {
 			newY = ih - rc.Height();
 		}
 
@@ -258,6 +306,8 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 }
 
 void CImageView::onLostCapture () {
-	CHECK_CONDITION;
+	if (!_CheckCondition()) {
+		return;
+	}
 	::SetCursor(::LoadCursor(NULL, IDC_ARROW));
 }
