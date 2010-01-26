@@ -5,15 +5,8 @@
 #include <limits>
 #include "libxl/include/common.h"
 #include "libxl/include/string.h"
-#include <Windows.h>
+#include "libxl/include/ui/DIBSection.h"
 
-#ifdef max // <windows.h> defines max & min
-#define RESTORE_MIN_MAX
-#pragma push_macro ("min")
-#pragma push_macro ("max")
-#undef max
-#undef min
-#endif
 
 class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
@@ -26,7 +19,7 @@ protected:
 		enum {
 			DELAY_INFINITE = 0
 		};
-		HBITMAP bitmap;
+		xl::ui::CDIBSectionPtr bitmap;
 		xl::uint delay;
 
 		BitmapAndDelay ();
@@ -48,22 +41,15 @@ public:
 	SIZE getImageSize ();
 	xl::uint getImageDelay (xl::uint index);
 
- 	HBITMAP getImage (xl::uint index);
+	xl::ui::CDIBSectionPtr getImage (xl::uint index);
 // 	HBITMAP getImage (xl::uint index, xl::uint x, xl::uint y);
 
-	void insertImage (HBITMAP bitmap, xl::uint delay);
+	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
 
 	static CImagePtr loadFromFile (const xl::tstring &file);
 	static SIZE getSuitableSize (SIZE szArea, SIZE szImage);
 };
 
-
-
-#ifdef RESTORE_MIN_MAX
-#pragma pop_macro ("max")
-#pragma pop_macro ("min")
-#undef RESTORE_MIN_MAX
-#endif
 
 
 

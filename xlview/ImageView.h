@@ -8,38 +8,15 @@
 class CImageView :
 	public xl::ui::CControl
 {
-	CImagePtr    m_image;
-	xl::uint     m_index;
-
-	bool m_suitable;
-	double m_zoomFactor;
-	int m_imgW; // zoomed size
-	int m_imgH; // zoomed size
-	int m_srcX;
-	int m_srcY;
-	int m_dstX;
-	int m_dstY;
-	std::tr1::shared_ptr<xl::ui::CMemoryDC> m_pMemoryDC;
-
-	CPoint m_ptGrab;
-
 protected:
-	bool _CheckCondition ();
-	void _CalacuteDisplayParameter ();
-	void _CreateSourceBitmap ();
-	SIZE _BeforeZoom (CPoint);
-	void _AfterZoom (CPoint, SIZE);
+
+	CImagePtr m_image;
 
 public:
 	CImageView(void);
 	virtual ~CImageView(void);
 
-	void setImage (CImagePtr image = CImagePtr());
-
-	void showNormalSize (CPoint pt);
-	void showSuitable (CPoint);
-	void showLarger (CPoint pt);
-	void showSmaller (CPoint pt);
+	void setImage (CImagePtr image);
 
 	//////////////////////////////////////////////////////////////////////////
 	// virtual

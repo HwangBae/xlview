@@ -21,42 +21,6 @@ void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tra
 xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, bool release) {
 	if (gesture == _T("canceled")) {
 		return _T("timeout");
-	} else if (gesture == _T("UR")) {
-		if (release) {
-			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
-			assert(ctrl);
-			CImageView *view = (CImageView *)ctrl.get();
-			assert(view);
-			view->showNormalSize(ptDown);
-		}
-		return _T("show normal size");
-	} else if (gesture == _T("LD")) {
-		if (release) {
-			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
-			assert(ctrl);
-			CImageView *view = (CImageView *)ctrl.get();
-			assert(view);
-			view->showSuitable(ptDown);
-		}
-		return _T("show suitable size");
-	} else if (gesture == _T("U")) {
-		if (release) {
-			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
-			assert(ctrl);
-			CImageView *view = (CImageView *)ctrl.get();
-			assert(view);
-			view->showLarger(ptDown);
-		}
-		return _T("show larger");
-	} else if (gesture == _T("D")) {
-		if (release) {
-			xl::ui::CControlPtr ctrl = m_ctrlMain->getControlByID(ID_VIEW);
-			assert(ctrl);
-			CImageView *view = (CImageView *)ctrl.get();
-			assert(view);
-			view->showSmaller(ptDown);
-		}
-		return _T("show smaller");
 	}
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
 }
@@ -80,7 +44,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	slider->setStyle(_T("slider:0 100 0;"));
 	m_ctrlMain->insertChild(slider);
 
-	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance(); // start gdiplus
+	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
 
 	// test: load image
 	xl::tchar *p = _tgetenv(_T("xlview_test_image"));
@@ -100,7 +64,6 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	if (image != NULL) {
 		pView->setImage(image);
 	}
-
 
 	return TRUE;
 }

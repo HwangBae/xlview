@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <setjmp.h>
 #include "libxl/include/fs.h"
 #include "../libs/jpeglib.h"
 #include "Image.h"
@@ -6,16 +7,11 @@
 //////////////////////////////////////////////////////////////////////////
 // CImage::BitmapAndDelay
 CImage::BitmapAndDelay::BitmapAndDelay () {
-	bitmap = NULL;
-	delay = 0;
+	delay = DELAY_INFINITE;
 }
 
 CImage::BitmapAndDelay::~BitmapAndDelay () {
-	if (bitmap) {
-		::DeleteObject(bitmap);
-		bitmap = NULL;
-	}
-	delay = 0;
+	delay = DELAY_INFINITE;
 }
 
 
@@ -45,20 +41,18 @@ xl::uint CImage::getImageDelay (xl::uint index) {
 	return m_bads[index]->delay;
 }
 
-HBITMAP CImage::getImage (xl::uint index) {
+xl::ui::CDIBSectionPtr CImage::getImage (xl::uint index) {
 	assert(index < getImageCount());
 	return m_bads[index]->bitmap;
 }
 
-void CImage::insertImage (HBITMAP bitmap, xl::uint delay) {
+void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	assert(bitmap != NULL);
-	BITMAP bm;
-	VERIFY(::GetObject(bitmap, sizeof(bm), &bm) == sizeof(bm));
 	if (m_width != -1 || m_height != -1) {
-		assert(m_width == bm.bmWidth && m_height == bm.bmHeight);
+		assert(m_width == bitmap->getWidth() && m_height == bitmap->getHeight());
 	} else {
-		m_width = bm.bmWidth;
-		m_height = bm.bmHeight;
+		m_width = bitmap->getWidth();
+		m_height = bitmap->getHeight();
 	}
 
 	_BADPtr bad(new _BAD());
@@ -70,30 +64,45 @@ void CImage::insertImage (HBITMAP bitmap, xl::uint delay) {
 //////////////////////////////////////////////////////////////////////////
 // 
 
+// for safe error handle
+struct safe_error_mgr {
+	struct jpeg_error_mgr pub;
+	jmp_buf setjmp_buffer;
+};
+typedef safe_error_mgr *safe_error_mgr_ptr;
+
+void safe_error_exit (j_common_ptr cinfo) {
+	safe_error_mgr_ptr myerr = (safe_error_mgr_ptr) cinfo->err;
+	// (*cinfo->err->output_message) (cinfo);
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+
+
+
 CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	xl::string content;
 	if (!file_get_contents(file, content, 0)) {
 		return CImagePtr();
 	}
+	xl::ui::CDIBSectionPtr dib;
 
 	// load JPEG
 	struct jpeg_decompress_struct cinfo;
-	jpeg_error_mgr em;
-	JSAMPARRAY buffer;		/* Output row buffer */
-	int row_stride;		/* physical row width in output buffer */
+	safe_error_mgr em;
+	JSAMPARRAY buffer;
+	int row_stride;
 
-	cinfo.err = jpeg_std_error(&em);
+	cinfo.err = jpeg_std_error(&em.pub);
+	if (setjmp(em.setjmp_buffer)) {
+		jpeg_destroy_decompress(&cinfo);
+		return CImagePtr();
+	}
 
-/* Step 1: allocate and initialize JPEG decompression object */
 
-	/* Now we can initialize the JPEG decompression object. */
 	jpeg_create_decompress(&cinfo);
 
-	/* Step 2: specify data source (eg, a file) */
-
 	jpeg_mem_src(&cinfo, (unsigned char *)content.c_str(), content.length());
-
-/* Step 3: read file parameters with jpeg_read_header() */
 
 	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
 		(void) jpeg_finish_decompress(&cinfo);
@@ -104,32 +113,15 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	int w = cinfo.image_width;
 	int h = cinfo.image_height;
 	assert(w > 0 && h > 0);
+	dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
 
-	BITMAPINFO bmi;
-	memset(&bmi, 0, sizeof(BITMAPINFO)); 
-	bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-	bmi.bmiHeader.biWidth = w;
-	bmi.bmiHeader.biHeight = -h;
-	bmi.bmiHeader.biBitCount = 24;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biSizeImage     = 0;
-	bmi.bmiHeader.biXPelsPerMeter = 0;
-	bmi.bmiHeader.biYPelsPerMeter = 0;
-	bmi.bmiHeader.biClrUsed       = 0;
-	bmi.bmiHeader.biClrImportant  = 0;
-
-	HDC hdc = ::GetDC(NULL);
-	void *data = NULL;
-	HBITMAP hBitmap = ::CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &data, NULL, NULL);
-	::ReleaseDC(NULL, hdc);
-	if (hBitmap) {
+	if (dib) {
 		(void) jpeg_start_decompress(&cinfo);
 		row_stride = cinfo.output_width * cinfo.output_components;
-		int win_row_stride = (w * 3 + 3) & (~(unsigned int)3);
+		int win_row_stride = dib->getStride();
 		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-		unsigned char *p1 = (unsigned char *)data;
+		unsigned char *p1 = (unsigned char *)dib->getData();
 		unsigned char *p2 = buffer[0];
 		while (cinfo.output_scanline < cinfo.output_height) {
 			(void) jpeg_read_scanlines(&cinfo, buffer, 1);
@@ -141,11 +133,9 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 	}
 	jpeg_destroy_decompress(&cinfo);
 
-	if (hBitmap) {
-		BITMAP bm;
-		::GetObject(hBitmap, sizeof(bm), &bm);
+	if (dib) {
 		CImagePtr image(new CImage());
-		image->insertImage(hBitmap, CImage::BitmapAndDelay::DELAY_INFINITE);
+		image->insertImage(dib, CImage::BitmapAndDelay::DELAY_INFINITE);
 		return image;
 	}
 
