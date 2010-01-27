@@ -12,7 +12,16 @@ public:
 
 	virtual HWND createMainWindow (LPCTSTR, int) {
 		xl::tstring title = _T("xl / view");
-		return m_wndMain.Create(NULL, 0, title);
+		HWND hWnd = m_wndMain.Create(NULL, 0, title);
+		if (hWnd != NULL) {
+			xl::tchar *p = _tgetenv(_T("xlview_test_image"));
+			if (!p) {
+				::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
+				return hWnd;
+			}
+			m_wndMain.setFile(p);
+		}
+		return hWnd;
 	}
 
 	virtual void preRun () {

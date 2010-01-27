@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <setjmp.h>
+#include <process.h>
 #include "libxl/include/fs.h"
+#include "libxl/include/utilities.h"
 #include "../libs/jpeglib.h"
 #include "Image.h"
 
@@ -17,6 +19,25 @@ CImage::BitmapAndDelay::~BitmapAndDelay () {
 
 //////////////////////////////////////////////////////////////////////////
 // CImage
+
+void CImage::_CreateThumbnail () {
+	xl::CTimerLogger logger(_T("create thumbnail"));
+
+	assert(getImageCount() > 0);
+	assert(m_thumbnail == NULL);
+	xl::ui::CDIBSectionPtr dib = getImage(0);
+	SIZE szArea = {(int)(THUMBNAIL_WIDTH * 2.5), (int)(THUMBNAIL_HEIGHT * 2.5)};
+	SIZE szImage = getImageSize();
+	SIZE szThumbnail = getSuitableSize(szArea, szImage);
+
+	xl::ui::CDIBSectionPtr thumbnail = dib->resize(szThumbnail.cx, szThumbnail.cy, false);
+	szArea.cx = THUMBNAIL_WIDTH;
+	szArea.cy = THUMBNAIL_HEIGHT;
+	szThumbnail = getSuitableSize(szArea, szImage);
+	m_thumbnail = thumbnail->resize(szThumbnail.cx, szThumbnail.cy, true);
+}
+
+
 CImage::CImage () : m_width(-1), m_height(-1) {
 
 }
@@ -25,18 +46,30 @@ CImage::~CImage () {
 
 }
 
-xl::uint CImage::getImageCount () {
+void CImage::clear () {
+	m_height = m_width = -1;
+	m_bads.clear();
+}
+
+xl::uint CImage::getImageCount () const {
 	return m_bads.size();
 }
 
-SIZE CImage::getImageSize () {
+SIZE CImage::getImageSize () const {
 	SIZE sz;
 	sz.cx = m_width;
 	sz.cy = m_height;
 	return sz;
 }
 
-xl::uint CImage::getImageDelay (xl::uint index) {
+SIZE CImage::getThumbnailSize () const {
+	SIZE sz;
+	sz.cx = THUMBNAIL_WIDTH;
+	sz.cy = THUMBNAIL_HEIGHT;
+	return sz;
+}
+
+xl::uint CImage::getImageDelay (xl::uint index) const {
 	assert(index < getImageCount());
 	return m_bads[index]->delay;
 }
@@ -44,6 +77,10 @@ xl::uint CImage::getImageDelay (xl::uint index) {
 xl::ui::CDIBSectionPtr CImage::getImage (xl::uint index) {
 	assert(index < getImageCount());
 	return m_bads[index]->bitmap;
+}
+
+xl::ui::CDIBSectionPtr CImage::getThumbnail () {
+	return m_thumbnail;
 }
 
 void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
@@ -59,6 +96,10 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	bad->bitmap = bitmap;
 	bad->delay = delay;
 	m_bads.push_back(bad);
+
+	if (getImageCount() == 1) {
+		_CreateThumbnail();
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -144,7 +185,7 @@ CImagePtr CImage::loadFromFile (const xl::tstring &file) {
 
 SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 	SIZE sz;
-	if (szArea.cx * szArea.cy == 0 || szImage.cx * szImage.cy == 0) {
+	if (szArea.cx * szArea.cy <= 0 || szImage.cx * szImage.cy <= 0) {
 		sz.cx = 1;
 		sz.cy = 1;
 	} else if ((szArea.cx * szImage.cy) > (szImage.cx * szArea.cy)) {
@@ -156,4 +197,42 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 	}
 
 	return sz;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// CDisplayImage
+
+bool CDisplayImage::m_initialized = false;
+HANDLE CDisplayImage::m_semaphore = NULL;
+HANDLE CDisplayImage::m_hThread = NULL;
+
+unsigned int __stdcall CDisplayImage::_Thread (void *param) {
+	for (;;) {
+		::WaitForSingleObject(m_semaphore, INFINITE);
+	}
+	return 0;
+}
+
+void CDisplayImage::_Initilize () {
+	if (m_initialized) {
+		return;
+	}
+
+	TCHAR semaphore_name[MAX_PATH];
+	_stprintf_s(semaphore_name, MAX_PATH, _T("xl::view::CDisplayImage::semaphore@%d"), GetTickCount());
+	m_semaphore = CreateSemaphore(NULL, 0, 1, semaphore_name);
+	if (m_semaphore) {
+		m_hThread = (HANDLE)_beginthreadex(NULL, 0, _Thread, NULL, 0, NULL);
+		assert(m_hThread != NULL);
+		m_initialized = true;
+	}
+}
+
+
+CDisplayImage::CDisplayImage () {
+	_Initilize();
+}
+
+CDisplayImage::~CDisplayImage () {
 }

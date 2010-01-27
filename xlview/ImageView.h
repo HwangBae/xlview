@@ -10,7 +10,8 @@ class CImageView :
 {
 protected:
 
-	CImagePtr m_image;
+	CImagePtr          m_image;
+	int                m_zoom;
 
 public:
 	CImageView(void);
