@@ -7,6 +7,22 @@
 #include "Image.h"
 
 //////////////////////////////////////////////////////////////////////////
+// jpeg error handle
+
+// for safe error handle
+struct safe_jpeg_error_mgr {
+	struct jpeg_error_mgr pub;
+	jmp_buf setjmp_buffer;
+};
+typedef safe_jpeg_error_mgr *safe_jpeg_error_mgr_ptr;
+
+void safe_jpeg_error_exit (j_common_ptr cinfo) {
+	safe_jpeg_error_mgr_ptr myerr = (safe_jpeg_error_mgr_ptr) cinfo->err;
+	longjmp(myerr->setjmp_buffer, 1);
+}
+
+
+//////////////////////////////////////////////////////////////////////////
 // CImage::BitmapAndDelay
 CImage::BitmapAndDelay::BitmapAndDelay () {
 	delay = DELAY_INFINITE;
@@ -50,6 +66,70 @@ void CImage::clear () {
 	m_height = m_width = -1;
 	m_bads.clear();
 }
+
+bool CImage::load (const xl::tstring &file) {
+	xl::string content;
+	if (!file_get_contents(file, content, 0)) {
+		return false;
+	}
+	xl::ui::CDIBSectionPtr dib;
+
+	// load JPEG
+	struct jpeg_decompress_struct cinfo;
+	safe_jpeg_error_mgr em;
+	JSAMPARRAY buffer;
+	int row_stride;
+
+	cinfo.err = jpeg_std_error(&em.pub);
+	if (setjmp(em.setjmp_buffer)) {
+		jpeg_destroy_decompress(&cinfo);
+		return false;
+	}
+
+
+	jpeg_create_decompress(&cinfo);
+
+	jpeg_mem_src(&cinfo, (unsigned char *)content.c_str(), content.length());
+
+	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+		(void) jpeg_finish_decompress(&cinfo);
+		jpeg_destroy_decompress(&cinfo);
+		return false;
+	}
+
+	int w = cinfo.image_width;
+	int h = cinfo.image_height;
+	assert(w > 0 && h > 0);
+	dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
+
+	if (dib) {
+		(void) jpeg_start_decompress(&cinfo);
+		row_stride = cinfo.output_width * cinfo.output_components;
+		int win_row_stride = dib->getStride();
+		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+		unsigned char *p1 = (unsigned char *)dib->getData();
+		unsigned char *p2 = buffer[0];
+		while (cinfo.output_scanline < cinfo.output_height) {
+			(void) jpeg_read_scanlines(&cinfo, buffer, 1);
+			memcpy (p1, p2, row_stride);
+			p1 += win_row_stride;
+		}
+
+		(void) jpeg_finish_decompress(&cinfo);
+	}
+	jpeg_destroy_decompress(&cinfo);
+
+	if (dib) {
+		clear();
+		insertImage(dib, CImage::BitmapAndDelay::DELAY_INFINITE);
+		return true;
+	}
+
+	return false;
+}
+
+
 
 xl::uint CImage::getImageCount () const {
 	return m_bads.size();
@@ -102,86 +182,9 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////
-// 
-
-// for safe error handle
-struct safe_error_mgr {
-	struct jpeg_error_mgr pub;
-	jmp_buf setjmp_buffer;
-};
-typedef safe_error_mgr *safe_error_mgr_ptr;
-
-void safe_error_exit (j_common_ptr cinfo) {
-	safe_error_mgr_ptr myerr = (safe_error_mgr_ptr) cinfo->err;
-	// (*cinfo->err->output_message) (cinfo);
-	longjmp(myerr->setjmp_buffer, 1);
-}
 
 
 
-
-CImagePtr CImage::loadFromFile (const xl::tstring &file) {
-	xl::string content;
-	if (!file_get_contents(file, content, 0)) {
-		return CImagePtr();
-	}
-	xl::ui::CDIBSectionPtr dib;
-
-	// load JPEG
-	struct jpeg_decompress_struct cinfo;
-	safe_error_mgr em;
-	JSAMPARRAY buffer;
-	int row_stride;
-
-	cinfo.err = jpeg_std_error(&em.pub);
-	if (setjmp(em.setjmp_buffer)) {
-		jpeg_destroy_decompress(&cinfo);
-		return CImagePtr();
-	}
-
-
-	jpeg_create_decompress(&cinfo);
-
-	jpeg_mem_src(&cinfo, (unsigned char *)content.c_str(), content.length());
-
-	if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
-		(void) jpeg_finish_decompress(&cinfo);
-		jpeg_destroy_decompress(&cinfo);
-		return CImagePtr();
-	}
-
-	int w = cinfo.image_width;
-	int h = cinfo.image_height;
-	assert(w > 0 && h > 0);
-	dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
-
-	if (dib) {
-		(void) jpeg_start_decompress(&cinfo);
-		row_stride = cinfo.output_width * cinfo.output_components;
-		int win_row_stride = dib->getStride();
-		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-		unsigned char *p1 = (unsigned char *)dib->getData();
-		unsigned char *p2 = buffer[0];
-		while (cinfo.output_scanline < cinfo.output_height) {
-			(void) jpeg_read_scanlines(&cinfo, buffer, 1);
-			memcpy (p1, p2, row_stride);
-			p1 += win_row_stride;
-		}
-
-		(void) jpeg_finish_decompress(&cinfo);
-	}
-	jpeg_destroy_decompress(&cinfo);
-
-	if (dib) {
-		CImagePtr image(new CImage());
-		image->insertImage(dib, CImage::BitmapAndDelay::DELAY_INFINITE);
-		return image;
-	}
-
-	return CImagePtr();
-}
 
 SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 	SIZE sz;
@@ -203,36 +206,12 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 //////////////////////////////////////////////////////////////////////////
 // CDisplayImage
 
-bool CDisplayImage::m_initialized = false;
-HANDLE CDisplayImage::m_semaphore = NULL;
-HANDLE CDisplayImage::m_hThread = NULL;
-
-unsigned int __stdcall CDisplayImage::_Thread (void *param) {
-	for (;;) {
-		::WaitForSingleObject(m_semaphore, INFINITE);
-	}
-	return 0;
+CDisplayImage::CDisplayImage (const xl::tstring &fileName)
+	: m_fileName(fileName)
+{
+	assert(xl::file_exists(m_fileName));
 }
 
-void CDisplayImage::_Initilize () {
-	if (m_initialized) {
-		return;
-	}
-
-	TCHAR semaphore_name[MAX_PATH];
-	_stprintf_s(semaphore_name, MAX_PATH, _T("xl::view::CDisplayImage::semaphore@%d"), GetTickCount());
-	m_semaphore = CreateSemaphore(NULL, 0, 1, semaphore_name);
-	if (m_semaphore) {
-		m_hThread = (HANDLE)_beginthreadex(NULL, 0, _Thread, NULL, 0, NULL);
-		assert(m_hThread != NULL);
-		m_initialized = true;
-	}
-}
-
-
-CDisplayImage::CDisplayImage () {
-	_Initilize();
-}
-
-CDisplayImage::~CDisplayImage () {
+CDisplayImage::~CDisplayImage ()
+{
 }

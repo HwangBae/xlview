@@ -183,6 +183,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ImageManager.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ImageView.cpp"
 				>
 			</File>
@@ -202,6 +206,10 @@
 			>
 			<File
 				RelativePath=".\Image.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageManager.h"
 				>
 			</File>
 			<File

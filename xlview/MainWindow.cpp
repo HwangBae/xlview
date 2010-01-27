@@ -12,53 +12,6 @@
 #include "ImageView.h"
 #include "Slider.h"
 
-static xl::tchar* s_extensions[] = {
-	_T("jpeg"),
-	_T("jpg"),
-	_T("jif"),
-};
-
-bool CMainWindow::_IsFileSupported (const xl::tstring fileName) {
-	size_t index = fileName.rfind(_T('.'));
-	if (index != fileName.npos) {
-		xl::tstring ext = fileName.substr(index + 1);
-		bool match = false;
-		for (int i = 0; i < COUNT_OF(s_extensions); ++ i) {
-			if (_tcsicmp(ext.c_str(), s_extensions[i]) == 0) {
-				match = true;
-				break;
-			}
-		}
-		return match;
-	}
-	return false;
-}
-
-
-void CMainWindow::setFile (const xl::tstring &file) {
-	assert(m_fileNames.size() == 0);
-	xl::tstring dir = xl::file_get_directory(file);
-	dir += _T("\\");
-	xl::tstring pattern = dir + _T("*.*");
-	xl::CTimerLogger logger(_T("searching files cost"));
-
-	// find the files
-	WIN32_FIND_DATA wfd;
-	memset(&wfd, 0, sizeof(wfd));
-	HANDLE hFind = ::FindFirstFile(pattern, &wfd);
-	if (hFind != INVALID_HANDLE_VALUE) {
-		do {
-			xl::tstring name = dir + wfd.cFileName; 
-			if (_IsFileSupported(name)) {
-				m_fileNames.push_back(name);
-			}
-		} while (::FindNextFile(hFind, &wfd));
-		::FindClose(hFind);
-	} else {
-		MessageBox(_T("Can't find any file"));
-	}
-}
-
 
 void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr ctrl) {
 
@@ -86,7 +39,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
 	gestureCtrl->setStyle(_T("color:#ff0000"));
 
-	CImageView *pView = new CImageView();
+	CImageView *pView = new CImageView(this);
 	m_ctrlMain->insertChild(xl::ui::CControlPtr(pView));
 	
 	xl::ui::CControlPtr slider(new CSlider());

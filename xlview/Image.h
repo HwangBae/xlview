@@ -48,6 +48,7 @@ public:
 	virtual ~CImage ();
 
 	void clear ();
+	bool load (const xl::tstring &file);
 
 	xl::uint getImageCount () const;
 	SIZE getImageSize () const;
@@ -59,48 +60,22 @@ public:
 
 	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
 
-	static CImagePtr loadFromFile (const xl::tstring &file);
 	static SIZE getSuitableSize (SIZE szArea, SIZE szImage);
 };
 
 
 //////////////////////////////////////////////////////////////////////////
 // CDisplayImage
-
-/**
- * Contains three type of images:
- * 1. thumbnail
- * 2. resized image
- * 3. original image
- *
- * When display:
- *
- * 1. display thumbnail
- *  1.1 m_thumbnail exists, display it
- *  1.2 m_thumbnail doesn't exist, display blank
- * 2. display image
- *
- */
+class CDisplayImage;
+typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
 class CDisplayImage : public CImage
 {
-	static bool m_initialized;
-	static HANDLE m_semaphore;
-	static int m_thread_command;
-	static HANDLE m_hThread;
-
-	xl::tstring m_file;
-	xl::ui::CDIBSectionPtr        m_thumbnail;
-
-	//////////////////////////////////////////////////////////////////////////
-	// private methods
-	static unsigned int __stdcall _Thread (void *);
-	void _Initilize ();
+	xl::tstring m_fileName;
 
 public:
-	CDisplayImage ();
-	~CDisplayImage ();
-	void drawThumbnail ();
+	CDisplayImage (const xl::tstring &fileName);
+	virtual ~CDisplayImage ();
 };
 
 
