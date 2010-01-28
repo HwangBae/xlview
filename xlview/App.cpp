@@ -19,6 +19,7 @@ public:
 				::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
 				return hWnd;
 			}
+			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
 			m_wndMain.setFile(p);
 		}
 		return hWnd;

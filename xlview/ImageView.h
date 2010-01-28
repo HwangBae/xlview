@@ -9,10 +9,12 @@
 class CImageView 
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
+	, public CImage::ICancel
 {
 protected:
 	CImageManager     *m_pImageManager;
 	int                m_currIndex;
+	int                m_currLoading;
 	CDisplayImagePtr   m_imageZoomed;
 	CDisplayImagePtr   m_imageRealSize;
 
@@ -25,16 +27,21 @@ protected:
 	void _ResetParameter ();
 	void _PrepareDisplay ();
 	void _BeginLoad ();
+	void _BeginResize ();
 	void _OnIndexChanged ();
 	void _OnImageLoaded (bool success);
+	void _OnImageResized ();
 
 	//////////////////////////////////////////////////////////////////////////
 	// thread
 	bool m_exit;
 	HANDLE m_semaphoreLoad;
 	HANDLE m_threadLoad;
+	HANDLE m_semaphoreResize;
+	HANDLE m_threadResize;
 	CRITICAL_SECTION m_cs;
 	static unsigned int __stdcall _LoadThread (void *);
+	static unsigned int __stdcall _ResizeThread (void *);
 
 public:
 	CImageView(CImageManager *pImageManager);
@@ -54,6 +61,9 @@ public:
 
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
+
+	// CImage::ICancel
+	virtual bool cancelLoading ();
 };
 
 #endif

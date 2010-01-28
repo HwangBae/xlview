@@ -37,7 +37,7 @@ CImage::BitmapAndDelay::~BitmapAndDelay () {
 // CImage
 
 void CImage::_CreateThumbnail () {
-	xl::CTimerLogger logger(_T("create thumbnail"));
+	// xl::CTimerLogger logger(_T("create thumbnail"));
 
 	assert(getImageCount() > 0);
 	assert(m_thumbnail == NULL);
@@ -84,7 +84,7 @@ void CImage::clear () {
 	m_bads.clear();
 }
 
-bool CImage::load (const xl::tstring &file) {
+bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 	xl::string content;
 	if (!file_get_contents(file, content, 0)) {
 		return false;
@@ -98,6 +98,7 @@ bool CImage::load (const xl::tstring &file) {
 	int row_stride;
 
 	cinfo.err = jpeg_std_error(&em.pub);
+	em.pub.error_exit = safe_jpeg_error_exit;
 	if (setjmp(em.setjmp_buffer)) {
 		jpeg_destroy_decompress(&cinfo);
 		return false;
@@ -119,6 +120,7 @@ bool CImage::load (const xl::tstring &file) {
 	assert(w > 0 && h > 0);
 	dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
 
+	bool canceled = false;
 	if (dib) {
 		(void) jpeg_start_decompress(&cinfo);
 		row_stride = cinfo.output_width * cinfo.output_components;
@@ -127,18 +129,27 @@ bool CImage::load (const xl::tstring &file) {
 
 		unsigned char *p1 = (unsigned char *)dib->getData();
 		unsigned char *p2 = buffer[0];
+		int lines = 0;
 		while (cinfo.output_scanline < cinfo.output_height) {
-			(void) jpeg_read_scanlines(&cinfo, buffer, 1);
+			if (pCancel && (lines % 10) == 0 && pCancel->cancelLoading()) {
+				canceled = true;
+				break;
+			}
+			jpeg_read_scanlines(&cinfo, buffer, 1);
 			memcpy (p1, p2, row_stride);
 			p1 += win_row_stride;
+			++ lines;
 		}
 
-		(void) jpeg_finish_decompress(&cinfo);
+		if (canceled) {
+			jpeg_abort_decompress(&cinfo);
+		} else {
+			jpeg_finish_decompress(&cinfo);
+		}
 	}
 	jpeg_destroy_decompress(&cinfo);
 
-	if (dib) {
-		clear();
+	if (dib && !canceled) {
 		insertImage(dib, CImage::BitmapAndDelay::DELAY_INFINITE);
 		return true;
 	}
@@ -242,9 +253,19 @@ CDisplayImagePtr CDisplayImage::clone () {
 	return image;
 }
 
-bool CDisplayImage::load () {
+bool CDisplayImage::load (ICancel *pCancel) {
 	assert(xl::file_exists(m_fileName));
-	return CImage::load(m_fileName);
+	return CImage::load(m_fileName, pCancel);
+}
+
+void CDisplayImage::resize (int w, int h) {
+	m_width = w;
+	m_height = h;
+
+	for (size_t i = 0; i < getImageCount(); ++ i) {
+		xl::ui::CDIBSectionPtr dib = getImage(i)->resize(w, h);
+		m_bads[i]->bitmap = dib;
+	}
 }
 
 xl::tstring CDisplayImage::getFileName () const {

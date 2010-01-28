@@ -11,6 +11,7 @@
 class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
+
 //////////////////////////////////////////////////////////////////////////
 // CImage
 
@@ -39,6 +40,13 @@ protected:
 	void _CreateThumbnail ();
 
 public:
+	//////////////////////////////////////////////////////////////////////////
+	// interface for canceling image loading
+	class ICancel {
+	public:
+		virtual bool cancelLoading () = 0;
+	};
+
 	enum {
 		THUMBNAIL_WIDTH = 48,
 		THUMBNAIL_HEIGHT = 48,
@@ -49,7 +57,7 @@ public:
 
 	void operator = (const CImage &);
 	void clear ();
-	bool load (const xl::tstring &file);
+	bool load (const xl::tstring &file, ICancel *pCancel = NULL);
 
 	xl::uint getImageCount () const;
 	SIZE getImageSize () const;
@@ -79,7 +87,8 @@ public:
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();
 
-	bool load ();
+	bool load (ICancel *pCancel = NULL);
+	void resize (int w, int h);
 	xl::tstring getFileName () const;
 };
 

@@ -19,19 +19,50 @@ unsigned int __stdcall CImageView::_LoadThread (void *param) {
 		}
 
 		xl::CSimpleLock lock(&pThis->m_cs);
+		pThis->m_currLoading = pThis->m_currIndex;
 		CDisplayImagePtr image = pThis->m_imageRealSize;
 		lock.unlock();
 		assert(image != NULL);
 
-		if (image->load()) {
-			pThis->_OnImageLoaded(true);
-		} else {
-			pThis->_OnImageLoaded(false);
-		}
+		bool loaded = image->load(pThis);
 
+		lock.lock(&pThis->m_cs);
+		if (!pThis->cancelLoading()) {
+			pThis->_OnImageLoaded(loaded);
+		}
 	}
 	return 0;
 }
+
+unsigned int __stdcall CImageView::_ResizeThread (void *param) {
+	assert(param);
+	CImageView *pThis = (CImageView *)param;
+	for (;;) {
+		::WaitForSingleObject(pThis->m_semaphoreResize, INFINITE);
+		if (pThis->m_exit) {
+			break;
+		}
+
+		xl::CSimpleLock lock(&pThis->m_cs);
+		int currIndex = pThis->m_currIndex;
+		CDisplayImagePtr image = pThis->m_imageRealSize;
+		CDisplayImagePtr imageZoomed = image->clone();// = pThis->m_imageZoomed;
+		lock.unlock();
+
+		CRect rc = pThis->getClientRect();
+		CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), image->getImageSize());
+
+		imageZoomed->resize(sz.cx, sz.cy);
+
+		lock.lock(&pThis->m_cs);
+		if (pThis->m_currIndex == currIndex) {
+			pThis->m_imageZoomed = imageZoomed;
+			pThis->_OnImageResized();
+		}
+	}
+	return 0;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // protected
@@ -44,19 +75,24 @@ void CImageView::_CreateThreads () {
 	_stprintf_s(name, 128, _T("xlview::imageview::semaphore::load for 0x%08x on %d"), this, ::GetTickCount());
 	m_semaphoreLoad = ::CreateSemaphore(NULL, 0, 1, name);
 	m_threadLoad = (HANDLE)_beginthreadex(NULL, 0, _LoadThread, this, 0, NULL);
+
+	_stprintf_s(name, 128, _T("xlview::imageview::semaphore::resize for 0x%08x on %d"), this, ::GetTickCount());
+	m_semaphoreResize = ::CreateSemaphore(NULL, 0, 1, name);
+	m_threadResize = (HANDLE)_beginthreadex(NULL, 0, _ResizeThread, this, 0, NULL);
 }
 
 void CImageView::_TerminateThreads () {
 	m_exit = true;
 	::ReleaseSemaphore(m_semaphoreLoad, 1, NULL);
-	if (::WaitForSingleObject(m_threadLoad, 3000) == WAIT_TIMEOUT) {
-		TerminateThread(m_threadLoad, 0);
+	::ReleaseSemaphore(m_semaphoreResize, 1, NULL);
+	HANDLE handles[] = {m_threadLoad, m_threadResize};
+	if (::WaitForMultipleObjects(COUNT_OF(handles), handles, TRUE, 3000) == WAIT_TIMEOUT) {
+		for (int i = 0; i < COUNT_OF(handles); ++ i) {
+			TerminateThread(handles[i], 0);
+			::CloseHandle(handles[i]);
+		}
 	}
-
-	::CloseHandle(m_threadLoad);
-	m_threadLoad = NULL;
-	::CloseHandle(m_semaphoreLoad);
-	m_semaphoreLoad = NULL;
+	m_threadResize = m_threadLoad = NULL;
 
 	::DeleteCriticalSection(&m_cs);
 }
@@ -87,7 +123,13 @@ void CImageView::_BeginLoad () {
 	::ReleaseSemaphore(m_semaphoreLoad, 1, NULL);
 }
 
+void CImageView::_BeginResize () {
+	::ReleaseSemaphore(m_semaphoreResize, 1, NULL);
+}
+
+
 void CImageView::_OnIndexChanged () {
+	xl::CSimpleLock lock(&m_cs);
 	int newIndex = m_pImageManager->getCurrIndex();
 	if (newIndex != m_currIndex) {
 		m_currIndex = newIndex;
@@ -102,13 +144,19 @@ void CImageView::_OnImageLoaded (bool success) {
 	assert(pCtrlMain);
 	ATL::CWindow *pWindow = pCtrlMain->getWindow();
 	assert(pWindow);
+	xl::CSimpleLock lock(&m_cs);
 
 	// test code
-	xl::CSimpleLock lock(&m_cs);
 	if (m_imageZoomed->getImageCount() == 0) {
-		m_imageZoomed = m_imageRealSize;
+		_BeginResize();
+	} else {
 		invalidate();
 	}
+}
+
+void CImageView::_OnImageResized () {
+	assert(m_imageZoomed->getImageCount() > 0);
+	invalidate();
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -202,4 +250,8 @@ void CImageView::onEvent (EVT evt, void *param) {
 	default:
 		break;
 	}
+}
+
+bool CImageView::cancelLoading () {
+	return (m_currIndex != m_currLoading) || m_exit;
 }
