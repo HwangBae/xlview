@@ -62,6 +62,23 @@ CImage::~CImage () {
 
 }
 
+void CImage::operator = (const CImage &image) {
+	clear();
+	m_width = image.m_width;
+	m_height = image.m_height;
+	if (image.m_thumbnail) {
+		m_thumbnail = image.m_thumbnail->clone();
+	}
+
+	for (size_t i = 0; i < image.m_bads.size(); ++ i) {
+		_BADPtr bad(new _BAD());
+		bad->bitmap = image.m_bads[i]->bitmap->clone();
+		bad->delay = image.m_bads[i]->delay;
+
+		m_bads.push_back(bad);
+	}
+}
+
 void CImage::clear () {
 	m_height = m_width = -1;
 	m_bads.clear();
@@ -214,4 +231,22 @@ CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 
 CDisplayImage::~CDisplayImage ()
 {
+}
+
+CDisplayImagePtr CDisplayImage::clone () {
+	CDisplayImage *pImage = new CDisplayImage(m_fileName);
+
+	*(CImage *)pImage = *(CImage *)this;
+
+	CDisplayImagePtr image(pImage);
+	return image;
+}
+
+bool CDisplayImage::load () {
+	assert(xl::file_exists(m_fileName));
+	return CImage::load(m_fileName);
+}
+
+xl::tstring CDisplayImage::getFileName () const {
+	return m_fileName;
 }

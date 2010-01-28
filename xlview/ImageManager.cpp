@@ -27,12 +27,21 @@ bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
 	return false;
 }
 
+// note, don't prefetch the 'current' image, 
+// left it to the view to fetch, to avoid conflict
+void CImageManager::_BeginPrefetch () {
+	if (m_rcView.Width() <= 0 || m_rcView.Height() <= 0) {
+		return;
+	}
+}
+
 
 
 //////////////////////////////////////////////////////////////////////////
 
 CImageManager::CImageManager ()
 	: m_currIndex ((xl::uint)-1)
+	, m_rcView(0, 0, 0, 0)
 {
 
 }
@@ -45,6 +54,10 @@ int CImageManager::getCurrIndex () const {
 	return m_currIndex;
 }
 
+int CImageManager::getImageCount () const {
+	return (int)m_images.size();
+}
+
 void CImageManager::setFile (const xl::tstring &file) {
 	assert(m_images.size() == 0);
 	xl::tstring fileName = xl::file_get_name(file);
@@ -52,6 +65,8 @@ void CImageManager::setFile (const xl::tstring &file) {
 	m_directory += _T("\\");
 	xl::tstring pattern = m_directory + _T("*.*");
 	xl::CTimerLogger logger(_T("searching files cost"));
+
+	int new_index = -1;
 
 	// find the files
 	WIN32_FIND_DATA wfd;
@@ -67,7 +82,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 			xl::tstring name = m_directory + wfd.cFileName;
 			if (_IsFileSupported(name)) {
 				if (_tcsicmp(wfd.cFileName, fileName) == 0) {
-					setIndex(m_images.size());
+					new_index = (int)m_images.size();
 				}
 				m_images.push_back(CDisplayImagePtr(new CDisplayImage(name)));
 			}
@@ -80,11 +95,35 @@ void CImageManager::setFile (const xl::tstring &file) {
 	} else {
 		::MessageBox(NULL, _T("Can not find any image file"), 0, MB_OK);
 	}
+
+	if (new_index == -1 && m_images.size() > 0) {
+		new_index = 0;
+	}
+	setIndex(new_index);
 }
 
 void CImageManager::setIndex (int index) {
 	if (m_currIndex != index) {
 		m_currIndex = index;
+		_BeginPrefetch();
 		_TriggerEvent(EVT_INDEX_CHANGED, NULL);
 	}
+}
+
+CDisplayImagePtr CImageManager::getImage (int index) {
+	assert(index >= 0 && index < getImageCount());
+	return m_images[index];
+}
+
+void CImageManager::onViewSizeChanged (CRect rc) {
+	if (m_rcView == rc) {
+		return;
+	}
+
+	m_rcView = rc;
+	if (m_rcView.Width() <= 0 || m_rcView.Height() <= 0) {
+		return;
+	}
+
+	_BeginPrefetch();
 }

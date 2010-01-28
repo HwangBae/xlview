@@ -13,13 +13,28 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 	int                m_currIndex;
+	CDisplayImagePtr   m_imageZoomed;
+	CDisplayImagePtr   m_imageRealSize;
 
-	CImagePtr          m_image;
 	bool               m_suitable;
 	int                m_zoom;
 
+	void _CreateThreads ();
+	void _TerminateThreads ();
+
 	void _ResetParameter ();
+	void _PrepareDisplay ();
+	void _BeginLoad ();
 	void _OnIndexChanged ();
+	void _OnImageLoaded (bool success);
+
+	//////////////////////////////////////////////////////////////////////////
+	// thread
+	bool m_exit;
+	HANDLE m_semaphoreLoad;
+	HANDLE m_threadLoad;
+	CRITICAL_SECTION m_cs;
+	static unsigned int __stdcall _LoadThread (void *);
 
 public:
 	CImageView(CImageManager *pImageManager);

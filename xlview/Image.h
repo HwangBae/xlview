@@ -28,13 +28,13 @@ protected:
 		~BitmapAndDelay ();
 	} _BAD;
 
-	typedef std::tr1::shared_ptr<_BAD>   _BADPtr;
-	typedef std::vector<_BADPtr>         _BADContainer;
+	typedef std::tr1::shared_ptr<_BAD>             _BADPtr;
+	typedef std::vector<_BADPtr>                   _BADContainer;
 
-	_BADContainer            m_bads;
-	xl::ui::CDIBSectionPtr   m_thumbnail;
-	int                      m_width;
-	int                      m_height;
+	_BADContainer                                  m_bads;
+	xl::ui::CDIBSectionPtr                         m_thumbnail;
+	int                                            m_width;
+	int                                            m_height;
 
 	void _CreateThumbnail ();
 
@@ -47,6 +47,7 @@ public:
 	CImage ();
 	virtual ~CImage ();
 
+	void operator = (const CImage &);
 	void clear ();
 	bool load (const xl::tstring &file);
 
@@ -76,6 +77,10 @@ class CDisplayImage : public CImage
 public:
 	CDisplayImage (const xl::tstring &fileName);
 	virtual ~CDisplayImage ();
+	CDisplayImagePtr clone ();
+
+	bool load ();
+	xl::tstring getFileName () const;
 };
 
 

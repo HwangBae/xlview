@@ -25,6 +25,32 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 	if (gesture == _T("canceled")) {
 		return _T("timeout");
 	}
+
+	// test gesture and prev & next
+	if (gesture == _T("R")) {
+		if (release) {
+			int new_index = m_currIndex + 1;
+			if (new_index == m_images.size()) {
+				new_index = 0;
+			}
+			setIndex(new_index);
+		}
+		return _T("Next");
+	}
+
+	if (gesture == _T("L")) {
+		if (release) {
+			int new_index = m_currIndex;
+			if (new_index == 0) {
+				new_index = m_images.size() - 1;
+			} else {
+				new_index --;
+			}
+			setIndex(new_index);
+		}
+		return _T("Prev");
+	}
+
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
 }
 
