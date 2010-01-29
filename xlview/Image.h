@@ -11,6 +11,11 @@
 class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
+enum {
+	THUMBNAIL_WIDTH = 32,
+	THUMBNAIL_HEIGHT = 32,
+};
+
 
 //////////////////////////////////////////////////////////////////////////
 // CImage
@@ -33,11 +38,10 @@ protected:
 	typedef std::vector<_BADPtr>                   _BADContainer;
 
 	_BADContainer                                  m_bads;
-	xl::ui::CDIBSectionPtr                         m_thumbnail;
 	int                                            m_width;
 	int                                            m_height;
 
-	void _CreateThumbnail ();
+	// void _CreateThumbnail ();
 
 public:
 	//////////////////////////////////////////////////////////////////////////
@@ -47,29 +51,26 @@ public:
 		virtual bool cancelLoading () = 0;
 	};
 
-	enum {
-		THUMBNAIL_WIDTH = 48,
-		THUMBNAIL_HEIGHT = 48,
-	};
-
 	CImage ();
 	virtual ~CImage ();
 
-	void operator = (const CImage &);
-	void clear ();
 	bool load (const xl::tstring &file, ICancel *pCancel = NULL);
+	void operator = (const CImage &);
+	CImagePtr clone ();
+	void clear ();
 
 	xl::uint getImageCount () const;
 	SIZE getImageSize () const;
-	SIZE getThumbnailSize () const;
+	int getImageWidth () const { return m_width; }
+	int getImageHeight () const { return m_height; }
 
 	xl::uint getImageDelay (xl::uint index) const;
 	xl::ui::CDIBSectionPtr getImage (xl::uint index);
-	xl::ui::CDIBSectionPtr getThumbnail ();
 
 	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
+	CImagePtr resize (int width, int height, bool usehalftone = true);
 
-	static SIZE getSuitableSize (SIZE szArea, SIZE szImage);
+	static SIZE getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge = true);
 };
 
 
@@ -78,26 +79,38 @@ public:
 class CDisplayImage;
 typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
-class CDisplayImage : public CImage
+class CDisplayImage
 {
 	xl::tstring m_fileName;
-	bool m_isThumbnail;
+
 	int m_widthReal;
 	int m_heightReal;
+
+	CImagePtr          m_imgThumbnail;
+	CImagePtr          m_imgZoomed;
+	CImagePtr          m_imgRealSize;
 
 public:
 	CDisplayImage (const xl::tstring &fileName);
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();
 
-	bool load (ICancel *pCancel = NULL);
-	void resize (int w, int h);
-	void changeToThumbnail (CDisplayImagePtr source);
+	bool loadZoomed (int width, int height, CImage::ICancel *pCancel = NULL);
+	bool loadRealSize (CImage::ICancel *pCancel = NULL);
+	bool loadThumbnail (CImage::ICancel *pCancel = NULL);
+
+	void clearThumbnail ();
+	void clearRealSize ();
+	void clearZoomed ();
+	void clear ();
 
 	xl::tstring getFileName () const;
-	bool isThumbnail () const;
 	int getRealWidth () const;
 	int getRealHeight () const;
+
+	CImagePtr getThumbnail () { return m_imgThumbnail; }
+	CImagePtr getZoomedImage () { return m_imgZoomed; }
+	CImagePtr getRealSizeImage () { return m_imgRealSize; }
 };
 
 

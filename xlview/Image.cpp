@@ -36,6 +36,7 @@ CImage::BitmapAndDelay::~BitmapAndDelay () {
 //////////////////////////////////////////////////////////////////////////
 // CImage
 
+#if 0
 void CImage::_CreateThumbnail () {
 	// xl::CTimerLogger logger(_T("create thumbnail"));
 
@@ -52,6 +53,7 @@ void CImage::_CreateThumbnail () {
 	szThumbnail = getSuitableSize(szArea, szImage);
 	m_thumbnail = thumbnail->resize(szThumbnail.cx, szThumbnail.cy, true);
 }
+#endif
 
 
 CImage::CImage () : m_width(-1), m_height(-1) {
@@ -60,28 +62,6 @@ CImage::CImage () : m_width(-1), m_height(-1) {
 
 CImage::~CImage () {
 
-}
-
-void CImage::operator = (const CImage &image) {
-	clear();
-	m_width = image.m_width;
-	m_height = image.m_height;
-	if (image.m_thumbnail) {
-		m_thumbnail = image.m_thumbnail->clone();
-	}
-
-	for (size_t i = 0; i < image.m_bads.size(); ++ i) {
-		_BADPtr bad(new _BAD());
-		bad->bitmap = image.m_bads[i]->bitmap->clone();
-		bad->delay = image.m_bads[i]->delay;
-
-		m_bads.push_back(bad);
-	}
-}
-
-void CImage::clear () {
-	m_height = m_width = -1;
-	m_bads.clear();
 }
 
 bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
@@ -157,7 +137,33 @@ bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 	return false;
 }
 
+void CImage::operator = (const CImage &image) {
+	clear();
+	m_width = image.m_width;
+	m_height = image.m_height;
 
+	for (size_t i = 0; i < image.m_bads.size(); ++ i) {
+		_BADPtr bad(new _BAD());
+		bad->bitmap = image.m_bads[i]->bitmap->clone();
+		bad->delay = image.m_bads[i]->delay;
+
+		m_bads.push_back(bad);
+	}
+}
+
+CImagePtr CImage::clone () {
+	CImage *pImage = new CImage();
+	CImagePtr image(pImage);
+
+	*pImage = *this; // call operator = ()
+	
+	return image;
+}
+
+void CImage::clear () {
+	m_height = m_width = -1;
+	m_bads.clear();
+}
 
 xl::uint CImage::getImageCount () const {
 	return m_bads.size();
@@ -170,13 +176,6 @@ SIZE CImage::getImageSize () const {
 	return sz;
 }
 
-SIZE CImage::getThumbnailSize () const {
-	SIZE sz;
-	sz.cx = THUMBNAIL_WIDTH;
-	sz.cy = THUMBNAIL_HEIGHT;
-	return sz;
-}
-
 xl::uint CImage::getImageDelay (xl::uint index) const {
 	assert(index < getImageCount());
 	return m_bads[index]->delay;
@@ -185,10 +184,6 @@ xl::uint CImage::getImageDelay (xl::uint index) const {
 xl::ui::CDIBSectionPtr CImage::getImage (xl::uint index) {
 	assert(index < getImageCount());
 	return m_bads[index]->bitmap;
-}
-
-xl::ui::CDIBSectionPtr CImage::getThumbnail () {
-	return m_thumbnail;
 }
 
 void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
@@ -204,22 +199,36 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	bad->bitmap = bitmap;
 	bad->delay = delay;
 	m_bads.push_back(bad);
+}
 
-	if (getImageCount() == 1) {
-		_CreateThumbnail();
+CImagePtr CImage::resize (int width, int height, bool usehalftone) {
+	if (width == m_width && height == m_height) {
+		return clone();
+	} else {
+		assert(width > 0 && height > 0);
+		CImage *pImage = new CImage();
+		CImagePtr image(pImage);
+
+		pImage->m_width = width;
+		pImage->m_height = height;
+
+		for (size_t i = 0; i < m_bads.size(); ++ i) {
+			xl::ui::CDIBSectionPtr src = m_bads[i]->bitmap;
+			xl::ui::CDIBSectionPtr dib = src->resize(width, height, usehalftone, src->getBitCounts());
+			pImage->insertImage(dib, m_bads[i]->delay);
+		}
+
+		return image;
 	}
 }
 
 
-
-
-
-SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
+SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge) {
 	SIZE sz;
 	if (szArea.cx * szArea.cy <= 0 || szImage.cx * szImage.cy <= 0) {
 		sz.cx = 1;
 		sz.cy = 1;
-	} else if (szArea.cx >= szImage.cx && szArea.cy >= szImage.cy) {
+	} else if (szArea.cx >= szImage.cx && szArea.cy >= szImage.cy && dontEnlarge) {
 		sz.cx = szImage.cx;
 		sz.cy = szImage.cy;
 	} else if ((szArea.cx * szImage.cy) > (szImage.cx * szArea.cy)) {
@@ -239,7 +248,6 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 
 CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 	: m_fileName(fileName)
-	, m_isThumbnail(false)
 	, m_widthReal(-1)
 	, m_heightReal(-1)
 {
@@ -252,60 +260,107 @@ CDisplayImage::~CDisplayImage ()
 
 CDisplayImagePtr CDisplayImage::clone () {
 	CDisplayImage *pImage = new CDisplayImage(m_fileName);
-	pImage->m_isThumbnail = m_isThumbnail;
+	CDisplayImagePtr image(pImage);
+
 	pImage->m_widthReal = m_widthReal;
 	pImage->m_heightReal = m_heightReal;
 
-	*(CImage *)pImage = *(CImage *)this;
+	if (m_imgThumbnail) {
+		pImage->m_imgThumbnail = m_imgThumbnail->clone();
+	}
 
-	CDisplayImagePtr image(pImage);
+	if (m_imgZoomed) {
+		pImage->m_imgZoomed = m_imgZoomed->clone();
+	}
+
+	if (m_imgRealSize) {
+		pImage->m_imgRealSize = m_imgRealSize->clone();
+	}
+
 	return image;
 }
 
-bool CDisplayImage::load (ICancel *pCancel) {
-	assert(xl::file_exists(m_fileName));
-	bool loaded = CImage::load(m_fileName, pCancel);
-	if (loaded) {
-		m_isThumbnail = false;
-		m_widthReal = m_width;
-		m_heightReal = m_height;
-	}
-	return loaded;
-}
-
-void CDisplayImage::resize (int w, int h) {
-	m_width = w;
-	m_height = h;
-
-	for (size_t i = 0; i < getImageCount(); ++ i) {
-		xl::ui::CDIBSectionPtr dib = getImage(i)->resize(w, h);
-		m_bads[i]->bitmap = dib;
-	}
-}
-
-void CDisplayImage::changeToThumbnail (CDisplayImagePtr source) {
-	assert(source->getImageCount() > 0);
-	CImage::clear();
-	m_fileName = source->getFileName();
-	m_isThumbnail = true;
-	m_widthReal = source->m_widthReal;
-	m_heightReal = source->m_heightReal;
-	assert(m_widthReal > 0 && m_heightReal > 0);
-
-	if (source->m_thumbnail) {
-		insertImage(source->m_thumbnail->clone(), _BAD::DELAY_INFINITE);
+bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel) {
+	if (m_imgZoomed != NULL 
+	    && m_imgZoomed->getImageWidth() >= width
+	    && m_imgZoomed->getImageHeight() >= height)
+	{
+		m_imgZoomed = m_imgZoomed->resize(width, height);
 	} else {
-		insertImage(source->getImage(0)->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false), _BAD::DELAY_INFINITE);
+		bool clearRealSize = !m_imgRealSize;
+		if (!m_imgRealSize && !loadRealSize(pCancel)) {
+			return false;
+		}
+		assert(m_imgRealSize->getImageCount() > 0);
+		m_imgZoomed.reset();
+
+		m_imgZoomed = m_imgRealSize->resize(width, height);
+		if (clearRealSize) {
+			this->clearRealSize ();
+		}
 	}
+
+	return (!!m_imgZoomed) && (m_imgZoomed->getImageCount() > 0);
+}
+
+bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
+	assert(m_imgRealSize == NULL);
+	assert(xl::file_exists(getFileName()));
+	CImage *pImage = new CImage();
+	CImagePtr image(pImage);
+	if (!pImage->load(getFileName(), pCancel)) {
+		return false;
+	} else {
+		if (m_widthReal != -1 && m_heightReal != -1) {
+			assert(m_widthReal == pImage->getImageWidth() && m_heightReal == pImage->getImageHeight());
+		} else {
+			m_widthReal = pImage->getImageWidth();
+			m_heightReal = pImage->getImageHeight();
+		}
+		m_imgRealSize = image;
+		return true;
+	}
+}
+
+bool CDisplayImage::loadThumbnail (CImage::ICancel *pCancel) {
+	if (m_imgZoomed) {
+		assert(m_imgZoomed->getImageCount() > 0);
+		m_imgThumbnail = m_imgZoomed->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
+	} else if (m_imgRealSize) {
+		assert(m_imgRealSize->getImageCount() > 0);
+		m_imgThumbnail = m_imgRealSize->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
+	} else {
+		if (!loadRealSize(pCancel)) {
+			return false;
+		}
+		assert(m_imgRealSize->getImageCount() > 0);
+		m_imgThumbnail = m_imgRealSize->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
+		clearRealSize();
+	}
+	return true;
+}
+
+void CDisplayImage::clearThumbnail () {
+	m_imgThumbnail.reset();
+}
+
+void CDisplayImage::clearRealSize () {
+	m_imgRealSize.reset();
+}
+
+void CDisplayImage::clearZoomed () {
+	m_imgZoomed.reset();
+}
+
+void CDisplayImage::clear () {
+	m_imgRealSize.reset();
+	m_imgZoomed.reset();
+	m_imgThumbnail.reset();
 }
 
 
 xl::tstring CDisplayImage::getFileName () const {
 	return m_fileName;
-}
-
-bool CDisplayImage::isThumbnail () const {
-	return m_isThumbnail;
 }
 
 int CDisplayImage::getRealWidth () const {
