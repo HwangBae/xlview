@@ -219,6 +219,9 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 	if (szArea.cx * szArea.cy <= 0 || szImage.cx * szImage.cy <= 0) {
 		sz.cx = 1;
 		sz.cy = 1;
+	} else if (szArea.cx >= szImage.cx && szArea.cy >= szImage.cy) {
+		sz.cx = szImage.cx;
+		sz.cy = szImage.cy;
 	} else if ((szArea.cx * szImage.cy) > (szImage.cx * szArea.cy)) {
 		sz.cx = szImage.cx * szArea.cy / szImage.cy;
 		sz.cy = szArea.cy;
@@ -236,6 +239,9 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage) {
 
 CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 	: m_fileName(fileName)
+	, m_isThumbnail(false)
+	, m_widthReal(-1)
+	, m_heightReal(-1)
 {
 	assert(xl::file_exists(m_fileName));
 }
@@ -246,6 +252,9 @@ CDisplayImage::~CDisplayImage ()
 
 CDisplayImagePtr CDisplayImage::clone () {
 	CDisplayImage *pImage = new CDisplayImage(m_fileName);
+	pImage->m_isThumbnail = m_isThumbnail;
+	pImage->m_widthReal = m_widthReal;
+	pImage->m_heightReal = m_heightReal;
 
 	*(CImage *)pImage = *(CImage *)this;
 
@@ -255,7 +264,13 @@ CDisplayImagePtr CDisplayImage::clone () {
 
 bool CDisplayImage::load (ICancel *pCancel) {
 	assert(xl::file_exists(m_fileName));
-	return CImage::load(m_fileName, pCancel);
+	bool loaded = CImage::load(m_fileName, pCancel);
+	if (loaded) {
+		m_isThumbnail = false;
+		m_widthReal = m_width;
+		m_heightReal = m_height;
+	}
+	return loaded;
 }
 
 void CDisplayImage::resize (int w, int h) {
@@ -268,6 +283,35 @@ void CDisplayImage::resize (int w, int h) {
 	}
 }
 
+void CDisplayImage::changeToThumbnail (CDisplayImagePtr source) {
+	assert(source->getImageCount() > 0);
+	CImage::clear();
+	m_fileName = source->getFileName();
+	m_isThumbnail = true;
+	m_widthReal = source->m_widthReal;
+	m_heightReal = source->m_heightReal;
+	assert(m_widthReal > 0 && m_heightReal > 0);
+
+	if (source->m_thumbnail) {
+		insertImage(source->m_thumbnail->clone(), _BAD::DELAY_INFINITE);
+	} else {
+		insertImage(source->getImage(0)->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false), _BAD::DELAY_INFINITE);
+	}
+}
+
+
 xl::tstring CDisplayImage::getFileName () const {
 	return m_fileName;
+}
+
+bool CDisplayImage::isThumbnail () const {
+	return m_isThumbnail;
+}
+
+int CDisplayImage::getRealWidth () const {
+	return m_widthReal;
+}
+
+int CDisplayImage::getRealHeight () const {
+	return m_heightReal;
 }

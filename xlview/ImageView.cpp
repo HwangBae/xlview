@@ -146,8 +146,10 @@ void CImageView::_OnImageLoaded (bool success) {
 	assert(pWindow);
 	xl::CSimpleLock lock(&m_cs);
 
-	// test code
 	if (m_imageZoomed->getImageCount() == 0) {
+		// use the thumbnail first
+		m_imageZoomed->changeToThumbnail(m_imageRealSize);
+		invalidate();
 		_BeginResize();
 	} else {
 		invalidate();
@@ -198,14 +200,22 @@ void CImageView::drawMe (HDC hdc) {
 	if (m_imageZoomed != NULL && m_imageZoomed->getImageCount() > 0) {
 
 		xl::ui::CDIBSectionPtr bitmap = m_imageZoomed->getImage(0);
+		bool isThumbnail = m_imageZoomed->isThumbnail();
 
 		xl::ui::CDCHandle dc(hdc);
 		xl::ui::CDC mdc;
 		mdc.CreateCompatibleDC(hdc);
 		HBITMAP oldBmp = mdc.SelectBitmap(*bitmap);
 
-		int w = bitmap->getWidth();
-		int h = bitmap->getHeight();
+		int w = isThumbnail ? m_imageZoomed->getRealWidth() : bitmap->getWidth();
+		int h = isThumbnail ? m_imageZoomed->getRealHeight() : bitmap->getHeight();
+		assert(w > 0 && h > 0);
+		if (isThumbnail) {
+			CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
+			w = sz.cx;
+			h = sz.cy;
+		}
+
 		int x = (rc.Width() - w) / 2;
 		int y = (rc.Height() - h) / 2;
 		if (w > rc.Width()) {
@@ -223,7 +233,13 @@ void CImageView::drawMe (HDC hdc) {
 		x += rc.left;
 		y += rc.top;
 
-		dc.BitBlt(x, y, w, h, mdc, 0, 0, SRCCOPY);
+		if (m_imageZoomed->isThumbnail()) {
+			int oldMode = dc.SetStretchBltMode(HALFTONE);
+			dc.StretchBlt(x, y, w, h, mdc, 0, 0, bitmap->getWidth(), bitmap->getHeight(), SRCCOPY);
+			dc.SetStretchBltMode(oldMode);
+		} else {
+			dc.BitBlt(x, y, w, h, mdc, 0, 0, SRCCOPY);
+		}
 
 		mdc.SelectBitmap(oldBmp);
 	}

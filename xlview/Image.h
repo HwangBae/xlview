@@ -81,6 +81,9 @@ typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 class CDisplayImage : public CImage
 {
 	xl::tstring m_fileName;
+	bool m_isThumbnail;
+	int m_widthReal;
+	int m_heightReal;
 
 public:
 	CDisplayImage (const xl::tstring &fileName);
@@ -89,7 +92,12 @@ public:
 
 	bool load (ICancel *pCancel = NULL);
 	void resize (int w, int h);
+	void changeToThumbnail (CDisplayImagePtr source);
+
 	xl::tstring getFileName () const;
+	bool isThumbnail () const;
+	int getRealWidth () const;
+	int getRealHeight () const;
 };
 
 
