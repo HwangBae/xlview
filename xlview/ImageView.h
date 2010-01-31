@@ -15,11 +15,12 @@ protected:
 	CImageManager     *m_pImageManager;
 	int                m_currIndex;
 	int                m_currLoading;
-	CDisplayImagePtr   m_imageZoomed;
-	CDisplayImagePtr   m_imageRealSize;
+	CDisplayImagePtr   m_image;
+	CImagePtr          m_imageWhenResizing;
 
 	bool               m_suitable;
-	int                m_zoom;
+	int                m_zoomTo;
+	int                m_zoomNow;
 
 	void _CreateThreads ();
 	void _TerminateThreads ();
@@ -34,12 +35,14 @@ protected:
 
 	//////////////////////////////////////////////////////////////////////////
 	// thread
-	bool m_exit;
-	HANDLE m_semaphoreLoad;
-	HANDLE m_threadLoad;
-	HANDLE m_semaphoreResize;
-	HANDLE m_threadResize;
-	CRITICAL_SECTION m_cs;
+	bool               m_exit;
+	bool               m_loading;
+	bool               m_resizing;
+	HANDLE             m_semaphoreLoad;
+	HANDLE             m_threadLoad;
+	HANDLE             m_semaphoreResize;
+	HANDLE             m_threadResize;
+	CRITICAL_SECTION   m_cs;
 	static unsigned int __stdcall _LoadThread (void *);
 	static unsigned int __stdcall _ResizeThread (void *);
 

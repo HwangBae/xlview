@@ -19,17 +19,20 @@ unsigned int __stdcall CImageView::_LoadThread (void *param) {
 		}
 
 		xl::CSimpleLock lock(&pThis->m_cs);
+		pThis->m_loading = true;
 		pThis->m_currLoading = pThis->m_currIndex;
-		CDisplayImagePtr image = pThis->m_imageRealSize;
+		CDisplayImagePtr displayImage = pThis->m_image;
 		lock.unlock();
-		assert(image != NULL);
+		assert(displayImage != NULL);
 
-		bool loaded = image->load(pThis);
+		bool loaded = displayImage->loadRealSize(pThis);
 
 		lock.lock(&pThis->m_cs);
+		pThis->m_loading = false;
 		if (!pThis->cancelLoading()) {
 			pThis->_OnImageLoaded(loaded);
 		}
+		pThis->m_currLoading = -1;
 	}
 	return 0;
 }
@@ -42,21 +45,30 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 		if (pThis->m_exit) {
 			break;
 		}
+		// Sleep(1000);
 
 		xl::CSimpleLock lock(&pThis->m_cs);
+		if (pThis->m_loading) {
+			continue;
+		}
+		pThis->m_resizing = true;
 		int currIndex = pThis->m_currIndex;
-		CDisplayImagePtr image = pThis->m_imageRealSize;
-		CDisplayImagePtr imageZoomed = image->clone();// = pThis->m_imageZoomed;
+		CDisplayImagePtr image = pThis->m_image;
+		if (pThis->m_image->getZoomedImage()) {
+			pThis->m_imageWhenResizing = pThis->m_image->getZoomedImage()->clone();
+		}
 		lock.unlock();
 
 		CRect rc = pThis->getClientRect();
-		CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), image->getImageSize());
+		CSize szImage(image->getRealWidth(), image->getRealHeight());
+		CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), szImage);
 
-		imageZoomed->resize(sz.cx, sz.cy);
+		image->loadZoomed(sz.cx, sz.cy, pThis);
 
 		lock.lock(&pThis->m_cs);
+		pThis->m_resizing = false;
+		pThis->m_imageWhenResizing.reset();
 		if (pThis->m_currIndex == currIndex) {
-			pThis->m_imageZoomed = imageZoomed;
 			pThis->_OnImageResized();
 		}
 	}
@@ -101,22 +113,23 @@ void CImageView::_TerminateThreads () {
 void CImageView::_ResetParameter () {
 	xl::CSimpleLock lock(&m_cs);
 	m_suitable = true;
-	m_zoom = 0;
-	m_imageZoomed.reset();
-	m_imageRealSize.reset();
+	m_zoomTo = m_zoomNow = 0;
+	if (m_image != NULL) {
+		m_image->clearRealSize();
+	}
+	m_image.reset();
 }
 
 void CImageView::_PrepareDisplay () {
-	CDisplayImagePtr image = m_pImageManager->getImage(m_currIndex);
 
 	xl::CSimpleLock lock(&m_cs);
-	assert(image);
-	assert(m_imageZoomed == NULL);
-	assert(m_imageRealSize == NULL);
-
-	m_imageZoomed = image->clone();
-	m_imageRealSize.reset(new CDisplayImage(m_imageZoomed->getFileName()));
-	_BeginLoad();
+	m_image = m_pImageManager->getImage(m_currIndex);
+	assert(m_image);
+	if (m_image->getRealSizeImage() == NULL) {
+		_BeginLoad();
+	} else if (m_image->getZoomedImage() == NULL) {
+		_BeginResize();
+	}
 }
 
 void CImageView::_BeginLoad () {
@@ -124,6 +137,17 @@ void CImageView::_BeginLoad () {
 }
 
 void CImageView::_BeginResize () {
+	CRect rc = getClientRect();
+	if (rc.Width() <= 0 || rc.Height() <= 0) {
+		return;
+	}
+
+	int w = m_image->getRealWidth();
+	int h = m_image->getRealHeight();
+	CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
+	if (sz.cx == w && sz.cy == h) {
+		return; // not needed
+	}
 	::ReleaseSemaphore(m_semaphoreResize, 1, NULL);
 }
 
@@ -146,18 +170,16 @@ void CImageView::_OnImageLoaded (bool success) {
 	assert(pWindow);
 	xl::CSimpleLock lock(&m_cs);
 
-	if (m_imageZoomed->getImageCount() == 0) {
-		// use the thumbnail first
-		m_imageZoomed->changeToThumbnail(m_imageRealSize);
-		invalidate();
+	if (m_image->getZoomedImage() == NULL) {
 		_BeginResize();
+		invalidate();
 	} else {
 		invalidate();
 	}
 }
 
 void CImageView::_OnImageResized () {
-	assert(m_imageZoomed->getImageCount() > 0);
+	assert(m_image->getZoomedImage()->getImageCount() > 0);
 	invalidate();
 }
 
@@ -168,6 +190,8 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_pImageManager(pImageManager)
 	, m_currIndex(-1)
 	, m_exit(false)
+	, m_loading(false)
+	, m_resizing(false)
 	, m_semaphoreLoad(NULL)
 	, m_threadLoad(NULL)
 {
@@ -188,32 +212,58 @@ CImageView::~CImageView (void) {
 }
 
 void CImageView::onSize () {
+	if (!m_suitable) {
+		return;
+	}
 	CRect rc = getClientRect();
-	assert(m_pImageManager);
-	m_pImageManager->onViewSizeChanged(rc);
+	if (rc.Width() > 0 && rc.Height() > 0) {
+		assert(m_pImageManager);
+		m_pImageManager->onViewSizeChanged(rc);
+		_BeginResize();
+	}
 }
 
 void CImageView::drawMe (HDC hdc) {
 	CRect rc = getClientRect();
 
 	xl::CSimpleLock lock(&m_cs);
-	if (m_imageZoomed != NULL && m_imageZoomed->getImageCount() > 0) {
+	if (m_image == NULL) {
+		return;
+	}
+	CImagePtr zoomedImage = m_image->getZoomedImage();
+	CImagePtr realsizeImage = m_image->getRealSizeImage();
+	if (zoomedImage == NULL && realsizeImage == NULL) {
+		return;
+	}
+	CImagePtr drawImage;
 
-		xl::ui::CDIBSectionPtr bitmap = m_imageZoomed->getImage(0);
-		bool isThumbnail = m_imageZoomed->isThumbnail();
+	if (m_resizing && m_imageWhenResizing) {
+		assert(m_imageWhenResizing && m_imageWhenResizing->getImageCount() > 0);
+		drawImage = m_imageWhenResizing;
+	} else if (zoomedImage && zoomedImage->getImageCount() > 0) {
+		drawImage = zoomedImage;
+	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
+		drawImage = realsizeImage;
+	}
+
+	if (drawImage != NULL) {
+		xl::ui::CDIBSectionPtr bitmap = drawImage->getImage(0);
 
 		xl::ui::CDCHandle dc(hdc);
 		xl::ui::CDC mdc;
 		mdc.CreateCompatibleDC(hdc);
 		HBITMAP oldBmp = mdc.SelectBitmap(*bitmap);
 
-		int w = isThumbnail ? m_imageZoomed->getRealWidth() : bitmap->getWidth();
-		int h = isThumbnail ? m_imageZoomed->getRealHeight() : bitmap->getHeight();
+		int w = m_image->getRealWidth(); // bitmap->getWidth();
+		int h = m_image->getRealHeight(); // bitmap->getHeight();
 		assert(w > 0 && h > 0);
-		if (isThumbnail) {
+
+		if (m_suitable) {
 			CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
 			w = sz.cx;
 			h = sz.cy;
+		} else {
+			assert(false); // TODO
 		}
 
 		int x = (rc.Width() - w) / 2;
@@ -233,9 +283,9 @@ void CImageView::drawMe (HDC hdc) {
 		x += rc.left;
 		y += rc.top;
 
-		if (m_imageZoomed->isThumbnail()) {
-			int oldMode = dc.SetStretchBltMode(HALFTONE);
-			dc.StretchBlt(x, y, w, h, mdc, 0, 0, bitmap->getWidth(), bitmap->getHeight(), SRCCOPY);
+		if (w != drawImage->getImageWidth() || h != drawImage->getImageHeight()) {
+			int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
+			dc.StretchBlt(x, y, w, h, mdc, 0, 0, drawImage->getImageWidth(), drawImage->getImageHeight(), SRCCOPY);
 			dc.SetStretchBltMode(oldMode);
 		} else {
 			dc.BitBlt(x, y, w, h, mdc, 0, 0, SRCCOPY);

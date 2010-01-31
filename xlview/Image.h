@@ -81,6 +81,7 @@ typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
 class CDisplayImage
 {
+	CRITICAL_SECTION m_cs;
 	xl::tstring m_fileName;
 
 	int m_widthReal;

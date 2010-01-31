@@ -252,13 +252,16 @@ CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 	, m_heightReal(-1)
 {
 	assert(xl::file_exists(m_fileName));
+	::InitializeCriticalSection(&m_cs);
 }
 
 CDisplayImage::~CDisplayImage ()
 {
+	::DeleteCriticalSection(&m_cs);
 }
 
 CDisplayImagePtr CDisplayImage::clone () {
+	xl::CSimpleLock lock(&m_cs);
 	CDisplayImage *pImage = new CDisplayImage(m_fileName);
 	CDisplayImagePtr image(pImage);
 
@@ -281,29 +284,24 @@ CDisplayImagePtr CDisplayImage::clone () {
 }
 
 bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel) {
-	if (m_imgZoomed != NULL 
-	    && m_imgZoomed->getImageWidth() >= width
-	    && m_imgZoomed->getImageHeight() >= height)
-	{
-		m_imgZoomed = m_imgZoomed->resize(width, height);
-	} else {
-		bool clearRealSize = !m_imgRealSize;
-		if (!m_imgRealSize && !loadRealSize(pCancel)) {
-			return false;
-		}
-		assert(m_imgRealSize->getImageCount() > 0);
-		m_imgZoomed.reset();
+	xl::CSimpleLock lock(&m_cs);
+	bool clearRealSize = !m_imgRealSize;
+	if (!m_imgRealSize && !loadRealSize(pCancel)) {
+		return false;
+	}
+	assert(m_imgRealSize->getImageCount() > 0);
+	m_imgZoomed.reset();
 
-		m_imgZoomed = m_imgRealSize->resize(width, height);
-		if (clearRealSize) {
-			this->clearRealSize ();
-		}
+	m_imgZoomed = m_imgRealSize->resize(width, height);
+	if (clearRealSize) {
+		this->clearRealSize ();
 	}
 
 	return (!!m_imgZoomed) && (m_imgZoomed->getImageCount() > 0);
 }
 
 bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
+	xl::CSimpleLock lock(&m_cs);
 	assert(m_imgRealSize == NULL);
 	assert(xl::file_exists(getFileName()));
 	CImage *pImage = new CImage();
@@ -323,6 +321,7 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 }
 
 bool CDisplayImage::loadThumbnail (CImage::ICancel *pCancel) {
+	xl::CSimpleLock lock(&m_cs);
 	if (m_imgZoomed) {
 		assert(m_imgZoomed->getImageCount() > 0);
 		m_imgThumbnail = m_imgZoomed->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
@@ -341,14 +340,17 @@ bool CDisplayImage::loadThumbnail (CImage::ICancel *pCancel) {
 }
 
 void CDisplayImage::clearThumbnail () {
+	xl::CSimpleLock lock(&m_cs);
 	m_imgThumbnail.reset();
 }
 
 void CDisplayImage::clearRealSize () {
+	xl::CSimpleLock lock(&m_cs);
 	m_imgRealSize.reset();
 }
 
 void CDisplayImage::clearZoomed () {
+	xl::CSimpleLock lock(&m_cs);
 	m_imgZoomed.reset();
 }
 

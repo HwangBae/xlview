@@ -80,7 +80,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 
 
 LRESULT CMainWindow::OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
-	if (m_ctrlMain) {
+	if (m_ctrlMain && wParam != SIZE_MINIMIZED) {
 		CRect rc;
 		GetClientRect(rc);
 		m_ctrlMain->layout(rc);
