@@ -57,7 +57,7 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 		if (pThis->m_image->getZoomedImage()) {
 			pThis->m_imageWhenResizing = pThis->m_image->getZoomedImage()->clone();
 		}
-		lock.unlock();
+		// lock.unlock();
 
 		CRect rc = pThis->getClientRect();
 		CSize szImage(image->getRealWidth(), image->getRealHeight());
@@ -65,7 +65,7 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 
 		image->loadZoomed(sz.cx, sz.cy, pThis);
 
-		lock.lock(&pThis->m_cs);
+		// lock.lock(&pThis->m_cs);
 		pThis->m_resizing = false;
 		pThis->m_imageWhenResizing.reset();
 		if (pThis->m_currIndex == currIndex) {

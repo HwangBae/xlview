@@ -98,6 +98,7 @@ bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 	int w = cinfo.image_width;
 	int h = cinfo.image_height;
 	assert(w > 0 && h > 0);
+	// int bit_counts = cinfo.out_color_space == JCS_GRAYSCALE ? 8 : 24;
 	dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
 
 	bool canceled = false;
@@ -116,7 +117,22 @@ bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 				break;
 			}
 			jpeg_read_scanlines(&cinfo, buffer, 1);
-			memcpy (p1, p2, row_stride);
+			if (cinfo.out_color_space == JCS_GRAYSCALE) {
+				unsigned char *dst = p1;
+				unsigned char *src = p2;
+				for (int i = 0; i < w; ++ i) {
+					unsigned char c = *src ++;
+					*dst ++ = c;
+					*dst ++ = c;
+					*dst ++ = c;
+				}
+			} else if (cinfo.out_color_space == JCS_RGB) {
+				memcpy (p1, p2, row_stride);
+			} else {
+				assert(false); // not suppported
+				canceled = true;
+				break;
+			}
 			p1 += win_row_stride;
 			++ lines;
 		}
