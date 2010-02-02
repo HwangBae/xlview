@@ -302,21 +302,25 @@ bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel)
 	}
 	assert(m_imgRealSize->getImageCount() > 0);
 	CImagePtr imgRealSize = m_imgRealSize;
+
 	xl::CTimerLogger logger(false, _T("** resize image from (%d - %d) to (%d - %d) cost"),
-		imgRealSize->getImageWidth(), imgRealSize->getImageHeight(),
-		width, height);
+		imgRealSize->getImageWidth(), imgRealSize->getImageHeight(), width, height);
+
 	m_imgZooming = imgRealSize->resize(width, height, false);
+
 	logger.log();
 	assert(!m_zooming);
 	m_zooming = true;
 	lock.unlock();
 
 	CImagePtr img = imgRealSize->resize(width, height);
+
 	lock.lock(&m_cs);
 	m_imgZoomed = img;
 	m_imgZooming.reset();
 	m_zooming = false;
 	lock.unlock();
+	
 	if (clearRealSize) {
 		this->clearRealSize ();
 	}
@@ -407,6 +411,7 @@ CImagePtr CDisplayImage::getThumbnail () {
 	unlock();
 	return img;
 }
+
 CImagePtr CDisplayImage::getZoomedImage () {
 	CImagePtr img;
 	lock();

@@ -16,7 +16,6 @@ protected:
 	int                m_currIndex;
 	int                m_currLoading;
 	CDisplayImagePtr   m_image;
-	CImagePtr          m_imageWhenResizing;
 
 	bool               m_suitable;
 	int                m_zoomTo;

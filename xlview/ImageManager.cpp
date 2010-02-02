@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <process.h>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
 #include "ImageManager.h"
@@ -10,6 +11,21 @@ static xl::tchar* s_extensions[] = {
 	_T("jpg"),
 	_T("jif"),
 };
+
+unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
+	assert(param);
+	CImageManager *pThis = (CImageManager *)param;
+	for (;;) {
+		::WaitForSingleObject(pThis->m_semaphoreWorking, INFINITE);
+		if (pThis->m_exit) {
+			break;
+		}
+
+	}
+	return 0;
+}
+
+
 
 bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
 	size_t index = fileName.rfind(_T('.'));
@@ -27,6 +43,31 @@ bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
 	return false;
 }
 
+void CImageManager::_CreateThreads () {
+	assert(m_semaphoreWorking == NULL);
+
+	xl::tchar name[128];
+	_stprintf_s(name, 128, _T("xlview::imagemanager::semaphore::load for 0x%08x on %d"), this, ::GetTickCount());
+	m_semaphoreWorking = ::CreateSemaphore(NULL, 0, 1, name);
+	m_threadWorking = (HANDLE)_beginthreadex(NULL, 0, _WorkingThread, this, 0, NULL);
+	if (m_threadWorking != INVALID_HANDLE_VALUE) {
+		SetThreadPriority(m_threadWorking, THREAD_PRIORITY_BELOW_NORMAL);
+	}
+}
+
+void CImageManager::_TerminateThreads () {
+	m_exit = true;
+	::ReleaseSemaphore(m_semaphoreWorking, 1, NULL);
+	HANDLE handles[] = {m_threadWorking};
+	if (::WaitForMultipleObjects(COUNT_OF(handles), handles, TRUE, 3000) == WAIT_TIMEOUT) {
+		for (int i = 0; i < COUNT_OF(handles); ++ i) {
+			TerminateThread(handles[i], 0);
+			::CloseHandle(handles[i]);
+		}
+	}
+	m_threadWorking = NULL;
+}
+
 // note, don't prefetch the 'current' image, 
 // left it to the view to fetch, to avoid conflict
 void CImageManager::_BeginPrefetch () {
@@ -42,12 +83,15 @@ void CImageManager::_BeginPrefetch () {
 CImageManager::CImageManager ()
 	: m_currIndex ((xl::uint)-1)
 	, m_rcView(0, 0, 0, 0)
+	, m_exit(false)
+	, m_semaphoreWorking(NULL)
+	, m_threadWorking(NULL)
 {
-
+	_CreateThreads();
 }
 
 CImageManager::~CImageManager () {
-
+	_TerminateThreads();
 }
 
 int CImageManager::getCurrIndex () const {
@@ -126,4 +170,8 @@ void CImageManager::onViewSizeChanged (CRect rc) {
 	}
 
 	_BeginPrefetch();
+}
+
+bool CImageManager::cancelLoading () {
+	return true;
 }

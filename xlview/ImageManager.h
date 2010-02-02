@@ -8,7 +8,9 @@
 #include "Image.h"
 
 
-class CImageManager : public xl::dp::CObserableT<CImageManager>
+class CImageManager 
+	: public xl::dp::CObserableT<CImageManager>
+	, public CImage::ICancel
 {
 protected:
 	typedef std::vector<CDisplayImagePtr>          _Images;
@@ -21,7 +23,18 @@ protected:
 
 	virtual bool _IsFileSupported (const xl::tstring &file);
 	void _AddFile (const xl::tstring &file);
+
+	// threads
+	bool               m_exit;
+	HANDLE             m_semaphoreWorking;
+	HANDLE             m_threadWorking;
+	static unsigned int __stdcall _WorkingThread (void *);
+
+	void _CreateThreads ();
+	void _TerminateThreads ();
+
 	void _BeginPrefetch ();
+
 
 public:
 	// event
@@ -46,6 +59,9 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
+
+	// CImage::ICancel
+	virtual bool cancelLoading ();
 };
 
 #endif

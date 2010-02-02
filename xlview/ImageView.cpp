@@ -275,6 +275,7 @@ void CImageView::drawMe (HDC hdc) {
 	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
 		drawImage = realsizeImage;
 	}
+	lock.unlock();
 
 	if (drawImage != NULL) {
 		xl::ui::CDIBSectionPtr bitmap = drawImage->getImage(0);
