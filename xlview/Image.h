@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <limits>
+#include <atltypes.h>
 #include "libxl/include/common.h"
 #include "libxl/include/string.h"
 #include "libxl/include/ui/DIBSection.h"
@@ -20,33 +21,26 @@ enum {
 //////////////////////////////////////////////////////////////////////////
 // CImage
 
-enum {
-	IT_RS,
-	IT_ZOOMED,
-	IT_ZOOMING,
-};
-
 class CImage
 {
 protected:
-	typedef struct BitmapAndDelay {
+	struct Frame {
 		enum {
 			DELAY_INFINITE = 0
 		};
 		xl::ui::CDIBSectionPtr bitmap;
 		xl::uint delay;
 
-		BitmapAndDelay ();
-		~BitmapAndDelay ();
-	} _BAD;
+		Frame ();
+		~Frame ();
+	};
 
-	typedef std::tr1::shared_ptr<_BAD>             _BADPtr;
-	typedef std::vector<_BADPtr>                   _BADContainer;
+	typedef std::tr1::shared_ptr<Frame>            _FramePtr;
+	typedef std::vector<_FramePtr>                 _FrameContainer;
 
-	_BADContainer                                  m_bads;
+	_FrameContainer                                m_bads;
 	int                                            m_width;
 	int                                            m_height;
-	int                                            m_type;
 
 	// void _CreateThumbnail ();
 
@@ -58,10 +52,8 @@ public:
 		virtual bool cancelLoading () = 0;
 	};
 
-	CImage (int type);
+	CImage ();
 	virtual ~CImage ();
-
-	void setType (int type);
 
 	bool load (const xl::tstring &file, ICancel *pCancel = NULL);
 	void operator = (const CImage &);
@@ -69,7 +61,7 @@ public:
 	void clear ();
 
 	xl::uint getImageCount () const;
-	SIZE getImageSize () const;
+	CSize getImageSize () const { return CSize(m_width, m_height); }
 	int getImageWidth () const { return m_width; }
 	int getImageHeight () const { return m_height; }
 
@@ -79,7 +71,7 @@ public:
 	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
 	CImagePtr resize (int width, int height, bool usehalftone = true);
 
-	static SIZE getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge = true);
+	static CSize getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge = true);
 };
 
 
@@ -90,8 +82,9 @@ typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
 class CDisplayImage
 {
-	CRITICAL_SECTION   m_cs;
+	mutable CRITICAL_SECTION                       m_cs;
 	bool               m_locked;
+	bool               m_zooming;
 	xl::tstring        m_fileName;
 
 	int                m_widthReal;
@@ -99,15 +92,16 @@ class CDisplayImage
 
 	CImagePtr          m_imgThumbnail;
 	CImagePtr          m_imgZoomed;
+	CImagePtr          m_imgZooming;
 	CImagePtr          m_imgRealSize;
 
 public:
+	void lock ();
+	void unlock ();
+
 	CDisplayImage (const xl::tstring &fileName);
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();
-
-	void lock ();
-	void unlock ();
 
 	bool loadZoomed (int width, int height, CImage::ICancel *pCancel = NULL);
 	bool loadRealSize (CImage::ICancel *pCancel = NULL);

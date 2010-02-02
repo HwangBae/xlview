@@ -46,6 +46,11 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 			break;
 		}
 
+		CRect rc = pThis->getClientRect();
+		if (rc.Width() <= 0 || rc.Height() <= 0) {
+			continue;
+		}
+
 		xl::CSimpleLock lock(&pThis->m_cs);
 		if (pThis->m_loading) {
 			continue;
@@ -56,20 +61,8 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 		pThis->m_resizing = true;
 		int currIndex = pThis->m_currIndex;
 		CDisplayImagePtr image = pThis->m_image;
-		if (image->getZoomedImage()) {
-			pThis->m_imageWhenResizing = image->getZoomedImage()->clone();
-			pThis->m_imageWhenResizing->setType(IT_ZOOMING);
-			xl::trace(_T("clone zoomed image\n"));
-		} else {
-			// must be first loaded
-			CSize sz = pThis->_GetZoomedSize();
-			pThis->m_imageWhenResizing = image->getRealSizeImage()->resize(sz.cx, sz.cy, false);
-			pThis->m_imageWhenResizing->setType(IT_ZOOMING);
-			xl::trace(_T("resize zoomed image from realsize\n"));
-		}
 		lock.unlock();
 
-		CRect rc = pThis->getClientRect();
 		CSize szImage(image->getRealWidth(), image->getRealHeight());
 		CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), szImage);
 
@@ -77,7 +70,6 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 
 		lock.lock(&pThis->m_cs);
 		pThis->m_resizing = false;
-		pThis->m_imageWhenResizing.reset();
 		if (pThis->m_currIndex == currIndex) {
 			pThis->_OnImageResized();
 		}
@@ -198,8 +190,6 @@ void CImageView::_OnIndexChanged () {
 		_ResetParameter();
 		_PrepareDisplay();
 		invalidate();
-
-		xl::trace(_T("new imaage (%d) =========================================\n"), newIndex);
 	}
 }
 
@@ -263,31 +253,27 @@ void CImageView::onSize () {
 }
 
 void CImageView::drawMe (HDC hdc) {
-	xl::CTimerLogger logger(_T("Paint cost"));
+	// xl::CTimerLogger logger(_T("Paint cost"));
 	CRect rc = getClientRect();
+	if (rc.Width() <= 0 || rc.Height() <= 0) {
+		return;
+	}
 
 	xl::CSimpleLock lock(&m_cs);
 	if (m_image == NULL) {
 		return;
 	}
 	CImagePtr zoomedImage = m_image->getZoomedImage();
-	xl::trace(_T("drawMe get zoomedImage (0x%08x) and cref = %d\n"), zoomedImage.get(), zoomedImage.use_count());
 	CImagePtr realsizeImage = m_image->getRealSizeImage();
 	if (zoomedImage == NULL && realsizeImage == NULL) {
 		return;
 	}
 	CImagePtr drawImage;
 
-	if (m_resizing && m_imageWhenResizing) {
-		assert(m_imageWhenResizing && m_imageWhenResizing->getImageCount() > 0);
-		drawImage = m_imageWhenResizing;
-		xl::trace(_T("***** use saved image for painting *****\n"));
-	} else if (zoomedImage && zoomedImage->getImageCount() > 0) {
+	if (zoomedImage && zoomedImage->getImageCount() > 0) {
 		drawImage = zoomedImage;
-		xl::trace(_T("use zoomed image for painting\n"));
 	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
 		drawImage = realsizeImage;
-		xl::trace(_T("use real size image for painting\n"));
 	}
 
 	if (drawImage != NULL) {

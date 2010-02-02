@@ -24,11 +24,11 @@ void safe_jpeg_error_exit (j_common_ptr cinfo) {
 
 //////////////////////////////////////////////////////////////////////////
 // CImage::BitmapAndDelay
-CImage::BitmapAndDelay::BitmapAndDelay () {
+CImage::Frame::Frame () {
 	delay = DELAY_INFINITE;
 }
 
-CImage::BitmapAndDelay::~BitmapAndDelay () {
+CImage::Frame::~Frame () {
 	delay = DELAY_INFINITE;
 }
 
@@ -36,37 +36,13 @@ CImage::BitmapAndDelay::~BitmapAndDelay () {
 //////////////////////////////////////////////////////////////////////////
 // CImage
 
-#if 0
-void CImage::_CreateThumbnail () {
-	// xl::CTimerLogger logger(_T("create thumbnail"));
 
-	assert(getImageCount() > 0);
-	assert(m_thumbnail == NULL);
-	xl::ui::CDIBSectionPtr dib = getImage(0);
-	SIZE szArea = {(int)(THUMBNAIL_WIDTH * 2.5), (int)(THUMBNAIL_HEIGHT * 2.5)};
-	SIZE szImage = getImageSize();
-	SIZE szThumbnail = getSuitableSize(szArea, szImage);
-
-	xl::ui::CDIBSectionPtr thumbnail = dib->resize(szThumbnail.cx, szThumbnail.cy, false);
-	szArea.cx = THUMBNAIL_WIDTH;
-	szArea.cy = THUMBNAIL_HEIGHT;
-	szThumbnail = getSuitableSize(szArea, szImage);
-	m_thumbnail = thumbnail->resize(szThumbnail.cx, szThumbnail.cy, true);
-}
-#endif
-
-
-CImage::CImage (int type) : m_width(-1), m_height(-1), m_type(type) {
-	xl::trace(_T("CImage(0x%08x) type(%d) created by thread(%d)\n"), this, m_type, ::GetCurrentThreadId());
+CImage::CImage () : m_width(-1), m_height(-1) {
+	XLTRACE(_T("CImage(0x%08x) created by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 CImage::~CImage () {
-	xl::trace(_T("CImage(0x%08x) type(%d) destroyed by thread(%d)\n"), this, m_type, ::GetCurrentThreadId());
-}
-
-void CImage::setType (int type) {
-	xl::trace(_T("CImage(0x%08x) type(%d) changed to %d thread(%d)\n"), this, m_type, type, ::GetCurrentThreadId());
-	m_type = type;
+	XLTRACE(_T("CImage(0x%08x) destroyed by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
@@ -134,7 +110,7 @@ bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 			} else if (cinfo.out_color_space == JCS_RGB) {
 				memcpy (p1, p2, row_stride);
 			} else {
-				assert(false); // not suppported
+				assert(false); // not supported
 				canceled = true;
 				break;
 			}
@@ -151,7 +127,7 @@ bool CImage::load (const xl::tstring &file, ICancel *pCancel) {
 	jpeg_destroy_decompress(&cinfo);
 
 	if (dib && !canceled) {
-		insertImage(dib, CImage::BitmapAndDelay::DELAY_INFINITE);
+		insertImage(dib, CImage::Frame::DELAY_INFINITE);
 		return true;
 	}
 
@@ -164,7 +140,7 @@ void CImage::operator = (const CImage &image) {
 	m_height = image.m_height;
 
 	for (size_t i = 0; i < image.m_bads.size(); ++ i) {
-		_BADPtr bad(new _BAD());
+		_FramePtr bad(new Frame());
 		bad->bitmap = image.m_bads[i]->bitmap->clone();
 		bad->delay = image.m_bads[i]->delay;
 
@@ -173,7 +149,7 @@ void CImage::operator = (const CImage &image) {
 }
 
 CImagePtr CImage::clone () {
-	CImage *pImage = new CImage(m_type);
+	CImage *pImage = new CImage();
 	CImagePtr image(pImage);
 
 	*pImage = *this; // call operator = ()
@@ -188,13 +164,6 @@ void CImage::clear () {
 
 xl::uint CImage::getImageCount () const {
 	return m_bads.size();
-}
-
-SIZE CImage::getImageSize () const {
-	SIZE sz;
-	sz.cx = m_width;
-	sz.cy = m_height;
-	return sz;
 }
 
 xl::uint CImage::getImageDelay (xl::uint index) const {
@@ -216,7 +185,7 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 		m_height = bitmap->getHeight();
 	}
 
-	_BADPtr bad(new _BAD());
+	_FramePtr bad(new Frame());
 	bad->bitmap = bitmap;
 	bad->delay = delay;
 	m_bads.push_back(bad);
@@ -227,8 +196,7 @@ CImagePtr CImage::resize (int width, int height, bool usehalftone) {
 		return clone();
 	} else {
 		assert(width > 0 && height > 0);
-		CImage *pImage = new CImage(IT_ZOOMED);
-		xl::trace(_T("Allocate new CImage (0x%08x) by (0x%08x) thread (%d)\n"), pImage, this, ::GetCurrentThreadId());
+		CImage *pImage = new CImage();
 		CImagePtr image(pImage);
 
 		pImage->m_width = width;
@@ -245,11 +213,10 @@ CImagePtr CImage::resize (int width, int height, bool usehalftone) {
 }
 
 
-SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge) {
-	SIZE sz;
+CSize CImage::getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge) {
+	CSize sz(1, 1);
 	if (szArea.cx * szArea.cy <= 0 || szImage.cx * szImage.cy <= 0) {
-		sz.cx = 1;
-		sz.cy = 1;
+
 	} else if (szArea.cx >= szImage.cx && szArea.cy >= szImage.cy && dontEnlarge) {
 		sz.cx = szImage.cx;
 		sz.cy = szImage.cy;
@@ -261,6 +228,13 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge) {
 		sz.cy = szImage.cy * szArea.cx / szImage.cx;
 	}
 
+	if (sz.cx <= 0) {
+		sz.cx = 1;
+	}
+	if (sz.cy <= 0) {
+		sz.cy = 1;
+	}
+
 	return sz;
 }
 
@@ -268,8 +242,21 @@ SIZE CImage::getSuitableSize (SIZE szArea, SIZE szImage, bool dontEnlarge) {
 //////////////////////////////////////////////////////////////////////////
 // CDisplayImage
 
+void CDisplayImage::lock () {
+	assert(!m_locked);
+	m_locked = true;
+	::EnterCriticalSection(&m_cs);
+}
+
+void CDisplayImage::unlock () {
+	::LeaveCriticalSection(&m_cs);
+	assert(m_locked);
+	m_locked = false;
+}
+
 CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 	: m_locked(false)
+	, m_zooming(false)
 	, m_fileName(fileName)
 	, m_widthReal(-1)
 	, m_heightReal(-1)
@@ -280,14 +267,15 @@ CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 
 CDisplayImage::~CDisplayImage ()
 {
+	assert(!m_locked);
 	::DeleteCriticalSection(&m_cs);
 }
 
 CDisplayImagePtr CDisplayImage::clone () {
 	xl::CSimpleLock lock(&m_cs);
+
 	CDisplayImage *pImage = new CDisplayImage(m_fileName);
 	CDisplayImagePtr image(pImage);
-
 	pImage->m_widthReal = m_widthReal;
 	pImage->m_heightReal = m_heightReal;
 
@@ -306,18 +294,6 @@ CDisplayImagePtr CDisplayImage::clone () {
 	return image;
 }
 
-void CDisplayImage::lock () {
-	assert(!m_locked);
-	m_locked = true;
-	::EnterCriticalSection(&m_cs);
-}
-
-void CDisplayImage::unlock () {
-	::LeaveCriticalSection(&m_cs);
-	assert(m_locked);
-	m_locked = false;
-}
-
 bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel) {
 	xl::CSimpleLock lock(&m_cs);
 	bool clearRealSize = !m_imgRealSize;
@@ -325,14 +301,21 @@ bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel)
 		return false;
 	}
 	assert(m_imgRealSize->getImageCount() > 0);
-	xl::trace(_T("Reset zoomed CImage (0x%08x) by (0x%08x) thread (%d)\n"), m_imgZoomed.get(), this, ::GetCurrentThreadId());
-	m_imgZoomed.reset();
 	CImagePtr imgRealSize = m_imgRealSize;
+	xl::CTimerLogger logger(false, _T("** resize image from (%d - %d) to (%d - %d) cost"),
+		imgRealSize->getImageWidth(), imgRealSize->getImageHeight(),
+		width, height);
+	m_imgZooming = imgRealSize->resize(width, height, false);
+	logger.log();
+	assert(!m_zooming);
+	m_zooming = true;
 	lock.unlock();
 
 	CImagePtr img = imgRealSize->resize(width, height);
 	lock.lock(&m_cs);
 	m_imgZoomed = img;
+	m_imgZooming.reset();
+	m_zooming = false;
 	lock.unlock();
 	if (clearRealSize) {
 		this->clearRealSize ();
@@ -346,7 +329,7 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 	assert(m_imgRealSize == NULL);
 	lock.unlock();
 	assert(xl::file_exists(getFileName()));
-	CImage *pImage = new CImage(IT_RS);
+	CImage *pImage = new CImage();
 	CImagePtr image(pImage);
 	if (!pImage->load(getFileName(), pCancel)) {
 		return false;
@@ -405,7 +388,9 @@ void CDisplayImage::clear () {
 
 
 xl::tstring CDisplayImage::getFileName () const {
-	return m_fileName;
+	xl::CSimpleLock lock(&m_cs);
+	xl::tstring fileName = m_fileName;
+	return fileName;
 }
 
 int CDisplayImage::getRealWidth () const {
@@ -423,8 +408,13 @@ CImagePtr CDisplayImage::getThumbnail () {
 	return img;
 }
 CImagePtr CDisplayImage::getZoomedImage () {
+	CImagePtr img;
 	lock();
-	CImagePtr img = m_imgZoomed;
+	if (m_zooming) {
+		img = m_imgZooming;
+	} else {
+		img = m_imgZoomed;
+	}
 	unlock();
 	return img;
 }
