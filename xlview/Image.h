@@ -20,6 +20,12 @@ enum {
 //////////////////////////////////////////////////////////////////////////
 // CImage
 
+enum {
+	IT_RS,
+	IT_ZOOMED,
+	IT_ZOOMING,
+};
+
 class CImage
 {
 protected:
@@ -40,6 +46,7 @@ protected:
 	_BADContainer                                  m_bads;
 	int                                            m_width;
 	int                                            m_height;
+	int                                            m_type;
 
 	// void _CreateThumbnail ();
 
@@ -51,8 +58,10 @@ public:
 		virtual bool cancelLoading () = 0;
 	};
 
-	CImage ();
+	CImage (int type);
 	virtual ~CImage ();
+
+	void setType (int type);
 
 	bool load (const xl::tstring &file, ICancel *pCancel = NULL);
 	void operator = (const CImage &);
@@ -81,11 +90,12 @@ typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
 class CDisplayImage
 {
-	CRITICAL_SECTION m_cs;
-	xl::tstring m_fileName;
+	CRITICAL_SECTION   m_cs;
+	bool               m_locked;
+	xl::tstring        m_fileName;
 
-	int m_widthReal;
-	int m_heightReal;
+	int                m_widthReal;
+	int                m_heightReal;
 
 	CImagePtr          m_imgThumbnail;
 	CImagePtr          m_imgZoomed;
@@ -95,6 +105,9 @@ public:
 	CDisplayImage (const xl::tstring &fileName);
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();
+
+	void lock ();
+	void unlock ();
 
 	bool loadZoomed (int width, int height, CImage::ICancel *pCancel = NULL);
 	bool loadRealSize (CImage::ICancel *pCancel = NULL);
@@ -109,9 +122,9 @@ public:
 	int getRealWidth () const;
 	int getRealHeight () const;
 
-	CImagePtr getThumbnail () { return m_imgThumbnail; }
-	CImagePtr getZoomedImage () { return m_imgZoomed; }
-	CImagePtr getRealSizeImage () { return m_imgRealSize; }
+	CImagePtr getThumbnail ();
+	CImagePtr getZoomedImage ();
+	CImagePtr getRealSizeImage ();
 };
 
 

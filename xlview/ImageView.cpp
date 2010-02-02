@@ -45,19 +45,29 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 		if (pThis->m_exit) {
 			break;
 		}
-		// Sleep(1000);
 
 		xl::CSimpleLock lock(&pThis->m_cs);
 		if (pThis->m_loading) {
+			continue;
+		} else if (pThis->m_image->getRealWidth() == -1 || pThis->m_image->getRealHeight() == -1) {
+			assert(false);
 			continue;
 		}
 		pThis->m_resizing = true;
 		int currIndex = pThis->m_currIndex;
 		CDisplayImagePtr image = pThis->m_image;
-		if (pThis->m_image->getZoomedImage()) {
-			pThis->m_imageWhenResizing = pThis->m_image->getZoomedImage()->clone();
+		if (image->getZoomedImage()) {
+			pThis->m_imageWhenResizing = image->getZoomedImage()->clone();
+			pThis->m_imageWhenResizing->setType(IT_ZOOMING);
+			xl::trace(_T("clone zoomed image\n"));
+		} else {
+			// must be first loaded
+			CSize sz = pThis->_GetZoomedSize();
+			pThis->m_imageWhenResizing = image->getRealSizeImage()->resize(sz.cx, sz.cy, false);
+			pThis->m_imageWhenResizing->setType(IT_ZOOMING);
+			xl::trace(_T("resize zoomed image from realsize\n"));
 		}
-		// lock.unlock();
+		lock.unlock();
 
 		CRect rc = pThis->getClientRect();
 		CSize szImage(image->getRealWidth(), image->getRealHeight());
@@ -65,7 +75,7 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 
 		image->loadZoomed(sz.cx, sz.cy, pThis);
 
-		// lock.lock(&pThis->m_cs);
+		lock.lock(&pThis->m_cs);
 		pThis->m_resizing = false;
 		pThis->m_imageWhenResizing.reset();
 		if (pThis->m_currIndex == currIndex) {
@@ -129,7 +139,32 @@ void CImageView::_PrepareDisplay () {
 		_BeginLoad();
 	} else if (m_image->getZoomedImage() == NULL) {
 		_BeginResize();
+	} else {
+		CSize sz = _GetZoomedSize();
+		CSize szImage = m_image->getZoomedImage()->getImageSize();
+		if (sz.cx != -1 && sz.cy != -1 && sz != szImage) {
+			_BeginResize();
+		}
 	}
+}
+
+CSize CImageView::_GetZoomedSize () {
+	xl::CSimpleLock lock(&m_cs);
+	CSize sz(-1, -1);
+	if (m_image) {
+		if (m_suitable) {
+			CRect rc = getClientRect();
+			if (rc.Width() > 0 && rc.Height() > 0) {
+				int w = m_image->getRealWidth();
+				int h = m_image->getRealHeight();
+				sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
+			}
+		} else {
+			assert(false); // TODO
+		}
+	}
+	assert(sz.cx != -1 && sz.cy != -1);
+	return sz;
 }
 
 void CImageView::_BeginLoad () {
@@ -141,10 +176,13 @@ void CImageView::_BeginResize () {
 	if (rc.Width() <= 0 || rc.Height() <= 0) {
 		return;
 	}
+	if (m_image->getRealWidth() <= 0 || m_image->getRealHeight() <= 0) {
+		return;
+	}
 
+	CSize sz = _GetZoomedSize();
 	int w = m_image->getRealWidth();
 	int h = m_image->getRealHeight();
-	CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
 	if (sz.cx == w && sz.cy == h) {
 		return; // not needed
 	}
@@ -160,20 +198,21 @@ void CImageView::_OnIndexChanged () {
 		_ResetParameter();
 		_PrepareDisplay();
 		invalidate();
+
+		xl::trace(_T("new imaage (%d) =========================================\n"), newIndex);
 	}
 }
 
 void CImageView::_OnImageLoaded (bool success) {
-	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
-	assert(pCtrlMain);
-	ATL::CWindow *pWindow = pCtrlMain->getWindow();
-	assert(pWindow);
-	xl::CSimpleLock lock(&m_cs);
-
 	if (m_image->getZoomedImage() == NULL) {
 		_BeginResize();
 		invalidate();
 	} else {
+		CSize sz = _GetZoomedSize();
+		CSize szImage = m_image->getZoomedImage()->getImageSize();
+		if (sz.cx != -1 && sz.cy != -1 && sz != szImage) {
+			_BeginResize();
+		}
 		invalidate();
 	}
 }
@@ -224,6 +263,7 @@ void CImageView::onSize () {
 }
 
 void CImageView::drawMe (HDC hdc) {
+	xl::CTimerLogger logger(_T("Paint cost"));
 	CRect rc = getClientRect();
 
 	xl::CSimpleLock lock(&m_cs);
@@ -231,6 +271,7 @@ void CImageView::drawMe (HDC hdc) {
 		return;
 	}
 	CImagePtr zoomedImage = m_image->getZoomedImage();
+	xl::trace(_T("drawMe get zoomedImage (0x%08x) and cref = %d\n"), zoomedImage.get(), zoomedImage.use_count());
 	CImagePtr realsizeImage = m_image->getRealSizeImage();
 	if (zoomedImage == NULL && realsizeImage == NULL) {
 		return;
@@ -240,10 +281,13 @@ void CImageView::drawMe (HDC hdc) {
 	if (m_resizing && m_imageWhenResizing) {
 		assert(m_imageWhenResizing && m_imageWhenResizing->getImageCount() > 0);
 		drawImage = m_imageWhenResizing;
+		xl::trace(_T("***** use saved image for painting *****\n"));
 	} else if (zoomedImage && zoomedImage->getImageCount() > 0) {
 		drawImage = zoomedImage;
+		xl::trace(_T("use zoomed image for painting\n"));
 	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
 		drawImage = realsizeImage;
+		xl::trace(_T("use real size image for painting\n"));
 	}
 
 	if (drawImage != NULL) {
@@ -259,7 +303,7 @@ void CImageView::drawMe (HDC hdc) {
 		assert(w > 0 && h > 0);
 
 		if (m_suitable) {
-			CSize sz = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), CSize(w, h));
+			CSize sz = _GetZoomedSize();
 			w = sz.cx;
 			h = sz.cy;
 		} else {

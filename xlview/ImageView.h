@@ -27,6 +27,7 @@ protected:
 
 	void _ResetParameter ();
 	void _PrepareDisplay ();
+	CSize _GetZoomedSize ();
 	void _BeginLoad ();
 	void _BeginResize ();
 	void _OnIndexChanged ();
