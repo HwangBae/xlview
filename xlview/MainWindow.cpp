@@ -107,6 +107,9 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 			TCHAR buf[128];
 			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
 			pSlider->setStyle(buf);
+
+			xl::tstring title = _T("xl / view - ") + m_images[_curr]->getFileName();
+			SetWindowText(title);
 		}
 		break;
 	default:

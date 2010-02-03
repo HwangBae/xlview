@@ -275,19 +275,13 @@ void CImageView::drawMe (HDC hdc) {
 	if (zoomedImage && zoomedImage->getImageCount() > 0) {
 		drawImage = zoomedImage;
 	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
+		XLTRACE(_T("*****************use realsize image****************\n"));
 		drawImage = realsizeImage;
 	} else if (thumbnail != NULL && thumbnail->getImageCount() > 0) {
 		drawImage = thumbnail;
 	}
-	lock.unlock();
 
 	if (drawImage != NULL) {
-		xl::ui::CDIBSectionPtr bitmap = drawImage->getImage(0);
-
-		xl::ui::CDCHandle dc(hdc);
-		xl::ui::CDC mdc;
-		mdc.CreateCompatibleDC(hdc);
-		HBITMAP oldBmp = mdc.SelectBitmap(*bitmap);
 
 		int w = m_image->getRealWidth(); // bitmap->getWidth();
 		int h = m_image->getRealHeight(); // bitmap->getHeight();
@@ -318,6 +312,13 @@ void CImageView::drawMe (HDC hdc) {
 		x += rc.left;
 		y += rc.top;
 
+
+		xl::ui::CDIBSectionPtr bitmap = drawImage->getImage(0);
+		xl::ui::CDCHandle dc(hdc);
+		xl::ui::CDC mdc;
+		mdc.CreateCompatibleDC(hdc);
+		HBITMAP oldBmp = mdc.SelectBitmap(*bitmap);
+
 		if (w != drawImage->getImageWidth() || h != drawImage->getImageHeight()) {
 			int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
 			dc.StretchBlt(x, y, w, h, mdc, 0, 0, drawImage->getImageWidth(), drawImage->getImageHeight(), SRCCOPY);
@@ -328,6 +329,11 @@ void CImageView::drawMe (HDC hdc) {
 
 		mdc.SelectBitmap(oldBmp);
 	}
+
+	lock.unlock(); // consider: drawMe() lock, and get the real size image, and unlock after that,
+		// then, switch to _ResizeThread, in CDisplayImage::resize(), it first create m_imgZooming,
+		// but it won't be used by drawMe() because the drawImage is gotten already,
+		// and when it resizing, the real size image is painting, so we'll get a black resized image.
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {

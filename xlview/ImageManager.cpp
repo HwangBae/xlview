@@ -25,7 +25,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			break;
 		}
 
-		xl::CSimpleLock lock(&pThis->m_cs);
+		xl::CSimpleLock lockThis(&pThis->m_cs);
 		CRect rc = pThis->m_rcView;
 		if (rc.Width() <= 0 || rc.Height() <= 0) {
 			continue;
@@ -35,7 +35,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 		int currIndex = (int)pThis->m_currIndex;
 		int count = (int)pThis->m_images.size();
 		DIRECTION direction = pThis->m_direction;
-		lock.unlock();
+		lockThis.unlock();
 
 		_Indexes indexes;
 		std::set<xl::uint> indexSet;
@@ -44,18 +44,19 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 		for (int i = 0; i < (int)indexes.size(); ++ i) {
 			xl::uint index = indexes[i];
 			indexSet.insert(index);
-			lock.lock(&pThis->m_cs);
+			lockThis.lock(&pThis->m_cs);
 			if (pThis->cancelLoading()) {
 				break;
 			}
 			CDisplayImagePtr displayImage = pThis->m_images.at(index);
-			lock.unlock();
+			lockThis.unlock();
 
 			CImagePtr zoomedImage = displayImage->getZoomedImage();
 			displayImage->lock();
 			if (zoomedImage == NULL) {
 				if (displayImage->getRealWidth() == -1) {
 					if (!displayImage->loadRealSize(pThis)) {
+						displayImage->clearRealSize();
 						displayImage->unlock();
 						if (pThis->cancelLoading()) {
 							break;
@@ -75,6 +76,14 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 					displayImage->unlock();
 					break;
 				}
+#if 0
+				CImagePtr zoomedImage = displayImage->getZoomedImage();
+				xl::ui::CDIBSectionPtr dib = zoomedImage->getImage(0);
+				unsigned char *data = (unsigned char *)dib->getData();
+				size_t len = dib->getStride();
+				// data += (dib->getHeight() * len / 2);
+				memset(data, 255, len);
+#endif
 				XLTRACE(_T("loaded: %s\n"), displayImage->getFileName().c_str());
 			} else {
 				assert(zoomedImage->getImageCount() > 0);
@@ -89,7 +98,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 
 		// clear zoomed image which is far from current, for saving memory usage
 		XLTRACE(_T("**begin clear zoomed images**\n"));
-		lock.lock(&pThis->m_cs);
+		lockThis.lock(&pThis->m_cs);
 		currIndex = pThis->m_currIndex;
 		indexSet.insert(currIndex);
 		for (size_t i = 0; i < (size_t)count && !pThis->cancelLoading(); ++ i) {
@@ -104,62 +113,64 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			}
 			image->unlock();
 		}
-		lock.unlock();
+		lockThis.unlock();
 
 		// get thumbnail
 	}
 	return 0;
 }
 
+/**
+ * the order is (for current index is N):
+ * forward: [N + 1, N - 1, N + 2, N + 3, ... N - 2, N - 3, ...]
+ * backward: [N -1, N + 1, N - 2, N - 3, ... N + 2, N + 3, ...]
+ */
+#define IM_CHECK_INDEX(index, count) \
+do {\
+	if (index < 0) {\
+		index += count;\
+	} else if (index >= count) {\
+		index -= count;\
+	}\
+} while(0)
+#define IM_INSERT_INDEX(container, index, getcount, count) \
+do {\
+	if (getcount == count - 1) {\
+		return;\
+	}\
+	IM_CHECK_INDEX(index, count);\
+	container.push_back(index);\
+	getcount ++;\
+} while (0)
 void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int count, DIRECTION direction, int range) {
 	indexes.reserve(2 * range);
 
 	int offset = direction == FORWARD ? 1 : -1;
 	int getcount = 0;
-	for (;;) {
-		int index;
 
-		if (getcount == count - 1) {
-			break;
-		}
-		index = currIndex + offset;
-		if (index < 0) {
-			index = count + index;
-		} else if (index >= count) {
-			index -= count;
-		}
-		indexes.push_back(index);
-		getcount ++;
+	int index = currIndex + offset;
+	IM_INSERT_INDEX(indexes, index, getcount, count); // N + 1
 
-		if (getcount == count - 1) {
-			break;
-		}
-		index = currIndex - offset;
-		if (index < 0) {
-			index = count + index;
-		} else if (index >= count) {
-			index -= count;
-		}
-		indexes.push_back(index);
-		getcount ++;
+	index = currIndex - offset;
+	IM_INSERT_INDEX(indexes, index, getcount, count); // N - 1
 
-
-		if (abs(offset) == PREFETCH_RANGE) {
-			break;
-		}
-
-		if (offset < 0) {
-			offset --;
-		} else {
-			offset ++;
-		}
+	int r = range - 1;
+	for (int i = 0; i < r; ++ i) {
+		index = currIndex + offset * (i + 2);
+		IM_INSERT_INDEX(indexes, index, getcount, count); // N + 1
 	}
 
+	offset = -offset;
+	for (int i = 0; i < r; ++ i) {
+		index = currIndex + offset * (i + 2);
+		IM_INSERT_INDEX(indexes, index, getcount, count); // N + 1
+	}
 
 	if (count > 2 * range + 1) {
 		assert(indexes.size() == 2 * range);
 	}
 }
+#undef IM_CHECK_INDEX
 
 
 

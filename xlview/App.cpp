@@ -10,16 +10,20 @@ class CXLViewApp : public xl::ui::CApplicationT<CXLViewApp>
 	CMainWindow m_wndMain;
 public:
 
-	virtual HWND createMainWindow (LPCTSTR, int) {
+	virtual HWND createMainWindow (LPCTSTR lpctCmdLine, int) {
 		xl::tstring title = _T("xl / view");
 		HWND hWnd = m_wndMain.Create(NULL, 0, title);
 		if (hWnd != NULL) {
-			xl::tchar *p = _tgetenv(_T("xlview_test_image"));
+			const xl::tchar *p = lpctCmdLine;
+			if (_tcslen(p) == 0) {
+				p = _tgetenv(_T("xlview_test_image"));
+			}
 			if (!p) {
 				::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
 				return hWnd;
 			}
 			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
+			// p = _T("D:\\test_images\\1\\1.jpg");
 			m_wndMain.setFile(p);
 		}
 		return hWnd;
