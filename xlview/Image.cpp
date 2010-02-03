@@ -243,19 +243,18 @@ CSize CImage::getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge) {
 // CDisplayImage
 
 void CDisplayImage::lock () {
-	assert(!m_locked);
-	m_locked = true;
 	::EnterCriticalSection(&m_cs);
+	m_lockedCount ++;
 }
 
 void CDisplayImage::unlock () {
+	assert(m_lockedCount > 0);
+	m_lockedCount --;
 	::LeaveCriticalSection(&m_cs);
-	assert(m_locked);
-	m_locked = false;
 }
 
 CDisplayImage::CDisplayImage (const xl::tstring &fileName)
-	: m_locked(false)
+	: m_lockedCount(0)
 	, m_zooming(false)
 	, m_fileName(fileName)
 	, m_widthReal(-1)
@@ -267,7 +266,7 @@ CDisplayImage::CDisplayImage (const xl::tstring &fileName)
 
 CDisplayImage::~CDisplayImage ()
 {
-	assert(!m_locked);
+	assert(!m_lockedCount);
 	::DeleteCriticalSection(&m_cs);
 }
 
@@ -346,6 +345,11 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 			m_heightReal = pImage->getImageHeight();
 		}
 		m_imgRealSize = image;
+
+		if (m_imgThumbnail == NULL) {
+			m_imgThumbnail = image->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
+		}
+
 		return true;
 	}
 }

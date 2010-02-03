@@ -13,11 +13,17 @@ class CImageManager
 	, public CImage::ICancel
 {
 protected:
+	enum DIRECTION {
+		FORWARD,
+		BACKWARD
+	};
+	typedef std::vector<xl::uint>                  _Indexes;
 	typedef std::vector<CDisplayImagePtr>          _Images;
 	typedef _Images::iterator                      _ImageIter;
 	xl::tstring        m_directory; // include the last '\\'
 	_Images            m_images;
 	xl::uint           m_currIndex;
+	DIRECTION          m_direction;
 
 	CRect              m_rcView;
 
@@ -25,10 +31,14 @@ protected:
 	void _AddFile (const xl::tstring &file);
 
 	// threads
-	bool               m_exit;
-	HANDLE             m_semaphoreWorking;
-	HANDLE             m_threadWorking;
+	bool                                           m_exit;
+	bool                                           m_indexChanged;
+	bool                                           m_sizeChanged;
+	mutable CRITICAL_SECTION                       m_cs;
+	HANDLE                                         m_semaphoreWorking;
+	HANDLE                                         m_threadWorking;
 	static unsigned int __stdcall _WorkingThread (void *);
+	static void _GetPrefetchIndexes (_Indexes &indexes, int currIndex, int count, DIRECTION direction, int range);
 
 	void _CreateThreads ();
 	void _TerminateThreads ();
@@ -41,6 +51,7 @@ public:
 	enum EVENT 
 		: xl::dp::CObserableT<CImageManager>::EVT
 	{
+		EVT_READY,                             // param (pointer for total count)
 		EVT_INDEX_CHANGED,                     // param not used
 		EVT_NUM
 	};

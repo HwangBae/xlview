@@ -101,6 +101,7 @@ void CImageView::_TerminateThreads () {
 	::ReleaseSemaphore(m_semaphoreResize, 1, NULL);
 	HANDLE handles[] = {m_threadLoad, m_threadResize};
 	if (::WaitForMultipleObjects(COUNT_OF(handles), handles, TRUE, 3000) == WAIT_TIMEOUT) {
+		XLTRACE(_T("CImageView::_TerminateThreads() wait for thread exit failed\n"));
 		for (int i = 0; i < COUNT_OF(handles); ++ i) {
 			TerminateThread(handles[i], 0);
 			::CloseHandle(handles[i]);
@@ -265,7 +266,8 @@ void CImageView::drawMe (HDC hdc) {
 	}
 	CImagePtr zoomedImage = m_image->getZoomedImage();
 	CImagePtr realsizeImage = m_image->getRealSizeImage();
-	if (zoomedImage == NULL && realsizeImage == NULL) {
+	CImagePtr thumbnail = m_image->getThumbnail();
+	if (zoomedImage == NULL && realsizeImage == NULL && thumbnail == NULL) {
 		return;
 	}
 	CImagePtr drawImage;
@@ -274,6 +276,8 @@ void CImageView::drawMe (HDC hdc) {
 		drawImage = zoomedImage;
 	} else if (realsizeImage && realsizeImage->getImageCount() > 0 && !m_loading) {
 		drawImage = realsizeImage;
+	} else if (thumbnail != NULL && thumbnail->getImageCount() > 0) {
+		drawImage = thumbnail;
 	}
 	lock.unlock();
 

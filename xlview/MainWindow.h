@@ -12,7 +12,10 @@
 class CMainWindow 
 	: public xl::ui::CMainWindowT<CMainWindow>
 	, public CImageManager
+	, public CImageManager::IObserver
 {
+
+	xl::ui::CControlPtr                            m_slider;
 
 public:
 	virtual void onCommand (xl::uint id, xl::ui::CControlPtr ctrl);
@@ -29,6 +32,9 @@ public:
 
 	LRESULT OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
+
+	// CImageManager::IObserver
+	virtual void onEvent (CImageManager::IObserver::EVT evt, void *param);
 };
 
 #endif

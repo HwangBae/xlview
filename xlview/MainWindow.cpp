@@ -18,6 +18,9 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr ctrl) {
 }
 
 void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tracking, xl::ui::CControlPtr ctrl) {
+	assert(id == m_slider->getID());
+
+	setIndex(_curr);
 }
 
 
@@ -56,6 +59,8 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 
 
 LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+	subscribe(this);
+
 	bHandled = false;
 	if (m_ctrlMain == NULL) {
 		m_ctrlMain.reset(new xl::ui::CCtrlMain(this, this));
@@ -69,8 +74,9 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	m_ctrlMain->insertChild(xl::ui::CControlPtr(pView));
 	
 	xl::ui::CControlPtr slider(new CSlider());
-	slider->setStyle(_T("margin:0 auto; py:bottom; width:480; float:true;"));
-	slider->setStyle(_T("slider:0 100 0;"));
+	m_slider = slider;
+	slider->setStyle(_T("margin:0 auto; py:bottom; width:480; float:true; disable:true"));
+	slider->setStyle(_T("slider:0 0 0;"));
 	m_ctrlMain->insertChild(slider);
 
 	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
@@ -86,4 +92,24 @@ LRESULT CMainWindow::OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHand
 		m_ctrlMain->layout(rc);
 	}
 	return 0;
+}
+
+void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
+	xl::ui::CCtrlSlider *pSlider = (xl::ui::CCtrlSlider *)m_slider.get();
+	assert(pSlider != NULL);
+	switch (evt) {
+	case CImageManager::EVT_READY:
+		pSlider->setStyle(_T("disable:false"));
+		break;
+	case CImageManager::EVT_INDEX_CHANGED:
+		{
+			int _min = 0, _max = m_images.size() - 1, _curr = m_currIndex;
+			TCHAR buf[128];
+			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
+			pSlider->setStyle(buf);
+		}
+		break;
+	default:
+		break;
+	}
 }

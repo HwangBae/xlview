@@ -83,7 +83,7 @@ typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 class CDisplayImage
 {
 	mutable CRITICAL_SECTION                       m_cs;
-	bool               m_locked;
+	int                m_lockedCount;
 	bool               m_zooming;
 	xl::tstring        m_fileName;
 

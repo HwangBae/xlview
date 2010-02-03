@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <process.h>
+#include <vector>
+#include <set>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
 #include "ImageManager.h"
@@ -12,6 +14,8 @@ static xl::tchar* s_extensions[] = {
 	_T("jif"),
 };
 
+static const int PREFETCH_RANGE = 5;
+
 unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 	assert(param);
 	CImageManager *pThis = (CImageManager *)param;
@@ -21,8 +25,140 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			break;
 		}
 
+		xl::CSimpleLock lock(&pThis->m_cs);
+		CRect rc = pThis->m_rcView;
+		if (rc.Width() <= 0 || rc.Height() <= 0) {
+			continue;
+		}
+		pThis->m_indexChanged = false;
+		pThis->m_sizeChanged = false;
+		int currIndex = (int)pThis->m_currIndex;
+		int count = (int)pThis->m_images.size();
+		DIRECTION direction = pThis->m_direction;
+		lock.unlock();
+
+		_Indexes indexes;
+		std::set<xl::uint> indexSet;
+		_GetPrefetchIndexes(indexes, currIndex, count, direction, PREFETCH_RANGE);
+
+		for (int i = 0; i < (int)indexes.size(); ++ i) {
+			xl::uint index = indexes[i];
+			indexSet.insert(index);
+			lock.lock(&pThis->m_cs);
+			if (pThis->cancelLoading()) {
+				break;
+			}
+			CDisplayImagePtr displayImage = pThis->m_images.at(index);
+			lock.unlock();
+
+			CImagePtr zoomedImage = displayImage->getZoomedImage();
+			displayImage->lock();
+			if (zoomedImage == NULL) {
+				if (displayImage->getRealWidth() == -1) {
+					if (!displayImage->loadRealSize(pThis)) {
+						displayImage->unlock();
+						if (pThis->cancelLoading()) {
+							break;
+						} else {
+							continue;
+						}
+						break;
+					}
+				}
+				CSize szArea(rc.Width(), rc.Height());
+				CSize szImage(displayImage->getRealWidth(), displayImage->getRealHeight());
+				CSize sz = CImage::getSuitableSize(szArea, szImage);
+
+				bool zoomed = displayImage->loadZoomed(sz.cx, sz.cy, pThis);
+				displayImage->clearRealSize();
+				if (!zoomed && pThis->cancelLoading()) {
+					displayImage->unlock();
+					break;
+				}
+				XLTRACE(_T("loaded: %s\n"), displayImage->getFileName().c_str());
+			} else {
+				assert(zoomedImage->getImageCount() > 0);
+			}
+			displayImage->unlock();
+		} // for ()
+
+		if (pThis->cancelLoading()) {
+			XLTRACE(_T("**cancel begin clear zoomed images**\n"));
+			continue;
+		}
+
+		// clear zoomed image which is far from current, for saving memory usage
+		XLTRACE(_T("**begin clear zoomed images**\n"));
+		lock.lock(&pThis->m_cs);
+		currIndex = pThis->m_currIndex;
+		indexSet.insert(currIndex);
+		for (size_t i = 0; i < (size_t)count && !pThis->cancelLoading(); ++ i) {
+			CDisplayImagePtr image = pThis->m_images[i];
+			image->lock();
+			if (indexSet.find(i) == indexSet.end()) {
+				if (image->getZoomedImage() != NULL) {
+					XLTRACE(_T("clear zoomed image (%s) (%d) from (%d)\n"),
+						image->getFileName().c_str(), i, currIndex);
+					image->clearZoomed();
+				}
+			}
+			image->unlock();
+		}
+		lock.unlock();
+
+		// get thumbnail
 	}
 	return 0;
+}
+
+void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int count, DIRECTION direction, int range) {
+	indexes.reserve(2 * range);
+
+	int offset = direction == FORWARD ? 1 : -1;
+	int getcount = 0;
+	for (;;) {
+		int index;
+
+		if (getcount == count - 1) {
+			break;
+		}
+		index = currIndex + offset;
+		if (index < 0) {
+			index = count + index;
+		} else if (index >= count) {
+			index -= count;
+		}
+		indexes.push_back(index);
+		getcount ++;
+
+		if (getcount == count - 1) {
+			break;
+		}
+		index = currIndex - offset;
+		if (index < 0) {
+			index = count + index;
+		} else if (index >= count) {
+			index -= count;
+		}
+		indexes.push_back(index);
+		getcount ++;
+
+
+		if (abs(offset) == PREFETCH_RANGE) {
+			break;
+		}
+
+		if (offset < 0) {
+			offset --;
+		} else {
+			offset ++;
+		}
+	}
+
+
+	if (count > 2 * range + 1) {
+		assert(indexes.size() == 2 * range);
+	}
 }
 
 
@@ -45,6 +181,7 @@ bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
 
 void CImageManager::_CreateThreads () {
 	assert(m_semaphoreWorking == NULL);
+	::InitializeCriticalSection(&m_cs);
 
 	xl::tchar name[128];
 	_stprintf_s(name, 128, _T("xlview::imagemanager::semaphore::load for 0x%08x on %d"), this, ::GetTickCount());
@@ -60,12 +197,15 @@ void CImageManager::_TerminateThreads () {
 	::ReleaseSemaphore(m_semaphoreWorking, 1, NULL);
 	HANDLE handles[] = {m_threadWorking};
 	if (::WaitForMultipleObjects(COUNT_OF(handles), handles, TRUE, 3000) == WAIT_TIMEOUT) {
+		XLTRACE(_T("CImageManager::_TerminateThreads() wait for thread exit failed\n"));
 		for (int i = 0; i < COUNT_OF(handles); ++ i) {
 			TerminateThread(handles[i], 0);
 			::CloseHandle(handles[i]);
 		}
 	}
 	m_threadWorking = NULL;
+
+	::DeleteCriticalSection(&m_cs);
 }
 
 // note, don't prefetch the 'current' image, 
@@ -74,6 +214,8 @@ void CImageManager::_BeginPrefetch () {
 	if (m_rcView.Width() <= 0 || m_rcView.Height() <= 0) {
 		return;
 	}
+
+	::ReleaseSemaphore(m_semaphoreWorking, 1, NULL);
 }
 
 
@@ -81,9 +223,12 @@ void CImageManager::_BeginPrefetch () {
 //////////////////////////////////////////////////////////////////////////
 
 CImageManager::CImageManager ()
-	: m_currIndex ((xl::uint)-1)
+	: m_currIndex((xl::uint)-1)
+	, m_direction(CImageManager::FORWARD)
 	, m_rcView(0, 0, 0, 0)
 	, m_exit(false)
+	, m_indexChanged(false)
+	, m_sizeChanged(false)
 	, m_semaphoreWorking(NULL)
 	, m_threadWorking(NULL)
 {
@@ -118,6 +263,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 	HANDLE hFind = ::FindFirstFile(pattern, &wfd);
 	if (hFind != INVALID_HANDLE_VALUE) {
 
+		xl::CSimpleLock lock(&m_cs);
 		do {
 			if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				continue; // skip directory
@@ -132,6 +278,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 			}
 
 		} while (::FindNextFile(hFind, &wfd));
+		lock.unlock();
 
 		::FindClose(hFind);
 		
@@ -140,26 +287,56 @@ void CImageManager::setFile (const xl::tstring &file) {
 		::MessageBox(NULL, _T("Can not find any image file"), 0, MB_OK);
 	}
 
-	if (new_index == -1 && m_images.size() > 0) {
+	size_t count = m_images.size();
+	_TriggerEvent(EVT_READY, &count);
+
+	if (new_index == -1 && count > 0) {
 		new_index = 0;
 	}
 	setIndex(new_index);
 }
 
 void CImageManager::setIndex (int index) {
+	xl::CSimpleLock lock(&m_cs);
 	if (m_currIndex != index) {
+		if ((int)m_currIndex < index) {
+			m_direction = FORWARD;
+		} else {
+			m_direction = BACKWARD;
+		}
+
+		// check marginal condiction
+		if (m_currIndex == 0 && index == m_images.size() - 1) {
+			m_direction = BACKWARD;
+		} else if (m_currIndex == m_images.size() - 1 && index == 0) {
+			m_direction = FORWARD;
+		}
+
+		if (m_currIndex != (xl::uint)-1) {
+			m_indexChanged = true;
+		} else {
+			m_direction = FORWARD;
+		}
+
+
 		m_currIndex = index;
+
 		_BeginPrefetch();
 		_TriggerEvent(EVT_INDEX_CHANGED, NULL);
 	}
 }
 
 CDisplayImagePtr CImageManager::getImage (int index) {
+	xl::CSimpleLock lock(&m_cs);
 	assert(index >= 0 && index < getImageCount());
-	return m_images[index];
+	CDisplayImagePtr image = m_images[index];
+	lock.unlock();
+	return image;
 }
 
 void CImageManager::onViewSizeChanged (CRect rc) {
+
+	xl::CSimpleLock lock(&m_cs);
 	if (m_rcView == rc) {
 		return;
 	}
@@ -169,9 +346,10 @@ void CImageManager::onViewSizeChanged (CRect rc) {
 		return;
 	}
 
+	m_sizeChanged = true;
 	_BeginPrefetch();
 }
 
 bool CImageManager::cancelLoading () {
-	return true;
+	return m_indexChanged || m_sizeChanged || m_exit;
 }
