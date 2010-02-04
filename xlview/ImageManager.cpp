@@ -333,7 +333,7 @@ void CImageManager::setIndex (int index) {
 		m_currIndex = index;
 
 		_BeginPrefetch();
-		_TriggerEvent(EVT_INDEX_CHANGED, NULL);
+		_TriggerEvent(EVT_INDEX_CHANGED, &index);
 	}
 }
 

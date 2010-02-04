@@ -103,7 +103,9 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
 		{
-			int _min = 0, _max = m_images.size() - 1, _curr = m_currIndex;
+			assert(param != NULL);
+			int _min = 0, _max = m_images.size() - 1, _curr = *(int *)param;
+			assert(_curr == m_currIndex);
 			TCHAR buf[128];
 			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
 			pSlider->setStyle(buf);

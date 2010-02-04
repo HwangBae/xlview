@@ -329,9 +329,10 @@ bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel)
 
 bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 	xl::CSimpleLock lock(&m_cs);
+	xl::tstring fileName = getFileName();
 	assert(m_imgRealSize == NULL);
 	lock.unlock();
-	assert(xl::file_exists(getFileName()));
+	assert(xl::file_exists(fileName));
 	CImage *pImage = new CImage();
 	CImagePtr image(pImage);
 	if (!pImage->load(getFileName(), pCancel)) {
@@ -345,6 +346,7 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 			m_heightReal = pImage->getImageHeight();
 		}
 		m_imgRealSize = image;
+		XLTRACE(_T("****** load image on 0x%08x (%s)\n"), pImage, fileName.c_str());
 
 		if (m_imgThumbnail == NULL) {
 			m_imgThumbnail = image->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);

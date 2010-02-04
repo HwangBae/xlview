@@ -29,7 +29,7 @@ protected:
 	CSize _GetZoomedSize ();
 	void _BeginLoad ();
 	void _BeginResize ();
-	void _OnIndexChanged ();
+	void _OnIndexChanged (int idx);
 	void _OnImageLoaded (bool success);
 	void _OnImageResized ();
 

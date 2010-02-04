@@ -9,6 +9,9 @@
 //////////////////////////////////////////////////////////////////////////
 // static
 
+// TODO: BUG, consider, curr is 5, now loading 5 (release semaphore), 
+// then fast move to 4 (release semaphore), then move back to 5,
+// then the loading finished,  and get the semaphore, it try to load the same image
 unsigned int __stdcall CImageView::_LoadThread (void *param) {
 	assert(param);
 	CImageView *pThis = (CImageView *)param;
@@ -174,18 +177,22 @@ void CImageView::_BeginResize () {
 	}
 
 	CSize sz = _GetZoomedSize();
-	int w = m_image->getRealWidth();
-	int h = m_image->getRealHeight();
-	if (sz.cx == w && sz.cy == h) {
-		return; // not needed
+	CImagePtr zoomedPtr = m_image->getZoomedImage();
+	if (zoomedPtr != NULL && sz == zoomedPtr->getImageSize()) {
+		int w = m_image->getRealWidth();
+		int h = m_image->getRealHeight();
+		if (sz.cx == w && sz.cy == h) {
+			return; // not needed
+		}
 	}
 	::ReleaseSemaphore(m_semaphoreResize, 1, NULL);
 }
 
 
-void CImageView::_OnIndexChanged () {
+void CImageView::_OnIndexChanged (int idx) {
 	xl::CSimpleLock lock(&m_cs);
-	int newIndex = m_pImageManager->getCurrIndex();
+	int newIndex = idx;
+	assert(idx == m_pImageManager->getCurrIndex());
 	if (newIndex != m_currIndex) {
 		m_currIndex = newIndex;
 		_ResetParameter();
@@ -280,6 +287,7 @@ void CImageView::drawMe (HDC hdc) {
 	} else if (thumbnail != NULL && thumbnail->getImageCount() > 0) {
 		drawImage = thumbnail;
 	}
+	lock.unlock();
 
 	if (drawImage != NULL) {
 
@@ -317,7 +325,7 @@ void CImageView::drawMe (HDC hdc) {
 		xl::ui::CDCHandle dc(hdc);
 		xl::ui::CDC mdc;
 		mdc.CreateCompatibleDC(hdc);
-		HBITMAP oldBmp = mdc.SelectBitmap(*bitmap);
+		xl::ui::CDIBSectionHelper selector(bitmap, mdc);
 
 		if (w != drawImage->getImageWidth() || h != drawImage->getImageHeight()) {
 			int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
@@ -326,14 +334,7 @@ void CImageView::drawMe (HDC hdc) {
 		} else {
 			dc.BitBlt(x, y, w, h, mdc, 0, 0, SRCCOPY);
 		}
-
-		mdc.SelectBitmap(oldBmp);
 	}
-
-	lock.unlock(); // consider: drawMe() lock, and get the real size image, and unlock after that,
-		// then, switch to _ResizeThread, in CDisplayImage::resize(), it first create m_imgZooming,
-		// but it won't be used by drawMe() because the drawImage is gotten already,
-		// and when it resizing, the real size image is painting, so we'll get a black resized image.
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
@@ -352,7 +353,8 @@ void CImageView::onLostCapture () {
 void CImageView::onEvent (EVT evt, void *param) {
 	switch (evt) {
 	case CImageManager::EVT_INDEX_CHANGED:
-		_OnIndexChanged();
+		assert(param != NULL);
+		_OnIndexChanged(*(int *)param);
 		break;
 	default:
 		break;

@@ -52,7 +52,7 @@ public:
 		: xl::dp::CObserableT<CImageManager>::EVT
 	{
 		EVT_READY,                             // param (pointer for total count)
-		EVT_INDEX_CHANGED,                     // param not used
+		EVT_INDEX_CHANGED,                     // param (pointer for the current index)
 		EVT_NUM
 	};
 
