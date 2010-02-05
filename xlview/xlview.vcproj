@@ -183,6 +183,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ImageLoader.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ImageManager.cpp"
 				>
 			</File>
@@ -206,6 +210,10 @@
 			>
 			<File
 				RelativePath=".\Image.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageLoader.h"
 				>
 			</File>
 			<File
