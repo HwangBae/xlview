@@ -25,7 +25,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			break;
 		}
 
-		xl::CSimpleLock lockThis(&pThis->m_cs);
+		xl::CScopeLock lockThis(pThis);
 		CRect rc = pThis->m_rcView;
 		if (rc.Width() <= 0 || rc.Height() <= 0) {
 			continue;
@@ -44,7 +44,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 		for (int i = 0; i < (int)indexes.size(); ++ i) {
 			xl::uint index = indexes[i];
 			indexSet.insert(index);
-			lockThis.lock(&pThis->m_cs);
+			lockThis.lock(pThis);
 			if (pThis->cancelLoading()) {
 				break;
 			}
@@ -98,7 +98,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 
 		// clear zoomed image which is far from current, for saving memory usage
 		XLTRACE(_T("**begin clear zoomed images**\n"));
-		lockThis.lock(&pThis->m_cs);
+		lockThis.lock(pThis);
 		currIndex = pThis->m_currIndex;
 		indexSet.insert(currIndex);
 		for (size_t i = 0; i < (size_t)count && !pThis->cancelLoading(); ++ i) {
@@ -192,7 +192,6 @@ bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
 
 void CImageManager::_CreateThreads () {
 	assert(m_semaphoreWorking == NULL);
-	::InitializeCriticalSection(&m_cs);
 
 	xl::tchar name[128];
 	_stprintf_s(name, 128, _T("xlview::imagemanager::semaphore::load for 0x%08x on %d"), this, ::GetTickCount());
@@ -216,7 +215,6 @@ void CImageManager::_TerminateThreads () {
 	}
 	m_threadWorking = NULL;
 
-	::DeleteCriticalSection(&m_cs);
 }
 
 // note, don't prefetch the 'current' image, 
@@ -274,7 +272,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 	HANDLE hFind = ::FindFirstFile(pattern, &wfd);
 	if (hFind != INVALID_HANDLE_VALUE) {
 
-		xl::CSimpleLock lock(&m_cs);
+		xl::CScopeLock lock(this);;
 		do {
 			if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				continue; // skip directory
@@ -308,7 +306,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 }
 
 void CImageManager::setIndex (int index) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	if (m_currIndex != index) {
 		if ((int)m_currIndex < index) {
 			m_direction = FORWARD;
@@ -338,7 +336,7 @@ void CImageManager::setIndex (int index) {
 }
 
 CDisplayImagePtr CImageManager::getImage (int index) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	assert(index >= 0 && index < getImageCount());
 	CDisplayImagePtr image = m_images[index];
 	lock.unlock();
@@ -347,7 +345,7 @@ CDisplayImagePtr CImageManager::getImage (int index) {
 
 void CImageManager::onViewSizeChanged (CRect rc) {
 
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	if (m_rcView == rc) {
 		return;
 	}

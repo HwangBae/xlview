@@ -4,6 +4,7 @@
 #include <atltypes.h>
 #include "libxl/include/common.h"
 #include "libxl/include/string.h"
+#include "libxl/include/utilities.h"
 #include "libxl/include/dp/Observable.h"
 #include "Image.h"
 
@@ -11,6 +12,7 @@
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
 	, public CImage::ICancel
+	, public xl::CUserLock
 {
 protected:
 	enum DIRECTION {
@@ -34,7 +36,6 @@ protected:
 	bool                                           m_exit;
 	bool                                           m_indexChanged;
 	bool                                           m_sizeChanged;
-	mutable CRITICAL_SECTION                       m_cs;
 	HANDLE                                         m_semaphoreWorking;
 	HANDLE                                         m_threadWorking;
 	static unsigned int __stdcall _WorkingThread (void *);

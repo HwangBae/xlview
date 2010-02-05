@@ -21,7 +21,7 @@ unsigned int __stdcall CImageView::_LoadThread (void *param) {
 			break;
 		}
 
-		xl::CSimpleLock lock(&pThis->m_cs);
+		xl::CScopeLock lock(pThis);
 		pThis->m_loading = true;
 		pThis->m_currLoading = pThis->m_currIndex;
 		CDisplayImagePtr displayImage = pThis->m_image;
@@ -30,7 +30,7 @@ unsigned int __stdcall CImageView::_LoadThread (void *param) {
 
 		bool loaded = displayImage->loadRealSize(pThis);
 
-		lock.lock(&pThis->m_cs);
+		lock.lock(pThis);
 		pThis->m_loading = false;
 		if (!pThis->cancelLoading()) {
 			pThis->_OnImageLoaded(loaded);
@@ -54,7 +54,7 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 			continue;
 		}
 
-		xl::CSimpleLock lock(&pThis->m_cs);
+		xl::CScopeLock lock(pThis);
 		if (pThis->m_loading) {
 			continue;
 		} else if (pThis->m_image->getRealWidth() == -1 || pThis->m_image->getRealHeight() == -1) {
@@ -71,7 +71,7 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 
 		image->loadZoomed(sz.cx, sz.cy, pThis);
 
-		lock.lock(&pThis->m_cs);
+		lock.lock(pThis);
 		pThis->m_resizing = false;
 		if (pThis->m_currIndex == currIndex) {
 			pThis->_OnImageResized();
@@ -86,7 +86,6 @@ unsigned int __stdcall CImageView::_ResizeThread (void *param) {
 
 void CImageView::_CreateThreads () {
 	assert(m_semaphoreLoad == NULL);
-	::InitializeCriticalSection(&m_cs);
 
 	xl::tchar name[128];
 	_stprintf_s(name, 128, _T("xlview::imageview::semaphore::load for 0x%08x on %d"), this, ::GetTickCount());
@@ -111,13 +110,11 @@ void CImageView::_TerminateThreads () {
 		}
 	}
 	m_threadResize = m_threadLoad = NULL;
-
-	::DeleteCriticalSection(&m_cs);
 }
 
 
 void CImageView::_ResetParameter () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	m_suitable = true;
 	m_zoomTo = m_zoomNow = 0;
 	if (m_image != NULL) {
@@ -128,7 +125,7 @@ void CImageView::_ResetParameter () {
 
 void CImageView::_PrepareDisplay () {
 
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	m_image = m_pImageManager->getImage(m_currIndex);
 	assert(m_image);
 	if (m_image->getRealSizeImage() == NULL) {
@@ -145,7 +142,7 @@ void CImageView::_PrepareDisplay () {
 }
 
 CSize CImageView::_GetZoomedSize () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	CSize sz(-1, -1);
 	if (m_image) {
 		if (m_suitable) {
@@ -190,7 +187,7 @@ void CImageView::_BeginResize () {
 
 
 void CImageView::_OnIndexChanged (int idx) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	int newIndex = idx;
 	assert(idx == m_pImageManager->getCurrIndex());
 	if (newIndex != m_currIndex) {
@@ -267,7 +264,7 @@ void CImageView::drawMe (HDC hdc) {
 		return;
 	}
 
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	if (m_image == NULL) {
 		return;
 	}

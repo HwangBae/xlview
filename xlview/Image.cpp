@@ -242,36 +242,21 @@ CSize CImage::getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge) {
 //////////////////////////////////////////////////////////////////////////
 // CDisplayImage
 
-void CDisplayImage::lock () {
-	::EnterCriticalSection(&m_cs);
-	m_lockedCount ++;
-}
-
-void CDisplayImage::unlock () {
-	assert(m_lockedCount > 0);
-	m_lockedCount --;
-	::LeaveCriticalSection(&m_cs);
-}
-
 CDisplayImage::CDisplayImage (const xl::tstring &fileName)
-	: m_lockedCount(0)
-	, m_zooming(false)
+	: m_zooming(false)
 	, m_fileName(fileName)
 	, m_widthReal(-1)
 	, m_heightReal(-1)
 {
 	assert(xl::file_exists(m_fileName));
-	::InitializeCriticalSection(&m_cs);
 }
 
 CDisplayImage::~CDisplayImage ()
 {
-	assert(!m_lockedCount);
-	::DeleteCriticalSection(&m_cs);
 }
 
 CDisplayImagePtr CDisplayImage::clone () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 
 	CDisplayImage *pImage = new CDisplayImage(m_fileName);
 	CDisplayImagePtr image(pImage);
@@ -294,7 +279,7 @@ CDisplayImagePtr CDisplayImage::clone () {
 }
 
 bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	bool clearRealSize = !m_imgRealSize;
 	if (!m_imgRealSize && !loadRealSize(pCancel)) {
 		return false;
@@ -314,7 +299,7 @@ bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel)
 
 	CImagePtr img = imgRealSize->resize(width, height);
 
-	lock.lock(&m_cs);
+	lock.lock(this);
 	m_imgZoomed = img;
 	m_imgZooming.reset();
 	m_zooming = false;
@@ -328,7 +313,7 @@ bool CDisplayImage::loadZoomed (int width, int height, CImage::ICancel *pCancel)
 }
 
 bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	xl::tstring fileName = getFileName();
 	assert(m_imgRealSize == NULL);
 	lock.unlock();
@@ -338,7 +323,7 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 	if (!pImage->load(getFileName(), pCancel)) {
 		return false;
 	} else {
-		lock.lock(&m_cs);
+		lock.lock(this);
 		if (m_widthReal != -1 && m_heightReal != -1) {
 			assert(m_widthReal == pImage->getImageWidth() && m_heightReal == pImage->getImageHeight());
 		} else {
@@ -357,7 +342,7 @@ bool CDisplayImage::loadRealSize (CImage::ICancel *pCancel) {
 }
 
 bool CDisplayImage::loadThumbnail (CImage::ICancel *pCancel) {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	if (m_imgZoomed) {
 		assert(m_imgZoomed->getImageCount() > 0);
 		m_imgThumbnail = m_imgZoomed->resize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, false);
@@ -376,17 +361,17 @@ bool CDisplayImage::loadThumbnail (CImage::ICancel *pCancel) {
 }
 
 void CDisplayImage::clearThumbnail () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	m_imgThumbnail.reset();
 }
 
 void CDisplayImage::clearRealSize () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	m_imgRealSize.reset();
 }
 
 void CDisplayImage::clearZoomed () {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	m_imgZoomed.reset();
 }
 
@@ -398,7 +383,7 @@ void CDisplayImage::clear () {
 
 
 xl::tstring CDisplayImage::getFileName () const {
-	xl::CSimpleLock lock(&m_cs);
+	xl::CScopeLock lock(this);;
 	xl::tstring fileName = m_fileName;
 	return fileName;
 }

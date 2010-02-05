@@ -80,10 +80,8 @@ public:
 class CDisplayImage;
 typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
-class CDisplayImage
+class CDisplayImage : public xl::CUserLock
 {
-	mutable CRITICAL_SECTION                       m_cs;
-	int                m_lockedCount;
 	bool               m_zooming;
 	xl::tstring        m_fileName;
 
@@ -96,9 +94,6 @@ class CDisplayImage
 	CImagePtr          m_imgRealSize;
 
 public:
-	void lock ();
-	void unlock ();
-
 	CDisplayImage (const xl::tstring &fileName);
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();

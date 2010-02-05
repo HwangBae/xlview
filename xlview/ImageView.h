@@ -10,6 +10,7 @@ class CImageView
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
 	, public CImage::ICancel
+	, public xl::CUserLock
 {
 protected:
 	CImageManager     *m_pImageManager;
@@ -42,7 +43,6 @@ protected:
 	HANDLE             m_threadLoad;
 	HANDLE             m_semaphoreResize;
 	HANDLE             m_threadResize;
-	CRITICAL_SECTION   m_cs;
 	static unsigned int __stdcall _LoadThread (void *);
 	static unsigned int __stdcall _ResizeThread (void *);
 
