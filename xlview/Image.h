@@ -27,8 +27,8 @@ protected:
 		enum {
 			DELAY_INFINITE = 0
 		};
-		xl::ui::CDIBSectionPtr bitmap;
-		xl::uint delay;
+		xl::ui::CDIBSectionPtr                 bitmap;
+		xl::uint                               delay;
 
 		Frame ();
 		~Frame ();
@@ -37,11 +37,9 @@ protected:
 	typedef std::tr1::shared_ptr<Frame>            _FramePtr;
 	typedef std::vector<_FramePtr>                 _FrameContainer;
 
-	_FrameContainer                                m_bads;
+	_FrameContainer                                m_frames;
 	int                                            m_width;
 	int                                            m_height;
-
-	// void _CreateThumbnail ();
 
 public:
 	enum {

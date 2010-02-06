@@ -36,12 +36,12 @@ void CImage::operator = (const CImage &image) {
 	m_width = image.m_width;
 	m_height = image.m_height;
 
-	for (size_t i = 0; i < image.m_bads.size(); ++ i) {
+	for (size_t i = 0; i < image.m_frames.size(); ++ i) {
 		_FramePtr bad(new Frame());
-		bad->bitmap = image.m_bads[i]->bitmap->clone();
-		bad->delay = image.m_bads[i]->delay;
+		bad->bitmap = image.m_frames[i]->bitmap->clone();
+		bad->delay = image.m_frames[i]->delay;
 
-		m_bads.push_back(bad);
+		m_frames.push_back(bad);
 	}
 }
 
@@ -56,21 +56,21 @@ CImagePtr CImage::clone () {
 
 void CImage::clear () {
 	m_height = m_width = -1;
-	m_bads.clear();
+	m_frames.clear();
 }
 
 xl::uint CImage::getImageCount () const {
-	return m_bads.size();
+	return m_frames.size();
 }
 
 xl::uint CImage::getImageDelay (xl::uint index) const {
 	assert(index < getImageCount());
-	return m_bads[index]->delay;
+	return m_frames[index]->delay;
 }
 
 xl::ui::CDIBSectionPtr CImage::getImage (xl::uint index) {
 	assert(index < getImageCount());
-	return m_bads[index]->bitmap;
+	return m_frames[index]->bitmap;
 }
 
 void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
@@ -85,7 +85,7 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	_FramePtr bad(new Frame());
 	bad->bitmap = bitmap;
 	bad->delay = delay;
-	m_bads.push_back(bad);
+	m_frames.push_back(bad);
 }
 
 CImagePtr CImage::resize (int width, int height, bool usehalftone) {
@@ -99,10 +99,10 @@ CImagePtr CImage::resize (int width, int height, bool usehalftone) {
 		pImage->m_width = width;
 		pImage->m_height = height;
 
-		for (size_t i = 0; i < m_bads.size(); ++ i) {
-			xl::ui::CDIBSectionPtr src = m_bads[i]->bitmap;
+		for (size_t i = 0; i < m_frames.size(); ++ i) {
+			xl::ui::CDIBSectionPtr src = m_frames[i]->bitmap;
 			xl::ui::CDIBSectionPtr dib = src->resize(width, height, usehalftone, src->getBitCounts());
-			pImage->insertImage(dib, m_bads[i]->delay);
+			pImage->insertImage(dib, m_frames[i]->delay);
 		}
 
 		return image;
