@@ -9,7 +9,8 @@
 class CDisplayImage;
 typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
 
-class CDisplayImage : public xl::CUserLock
+class CDisplayImage 
+	: public xl::CUserLock
 {
 	bool               m_zooming;
 	xl::tstring        m_fileName;
