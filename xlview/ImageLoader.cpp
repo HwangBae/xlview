@@ -53,7 +53,7 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *p
 	}
 	std::string header = data.substr(0, 256);
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
-		if ((*it)->checkHeader(header)) {
+		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
 			return (*it)->load(data, pCancel);
 		}
 	}
@@ -116,7 +116,13 @@ public:
 	}
 
 	virtual bool checkHeader (const std::string &header) {
-		return header.find("JFIF") == 6 || header.find("Exif") == 6;
+		// return header.find("JFIF") == 6 || header.find("Exif") == 6;
+		if (header.length() < 3) {
+			return false;
+		} else {
+			const unsigned char *data = (const unsigned char *)header.c_str();
+			return *data ++ == 0xFF && *data ++ == 0xD8 && *data ++ == 0xFF;
+		}
 	}
 
 	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) {
