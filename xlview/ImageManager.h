@@ -30,7 +30,6 @@ protected:
 
 	CRect              m_rcView;
 
-	virtual bool _IsFileSupported (const xl::tstring &file);
 	void _AddFile (const xl::tstring &file);
 
 	// threads

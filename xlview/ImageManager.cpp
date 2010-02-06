@@ -8,12 +8,6 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-static xl::tchar* s_extensions[] = {
-	_T("jpeg"),
-	_T("jpg"),
-	_T("jif"),
-};
-
 static const int PREFETCH_RANGE = 5;
 
 unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
@@ -76,14 +70,6 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 					displayImage->unlock();
 					break;
 				}
-#if 0
-				CImagePtr zoomedImage = displayImage->getZoomedImage();
-				xl::ui::CDIBSectionPtr dib = zoomedImage->getImage(0);
-				unsigned char *data = (unsigned char *)dib->getData();
-				size_t len = dib->getStride();
-				// data += (dib->getHeight() * len / 2);
-				memset(data, 255, len);
-#endif
 				XLTRACE(_T("loaded: %s\n"), displayImage->getFileName().c_str());
 			} else {
 				assert(zoomedImage->getImageCount() > 0);
@@ -174,22 +160,6 @@ void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int c
 
 
 
-bool CImageManager::_IsFileSupported (const xl::tstring &fileName) {
-	size_t index = fileName.rfind(_T('.'));
-	if (index != fileName.npos) {
-		xl::tstring ext = fileName.substr(index + 1);
-		bool match = false;
-		for (int i = 0; i < COUNT_OF(s_extensions); ++ i) {
-			if (_tcsicmp(ext.c_str(), s_extensions[i]) == 0) {
-				match = true;
-				break;
-			}
-		}
-		return match;
-	}
-	return false;
-}
-
 void CImageManager::_CreateThreads () {
 	assert(m_semaphoreWorking == NULL);
 
@@ -271,6 +241,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 	memset(&wfd, 0, sizeof(wfd));
 	HANDLE hFind = ::FindFirstFile(pattern, &wfd);
 	if (hFind != INVALID_HANDLE_VALUE) {
+		CImageLoader *pLoader = CImageLoader::getInstance();
 
 		xl::CScopeLock lock(this);;
 		do {
@@ -279,7 +250,7 @@ void CImageManager::setFile (const xl::tstring &file) {
 			}
 
 			xl::tstring name = m_directory + wfd.cFileName;
-			if (_IsFileSupported(name)) {
+			if (pLoader->isFileSupported(name)) {
 				if (_tcsicmp(wfd.cFileName, fileName) == 0) {
 					new_index = (int)m_images.size();
 				}

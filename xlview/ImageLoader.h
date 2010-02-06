@@ -20,7 +20,8 @@ public:
 // loader for image types
 class IImageLoaderPlugin {
 public:
-	virtual xl::tstring getName () = 0;
+	virtual xl::tstring getPluginName () = 0;
+	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool checkHeader (const std::string &header) = 0;
 	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) = 0;
 };
@@ -41,6 +42,7 @@ public:
 	static CImageLoader* getInstance ();
 
 	void registerPlugin (ImageLoaderPluginRawPtr);
+	bool isFileSupported (const xl::tstring &fileName);
 	CImagePtr load (const xl::tstring &fileName, IImageLoaderCancel *pCancel = NULL);
 };
 

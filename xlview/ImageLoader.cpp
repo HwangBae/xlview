@@ -22,13 +22,23 @@ CImageLoader* CImageLoader::getInstance () {
 
 void CImageLoader::registerPlugin (ImageLoaderPluginRawPtr plugin) {
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
-		if ((*it)->getName() == plugin->getName()) {
+		if ((*it)->getPluginName() == plugin->getPluginName()) {
 			assert(false);
 			return;
 		}
 	}
 
 	m_plugins.push_back(plugin);
+}
+
+bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
+	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
+		if ((*it)->checkFileName(fileName)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *pCancel) {
@@ -79,12 +89,34 @@ public:
 		XLTRACE(_T("Jpeg decoder destroyed!\n"));
 	}
 
-	virtual xl::tstring getName () {
+	virtual xl::tstring getPluginName () {
 		return _T("JPEG Loader");
 	}
 
+	virtual bool checkFileName (const xl::tstring &fileName) {
+		static xl::tchar *extensions[] = {
+			_T("jpg"),
+			_T("jpeg"),
+			_T("jif"),
+		};
+
+		size_t offset = fileName.rfind(_T("."));
+		if (offset == fileName.npos) { // no extension
+			return false;
+		}
+
+		const xl::tchar *ext = &fileName.c_str()[offset + 1];
+		for (int i = 0; i < COUNT_OF(extensions); ++ i) {
+			if (_tcsicmp(ext, extensions[i]) == 0) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	virtual bool checkHeader (const std::string &header) {
-		return header.find("JFIF") == 6;
+		return header.find("JFIF") == 6 || header.find("Exif") == 6;
 	}
 
 	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) {

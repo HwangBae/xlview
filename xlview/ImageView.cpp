@@ -325,7 +325,7 @@ void CImageView::drawMe (HDC hdc) {
 		xl::ui::CDIBSectionHelper selector(bitmap, mdc);
 
 		if (w != drawImage->getImageWidth() || h != drawImage->getImageHeight()) {
-			int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
+			int oldMode = dc.SetStretchBltMode(drawImage == thumbnail ? HALFTONE : COLORONCOLOR);
 			dc.StretchBlt(x, y, w, h, mdc, 0, 0, drawImage->getImageWidth(), drawImage->getImageHeight(), SRCCOPY);
 			dc.SetStretchBltMode(oldMode);
 		} else {
