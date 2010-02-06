@@ -32,7 +32,7 @@ unsigned int __stdcall CImageView::_LoadThread (void *param) {
 
 		lock.lock(pThis);
 		pThis->m_loading = false;
-		if (!pThis->cancelLoading()) {
+		if (!pThis->shouldCancel()) {
 			pThis->_OnImageLoaded(loaded);
 		}
 		pThis->m_currLoading = -1;
@@ -358,6 +358,6 @@ void CImageView::onEvent (EVT evt, void *param) {
 	}
 }
 
-bool CImageView::cancelLoading () {
+bool CImageView::shouldCancel () {
 	return (m_currIndex != m_currLoading) || m_exit;
 }

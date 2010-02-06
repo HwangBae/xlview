@@ -1,7 +1,8 @@
 #ifndef XLVIEW_IMAGE_VIEW_H
 #define XLVIEW_IMAGE_VIEW_H
 #include "libxl/include/ui/Control.h"
-#include "Image.h"
+#include "DisplayImage.h"
+#include "ImageLoader.h"
 #include "ImageManager.h"
 
 #define ID_VIEW  99
@@ -9,7 +10,7 @@
 class CImageView 
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
-	, public CImage::ICancel
+	, public IImageLoaderCancel
 	, public xl::CUserLock
 {
 protected:
@@ -65,8 +66,8 @@ public:
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
 
-	// CImage::ICancel
-	virtual bool cancelLoading ();
+	// IImageLoaderCancel
+	virtual bool shouldCancel ();
 };
 
 #endif

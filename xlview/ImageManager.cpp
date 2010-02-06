@@ -45,7 +45,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			xl::uint index = indexes[i];
 			indexSet.insert(index);
 			lockThis.lock(pThis);
-			if (pThis->cancelLoading()) {
+			if (pThis->shouldCancel()) {
 				break;
 			}
 			CDisplayImagePtr displayImage = pThis->m_images.at(index);
@@ -58,7 +58,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 					if (!displayImage->loadRealSize(pThis)) {
 						displayImage->clearRealSize();
 						displayImage->unlock();
-						if (pThis->cancelLoading()) {
+						if (pThis->shouldCancel()) {
 							break;
 						} else {
 							continue;
@@ -72,7 +72,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 
 				bool zoomed = displayImage->loadZoomed(sz.cx, sz.cy, pThis);
 				displayImage->clearRealSize();
-				if (!zoomed && pThis->cancelLoading()) {
+				if (!zoomed && pThis->shouldCancel()) {
 					displayImage->unlock();
 					break;
 				}
@@ -91,7 +91,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 			displayImage->unlock();
 		} // for ()
 
-		if (pThis->cancelLoading()) {
+		if (pThis->shouldCancel()) {
 			XLTRACE(_T("**cancel begin clear zoomed images**\n"));
 			continue;
 		}
@@ -101,7 +101,7 @@ unsigned int __stdcall CImageManager::_WorkingThread (void *param) {
 		lockThis.lock(pThis);
 		currIndex = pThis->m_currIndex;
 		indexSet.insert(currIndex);
-		for (size_t i = 0; i < (size_t)count && !pThis->cancelLoading(); ++ i) {
+		for (size_t i = 0; i < (size_t)count && !pThis->shouldCancel(); ++ i) {
 			CDisplayImagePtr image = pThis->m_images[i];
 			image->lock();
 			if (indexSet.find(i) == indexSet.end()) {
@@ -359,6 +359,6 @@ void CImageManager::onViewSizeChanged (CRect rc) {
 	_BeginPrefetch();
 }
 
-bool CImageManager::cancelLoading () {
+bool CImageManager::shouldCancel () {
 	return m_indexChanged || m_sizeChanged || m_exit;
 }

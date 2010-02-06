@@ -8,7 +8,6 @@
 #include "libxl/include/string.h"
 #include "libxl/include/ui/DIBSection.h"
 
-
 class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
@@ -45,17 +44,13 @@ protected:
 	// void _CreateThumbnail ();
 
 public:
-	//////////////////////////////////////////////////////////////////////////
-	// interface for canceling image loading
-	class ICancel {
-	public:
-		virtual bool cancelLoading () = 0;
+	enum {
+		DELAY_INFINITE = Frame::DELAY_INFINITE
 	};
 
 	CImage ();
 	virtual ~CImage ();
 
-	bool load (const xl::tstring &file, ICancel *pCancel = NULL);
 	void operator = (const CImage &);
 	CImagePtr clone ();
 	void clear ();
@@ -74,47 +69,6 @@ public:
 	static CSize getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge = true);
 };
 
-
-//////////////////////////////////////////////////////////////////////////
-// CDisplayImage
-class CDisplayImage;
-typedef std::tr1::shared_ptr<CDisplayImage>            CDisplayImagePtr;
-
-class CDisplayImage : public xl::CUserLock
-{
-	bool               m_zooming;
-	xl::tstring        m_fileName;
-
-	int                m_widthReal;
-	int                m_heightReal;
-
-	CImagePtr          m_imgThumbnail;
-	CImagePtr          m_imgZoomed;
-	CImagePtr          m_imgZooming;
-	CImagePtr          m_imgRealSize;
-
-public:
-	CDisplayImage (const xl::tstring &fileName);
-	virtual ~CDisplayImage ();
-	CDisplayImagePtr clone ();
-
-	bool loadZoomed (int width, int height, CImage::ICancel *pCancel = NULL);
-	bool loadRealSize (CImage::ICancel *pCancel = NULL);
-	bool loadThumbnail (CImage::ICancel *pCancel = NULL);
-
-	void clearThumbnail ();
-	void clearRealSize ();
-	void clearZoomed ();
-	void clear ();
-
-	xl::tstring getFileName () const;
-	int getRealWidth () const;
-	int getRealHeight () const;
-
-	CImagePtr getThumbnail ();
-	CImagePtr getZoomedImage ();
-	CImagePtr getRealSizeImage ();
-};
 
 
 

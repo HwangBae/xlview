@@ -6,12 +6,13 @@
 #include "libxl/include/string.h"
 #include "libxl/include/utilities.h"
 #include "libxl/include/dp/Observable.h"
-#include "Image.h"
+#include "DisplayImage.h"
+#include "ImageLoader.h"
 
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
-	, public CImage::ICancel
+	, public IImageLoaderCancel
 	, public xl::CUserLock
 {
 protected:
@@ -72,8 +73,8 @@ public:
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
 
-	// CImage::ICancel
-	virtual bool cancelLoading ();
+	// IImageLoaderCancel
+	virtual bool shouldCancel ();
 };
 
 #endif
