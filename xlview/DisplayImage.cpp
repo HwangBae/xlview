@@ -85,8 +85,13 @@ bool CDisplayImage::loadRealSize (IImageLoaderCancel *pCancel) {
 	if (!image) {
 		return false;
 	} else {
-		CImage *pImage = image.get();
 		lock.lock(this);
+		if (pCancel->shouldCancel()) {
+			lock.unlock();
+			return false;
+		}
+
+		CImage *pImage = image.get();
 		if (m_widthReal != -1 && m_heightReal != -1) {
 			assert(m_widthReal == pImage->getImageWidth() && m_heightReal == pImage->getImageHeight());
 		} else {

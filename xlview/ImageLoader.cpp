@@ -7,6 +7,8 @@
 #include "libxl/include/utilities.h"
 #include "ImageLoader.h"
 
+static const int IMAGE_HEADER_LENGTH = 256;
+
 CImageLoader::CImageLoader () {
 
 }
@@ -47,14 +49,46 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *p
 		return CImagePtr();
 	}
 
-	size_t header_length = 256;
+	size_t header_length = IMAGE_HEADER_LENGTH;
 	if (header_length > data.length()) {
 		header_length = data.length();
 	}
-	std::string header = data.substr(0, 256);
+	std::string header = data.substr(0, IMAGE_HEADER_LENGTH);
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
 			return (*it)->load(data, pCancel);
+		}
+	}
+
+	return CImagePtr();
+}
+
+CImagePtr CImageLoader::loadThumbnail (const xl::tstring &fileName, int tw, int th, IImageLoaderCancel *pCancel) {
+	std::string data;
+	if (!file_get_contents(fileName, data)) {
+		return CImagePtr();
+	}
+
+	size_t header_length = IMAGE_HEADER_LENGTH;
+	if (header_length > data.length()) {
+		header_length = data.length();
+	}
+	std::string header = data.substr(0, IMAGE_HEADER_LENGTH);
+	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
+		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
+			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, pCancel);
+			if (thumbnail != NULL) {
+				return thumbnail;
+			} else if (!pCancel->shouldCancel()) {
+				CImagePtr image = (*it)->load(data, pCancel);
+				if (image) {
+					CSize szArea(tw, th);
+					CSize sz = CImage::getSuitableSize(szArea, image->getImageSize());
+					thumbnail = image->resize(sz.cx, sz.cy);
+					return thumbnail;
+				}
+			}
+			break;
 		}
 	}
 

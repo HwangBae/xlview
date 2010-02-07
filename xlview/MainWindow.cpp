@@ -12,6 +12,8 @@
 #include "ImageView.h"
 #include "Slider.h"
 
+static const xl::tchar *MAIN_TITLE = _T("xl / view");
+
 
 void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr ctrl) {
 
@@ -62,6 +64,9 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	subscribe(this);
 
 	bHandled = false;
+
+	SetWindowText(MAIN_TITLE);
+
 	if (m_ctrlMain == NULL) {
 		m_ctrlMain.reset(new xl::ui::CCtrlMain(this, this));
 	}
@@ -75,7 +80,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	
 	xl::ui::CControlPtr slider(new CSlider());
 	m_slider = slider;
-	slider->setStyle(_T("margin:0 auto; py:bottom; width:480; float:true; disable:true"));
+	slider->setStyle(_T("margin:0 50; py:bottom; width:fill; float:true; disable:true"));
 	slider->setStyle(_T("slider:0 0 0;"));
 	m_ctrlMain->insertChild(slider);
 
@@ -98,7 +103,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	xl::ui::CCtrlSlider *pSlider = (xl::ui::CCtrlSlider *)m_slider.get();
 	assert(pSlider != NULL);
 	switch (evt) {
-	case CImageManager::EVT_READY:
+	case CImageManager::EVT_FILELIST_READY:
 		pSlider->setStyle(_T("disable:false"));
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
@@ -110,11 +115,13 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
 			pSlider->setStyle(buf);
 
-			xl::tstring title = _T("xl / view - ") + m_images[_curr]->getFileName();
+			xl::tstring title = MAIN_TITLE;
+			title += _T(" - ( ") + m_images[_curr]->getFileName() + _T(" )");
 			SetWindowText(title);
 		}
 		break;
 	default:
+		assert(false);
 		break;
 	}
 }

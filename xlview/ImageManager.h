@@ -28,31 +28,30 @@ protected:
 	xl::uint           m_currIndex;
 	DIRECTION          m_direction;
 
-	CRect              m_rcView;
+	CRect              m_rcPrefetch;
 
-	void _AddFile (const xl::tstring &file);
+	void _SetIndexNoLock (int index); // called when already locked
 
-	// threads
-	bool                                           m_exit;
-	bool                                           m_indexChanged;
-	bool                                           m_sizeChanged;
-	HANDLE                                         m_semaphoreWorking;
-	HANDLE                                         m_threadWorking;
-	static unsigned int __stdcall _WorkingThread (void *);
+	// static
 	static void _GetPrefetchIndexes (_Indexes &indexes, int currIndex, int count, DIRECTION direction, int range);
 
+	//////////////////////////////////////////////////////////////////////////
+	// thread related
+	bool               m_exiting;
+	bool               m_indexChanged;
+	HANDLE             m_hPrefetchThread;
+	HANDLE             m_hPrefetchEvent;
+	static unsigned __stdcall _PrefetchThread (void *);
 	void _CreateThreads ();
 	void _TerminateThreads ();
-
 	void _BeginPrefetch ();
-
 
 public:
 	// event
 	enum EVENT 
 		: xl::dp::CObserableT<CImageManager>::EVT
 	{
-		EVT_READY,                             // param (pointer for total count)
+		EVT_FILELIST_READY,                    // param (pointer for total count)
 		EVT_INDEX_CHANGED,                     // param (pointer for the current index)
 		EVT_NUM
 	};
@@ -63,14 +62,14 @@ public:
 	int getCurrIndex () const;
 	int getImageCount () const;
 
-	void setFile (const xl::tstring &file);
+	bool setFile (const xl::tstring &file);
 	void setIndex (int index);
 
 	CDisplayImagePtr getImage (int index);
 
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
-	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
+	// void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
 
 	// IImageLoaderCancel
 	virtual bool shouldCancel ();

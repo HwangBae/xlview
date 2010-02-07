@@ -24,6 +24,9 @@ public:
 	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool checkHeader (const std::string &header) = 0;
 	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) = 0;
+	virtual CImagePtr loadThumbnail (const std::string &data, int tw, int th, IImageLoaderCancel *pCancel = NULL) {
+		return CImagePtr();
+	}
 };
 // typedef std::tr1::shared_ptr<IImageLoaderPlugin>       ImageLoaderPluginRawPtr;
 typedef IImageLoaderPlugin                            *ImageLoaderPluginRawPtr;
@@ -44,6 +47,7 @@ public:
 	void registerPlugin (ImageLoaderPluginRawPtr);
 	bool isFileSupported (const xl::tstring &fileName);
 	CImagePtr load (const xl::tstring &fileName, IImageLoaderCancel *pCancel = NULL);
+	CImagePtr loadThumbnail (const xl::tstring &fileName, int tw, int th, IImageLoaderCancel *pCancel = NULL);
 };
 
 

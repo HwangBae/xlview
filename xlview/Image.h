@@ -12,8 +12,8 @@ class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
 
 enum {
-	THUMBNAIL_WIDTH = 48,
-	THUMBNAIL_HEIGHT = 48,
+	THUMBNAIL_WIDTH = 80,
+	THUMBNAIL_HEIGHT = 60,
 };
 
 
