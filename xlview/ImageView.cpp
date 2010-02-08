@@ -12,6 +12,48 @@
 
 //////////////////////////////////////////////////////////////////////////
 // protected
+void CImageView::_OnIndexChanged (int index) {
+	assert(getLockLevel() > 0); // must be called in lock
+	assert(m_pImageManager != NULL);
+
+	m_imageRealSize.reset();
+	m_imageZoomed.reset();
+	m_imageThumbnail.reset();
+
+	if (index == m_pImageManager->getCurrIndex()) {
+		CDisplayImagePtr image = m_pImageManager->getImage(index);
+		assert(image != NULL);
+		m_imageZoomed = image->getZoomedImage();
+		if (m_imageZoomed != NULL) {
+			m_imageZoomed = m_imageZoomed->clone();
+			m_szImage = image->getRealSize();
+		}
+
+		m_imageThumbnail = image->getThumbnail();
+		if (m_imageThumbnail != NULL) {
+			m_imageThumbnail = m_imageThumbnail->clone();
+		}
+	}
+	invalidate();
+}
+
+void CImageView::_OnImageLoaded (int index) {
+	assert(getLockLevel() > 0); // must be called in lock
+	assert(m_pImageManager != NULL);
+
+	if (index == m_pImageManager->getCurrIndex()) {
+		CDisplayImagePtr image = m_pImageManager->getImage(index);
+		assert(image != NULL);
+		m_imageRealSize = image->getRealSizeImage();
+		assert(m_imageRealSize != NULL);
+		m_szImage = image->getRealSize();
+
+		m_imageThumbnail = image->getThumbnail();
+		assert(m_imageThumbnail); // when loaded, the thumbnail is also created
+		m_imageThumbnail = m_imageThumbnail->clone();
+		invalidate();
+	}
+}
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,11 +120,15 @@ void CImageView::drawMe (HDC hdc) {
 		selector.detach();
 
 		dc.TextOut(10, 10, stretchMode == COLORONCOLOR ? _T("ColorOnColor") : _T("HalfTone"));
+
+		lock.lock(m_pImageManager);
+		image.reset();
+		lock.unlock();
+	} else {
+		xl::ui::CDCHandle dc(hdc);
+		dc.drawTransparentTextWithDefaultFont(_T("Loading...."), -1, rc, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
 	}
 
-	lock.lock(m_pImageManager);
-	image.reset();
-	lock.unlock();
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
@@ -107,60 +153,19 @@ void CImageView::onEvent (EVT evt, void *param) {
 	case CImageManager::EVT_FILELIST_READY:
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
-		{
-			m_imageRealSize.reset();
-			m_imageZoomed.reset();
-			m_imageThumbnail.reset();
-
-			assert(param != NULL);
-			int index = *(int *)param;
-			if (index == m_pImageManager->getCurrIndex()) {
-				CDisplayImagePtr image = m_pImageManager->getImage(index);
-				assert(image != NULL);
-				m_imageZoomed = image->getZoomedImage();
-				if (m_imageZoomed != NULL) {
-					m_imageZoomed = m_imageZoomed->clone();
-					m_szImage = image->getRealSize();
-				}
-				m_imageThumbnail = image->getThumbnail();
-				if (m_imageThumbnail != NULL) {
-					m_imageThumbnail = m_imageThumbnail->clone();
-				}
-			}
-		}
-		m_imageRealSize.reset();
-		invalidate();
+		assert(param);
+		_OnIndexChanged(*(int *)param);
 		break;
 	case CImageManager::EVT_IMAGE_LOADED:
-		{
-			assert(param != NULL);
-			int index = *(int *)param;
-			if (index == m_pImageManager->getCurrIndex()) {
-				CDisplayImagePtr image = m_pImageManager->getImage(index);
-				assert(image != NULL);
-				m_imageRealSize = image->getRealSizeImage();
-				assert(m_imageRealSize != NULL);
-				m_szImage = image->getRealSize();
-
-				m_imageThumbnail = image->getThumbnail();
-				if (m_imageThumbnail != NULL) {
-					m_imageThumbnail = m_imageThumbnail->clone();
-				}
-				invalidate();
-			}
-		}
+		assert(param);
+		_OnImageLoaded(*(int *)param);
 		break;
 	case CImageManager::EVT_IMAGE_ZOOMED:
-		{
+		{ // in fact, we don't care this event
 			assert(param != NULL);
 			int index = *(int *)param;
 			if (index == m_pImageManager->getCurrIndex()) {
-				CDisplayImagePtr image = m_pImageManager->getImage(index);
-				assert(image != NULL);
-				m_imageZoomed = image->getZoomedImage();
-				assert(m_imageRealSize != NULL);
-				m_imageZoomed = m_imageZoomed->clone();
-				invalidate();
+				assert(false); // the loader thread doesn't load the current image
 			}
 		}
 		break;

@@ -20,6 +20,9 @@ protected:
 	CImagePtr          m_imageZoomed; // cloned
 	CImagePtr          m_imageRealSize; // point to m_pImageManager->m_image[curr]->getRealSizeImage();
 
+	void _OnIndexChanged (int index);
+	void _OnImageLoaded (int index);
+
 public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
