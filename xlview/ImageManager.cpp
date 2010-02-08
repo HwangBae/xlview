@@ -115,17 +115,43 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 			break;
 		}
 
-		pThis->lock();
+		xl::CScopeLock lock(pThis);
+		CSize szPrefetch = pThis->m_szPrefetch;
+		if (szPrefetch.cx <= 0 || szPrefetch.cy <= 0 || pThis->m_images.size() == 0) {
+			continue;
+		}
+
 		int currIndex = pThis->getCurrIndex();
 		size_t count = pThis->getImageCount();
+		CDisplayImagePtr displayImage = pThis->getImage(currIndex);
+		assert(displayImage->getRealSizeImage() == NULL);
 		pThis->m_indexChanged = false;
-		pThis->unlock();
+		lock.unlock();
 
 		// 1. load current
 		assert(currIndex >= 0 && currIndex < (int)count);
-		CDisplayImagePtr displayImage = pThis->getImage(currIndex);
-		assert(displayImage->getRealSizeImage() == NULL);
 		if (displayImage->loadRealSize(pThis)) {
+			lock.lock(pThis);
+			if (pThis->shouldCancel()) {
+				continue;
+			}
+			int indexLoaded = currIndex;
+			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &indexLoaded);
+			lock.unlock();
+// 			CSize szImage = displayImage->getRealSize();
+// 			CSize szArea = pThis->m_szPrefetch;
+// 			CSize szZoom = CImage::getSuitableSize(szArea, szImage, true);
+// 
+// 			displayImage->loadZoomed(szZoom.cx, szZoom.cy, pThis);
+// 
+// 			lock.lock(pThis);
+// 			if (pThis->shouldCancel()) {
+// 				continue;
+// 			}
+// 			int indexLoaded = currIndex;
+// 			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &indexLoaded);
+// 			lock.unlock();
+
 		} else {
 			if (pThis->shouldCancel()) {
 				continue;
@@ -133,7 +159,65 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		}
 
 		// 2. prefetch
+		// 2.1 lock, and get the image ptrs
+		lock.lock(pThis);
+		if (pThis->shouldCancel()) {
+			continue;
+		} // make sure the index and count is not changed
+		_Indexes indexes;
+		_Images images;
+		pThis->_GetPrefetchIndexes(indexes, currIndex, count, pThis->m_direction, PREFETCH_RANGE);
+		images.reserve(indexes.size());
+		for (_Indexes::iterator it = indexes.begin(); it != indexes.end(); ++ it) {
+			images.push_back(pThis->getImage(*it));
+		}
 
+		// 2.2 clear the useless zoomed images, and unlock
+		// note that 2.1 and 2.2 should be fast enough for a lock operation
+		for (xl::uint i = 0; i < pThis->m_images.size(); ++ i) {
+			bool removed = true;
+			if (i == currIndex) {
+				removed = false;
+			} else {
+				for (xl::uint j = 0; j < indexes.size(); ++ j) {
+					if (i == indexes[j]) {
+						removed = false;
+					}
+				}
+			}
+			if (removed) {
+				pThis->m_images[i]->clearZoomed();
+			}
+		}
+		lock.unlock();
+
+		// 2.3 load the zoomed images
+		for (_Images::iterator it = images.begin(); it != images.end() && !pThis->shouldCancel(); ++ it) {
+			CDisplayImagePtr image = *it;
+			if (image->getZoomedImage() == NULL) {
+				if (image->getRealSizeImage() == NULL) {
+					image->loadRealSize(pThis);
+				}
+
+				if (image->getRealSizeImage() != NULL && !pThis->shouldCancel()) {
+					CSize szImage = image->getRealSize();
+					CSize szArea = pThis->m_szPrefetch;
+					CSize szZoom = CImage::getSuitableSize(szArea, szImage, true);
+
+					image->loadZoomed(szZoom.cx, szZoom.cy, pThis);
+
+					lock.lock(pThis);
+					if (!pThis->shouldCancel()) {
+						int indexZoomed = indexes[std::distance(images.begin(), it)];
+						pThis->_TriggerEvent(EVT_IMAGE_ZOOMED, &indexZoomed);
+					}
+					lock.unlock();
+				}
+
+				image->clearRealSize();
+				XLTRACE(_T("prefetched: %s\n"), image->getFileName().c_str());
+			}
+		} // the for loop
 	}
 
 	return 0;
@@ -189,17 +273,12 @@ void CImageManager::_BeginPrefetch () {
 CImageManager::CImageManager ()
 	: m_currIndex((xl::uint)-1)
 	, m_direction(CImageManager::FORWARD)
-	, m_rcPrefetch(0, 0, 0, 0)
+	, m_szPrefetch(MIN_VIEW_WIDTH, MIN_VIEW_HEIGHT)
 	, m_exiting(false)
 	, m_indexChanged(false)
 	, m_hPrefetchThread(INVALID_HANDLE_VALUE)
 	, m_hPrefetchEvent(NULL)
 {
-	// get the screen size
-	RECT *pRect = (RECT *)m_rcPrefetch;
-	::SystemParametersInfo(SPI_GETWORKAREA, 0, pRect, 0);
-	m_rcPrefetch.OffsetRect(-m_rcPrefetch.left, -m_rcPrefetch.top);
-
 	_CreateThreads();
 }
 
@@ -281,17 +360,22 @@ CDisplayImagePtr CImageManager::getImage (int index) {
 	return image;
 }
 
-// void CImageManager::onViewSizeChanged (CRect rc) {
-// 	xl::CScopeLock lock(this);
-// 	if (m_rcPrefetch == rc) {
-// 		return;
-// 	}
-// 
-// 	m_rcPrefetch = rc;
-// 	if (m_rcPrefetch.Width() <= 0 || m_rcPrefetch.Height() <= 0) {
-// 		return;
-// 	}
-// }
+void CImageManager::onViewSizeChanged (CRect rc) {
+	xl::CScopeLock lock(this);
+	CSize sz(rc.Width(), rc.Height());
+	if (sz.cx < MIN_VIEW_WIDTH) {
+		sz.cx = MIN_VIEW_WIDTH;
+	}
+	if (sz.cy < MIN_VIEW_HEIGHT) {
+		sz.cy = MIN_VIEW_HEIGHT;
+	}
+
+	if (m_szPrefetch == sz) {
+		return;
+	}
+
+	m_szPrefetch = sz;
+}
 
 bool CImageManager::shouldCancel () {
 	return m_indexChanged || m_exiting;

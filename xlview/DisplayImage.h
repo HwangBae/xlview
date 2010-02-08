@@ -40,6 +40,7 @@ public:
 	xl::tstring getFileName () const;
 	int getRealWidth () const;
 	int getRealHeight () const;
+	CSize getRealSize () const;
 
 	CImagePtr getThumbnail ();
 	CImagePtr getZoomedImage ();

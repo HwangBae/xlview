@@ -15,6 +15,11 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 
+	CSize              m_szImage;
+	CImagePtr          m_imageThumbnail; // cloned
+	CImagePtr          m_imageZoomed; // cloned
+	CImagePtr          m_imageRealSize; // point to m_pImageManager->m_image[curr]->getRealSizeImage();
+
 public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);

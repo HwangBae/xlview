@@ -28,7 +28,7 @@ protected:
 	xl::uint           m_currIndex;
 	DIRECTION          m_direction;
 
-	CRect              m_rcPrefetch;
+	CSize              m_szPrefetch;
 
 	void _SetIndexNoLock (int index); // called when already locked
 
@@ -51,8 +51,10 @@ public:
 	enum EVENT 
 		: xl::dp::CObserableT<CImageManager>::EVT
 	{
-		EVT_FILELIST_READY,                    // param (pointer for total count)
-		EVT_INDEX_CHANGED,                     // param (pointer for the current index)
+		EVT_FILELIST_READY,                    // param (pointer to total count)
+		EVT_INDEX_CHANGED,                     // param (pointer to the current index)
+		EVT_IMAGE_LOADED,                      // param (pointer to the loaded index)
+		EVT_IMAGE_ZOOMED,                      // param (pointer to the zoomed index)
 		EVT_NUM
 	};
 
@@ -69,7 +71,7 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
-	// void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
+	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
 
 	// IImageLoaderCancel
 	virtual bool shouldCancel ();

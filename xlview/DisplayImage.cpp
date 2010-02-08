@@ -164,6 +164,10 @@ int CDisplayImage::getRealHeight () const {
 	return m_heightReal;
 }
 
+CSize CDisplayImage::getRealSize () const {
+	return CSize(m_widthReal, m_heightReal);
+}
+
 CImagePtr CDisplayImage::getThumbnail () {
 	lock();
 	CImagePtr img =  m_imgThumbnail;
