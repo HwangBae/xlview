@@ -239,7 +239,7 @@ void CImageManager::_TerminateThreads () {
 	::SetEvent(m_hPrefetchEvent);
 	if (::WaitForSingleObject(m_hPrefetchThread, 3000) != WAIT_OBJECT_0) {
 		::TerminateThread(m_hPrefetchThread, -1);
-		XLTRACE(_T("** Thread prefetch does not exit normally\n"));
+		XLTRACE(_T("** Thread [prefetch] does not exit normally\n"));
 	}
 
 	CloseHandle(m_hPrefetchEvent);

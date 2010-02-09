@@ -8,65 +8,12 @@
 #include "MainWindow.h"
 
 //////////////////////////////////////////////////////////////////////////
-// DisplayParameter
-DisplayParameter::DisplayParameter ()
-	: suitable(true)
-	, zoomTo(0)
-	, zoomNow(0)
-	, srcX(0)
-	, srcY(0)
-	, realSize(-1, -1)
-	, zoomSize(-1, -1)
-	, rcView(0, 0, 0, 0)
-	, frameIndex(0)
-{
-}
+// CDisplayParameter
 
-DisplayParameter::~DisplayParameter () {
+//////////////////////////////////////////////////////////////////////////
+// private
 
-}
-
-void DisplayParameter::reset (CRect rc) {
-	suitable = true;
-	zoomTo = zoomNow = 0;
-	srcX = srcY = 0;
-	realSize.cx = realSize.cy = -1;
-	zoomSize.cx = zoomSize.cy = -1;
-	rcView = rc;
-	frameIndex = 0;
-}
-
-void DisplayParameter::draw (HDC hdc, CImagePtr image) {
-	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
-		return;
-	}
-
-	if (realSize.cx == -1 || realSize.cy == -1) {
-		assert(image == NULL);
-		xl::CLanguage *pLang = xl::CLanguage::getInstance();
-		xl::tstring strLoading = pLang->getString(_T("loading..."));
-
-		xl::ui::CDCHandle dc(hdc);
-		xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
-		HFONT font = pResMgr->getSysFont();
-		HFONT oldFont = dc.SelectFont(font);
-
-		UINT fmt = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
-		dc.DrawText(strLoading, strLoading.length(), rcView, fmt);
-
-		dc.SelectFont(oldFont);
-		return;
-	}
-
-	assert(image != NULL);
-	if (suitable) {
-		_DrawSuitable(hdc, image);
-	} else {
-		assert(false); // do later
-	}
-}
-
-void DisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
+void CDisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
 	CRect rc = rcView;
 	CSize szArea(rc.Width(), rc.Height());
 	CSize szImage = image->getImageSize();
@@ -103,9 +50,160 @@ void DisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
 }
 
 
+void CDisplayParameter::_CalacuteParameter () {
+	assert(realSize.cx > 0 && realSize.cy > 0);
+	assert(rcView.Width() > 0 && rcView.Height() > 0);
+	if (suitable) {
+		CSize szArea(rcView.Width(), rcView.Height());
+		zoomSize = CImage::getSuitableSize(szArea, realSize);
+		int zoom = (int)(100 * zoomSize.cx / realSize.cx);
+		zoomTo = zoom;
+		zoomNow = zoom;
+		srcX = 0;
+		srcY = 0;
+	} else {
+		assert(false);
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+// public
+CDisplayParameter::CDisplayParameter ()
+	: suitable(true)
+	, zoomTo(0)
+	, zoomNow(0)
+	, srcX(0)
+	, srcY(0)
+	, realSize(-1, -1)
+	, zoomSize(-1, -1)
+	, rcView(0, 0, 0, 0)
+	, frameIndex(0)
+{
+}
+
+CDisplayParameter::~CDisplayParameter () {
+
+}
+
+void CDisplayParameter::reset (CRect rc) {
+	suitable = true;
+	zoomTo = zoomNow = 0;
+	srcX = srcY = 0;
+	realSize.cx = realSize.cy = -1;
+	zoomSize.cx = zoomSize.cy = -1;
+	rcView = rc;
+	frameIndex = 0;
+}
+
+void CDisplayParameter::setRealSize (CSize rs) {
+	realSize = rs;
+	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
+		return;
+	}
+
+	_CalacuteParameter();
+}
+
+void CDisplayParameter::setViewRect (CRect rc) {
+	if (rcView == rc) {
+		return;
+	}
+
+	rcView = rc;
+	if (realSize != CSize(-1, -1)) {
+		_CalacuteParameter();
+	}
+}
+
+
+void CDisplayParameter::draw (HDC hdc, CImagePtr image) {
+	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
+		return;
+	}
+
+	if (realSize.cx == -1 || realSize.cy == -1) {
+		assert(image == NULL);
+		xl::CLanguage *pLang = xl::CLanguage::getInstance();
+		xl::tstring strLoading = pLang->getString(_T("loading..."));
+
+		xl::ui::CDCHandle dc(hdc);
+		xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
+		HFONT font = pResMgr->getSysFont();
+		HFONT oldFont = dc.SelectFont(font);
+
+		UINT fmt = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
+		dc.DrawText(strLoading, strLoading.length(), rcView, fmt);
+
+		dc.SelectFont(oldFont);
+		return;
+	}
+
+	assert(image != NULL);
+	if (suitable) {
+		_DrawSuitable(hdc, image);
+	} else {
+		assert(false); // do later
+	}
+
+#ifndef NDEBUG
+	drawParameter(hdc);
+#endif
+}
+
+void CDisplayParameter::drawParameter (HDC hdc) {
+	xl::tchar info[256];
+	_stprintf_s(info, 256, _T("%s; zoom to: %d, zoom now: %d"), 
+		suitable ? _T("suit") : _T("zoom"),
+		zoomTo, zoomNow
+		);
+	CRect rc = rcView;
+	rc.top = rc.bottom - 20;
+	xl::ui::CDCHandle dc(hdc);
+	xl::uint fmt = DT_LEFT | DT_SINGLELINE | DT_VCENTER;
+	dc.DrawText(info, -1, rc, fmt);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // static
+unsigned __stdcall CImageView::_ZoomThread (void *param) {
+	CImageView *pThis = (CImageView *)param;
+	assert(pThis != NULL);
+	HANDLE hEvent = pThis->m_hZoomEvent;
+	assert(hEvent != NULL);
+	for (;;) {
+		::WaitForSingleObject(hEvent, INFINITE);
+		if (pThis->m_exiting) {
+			break;
+		}
 
+		xl::CScopeLock lock(pThis);
+		CSize szZoom = pThis->m_disp.getZoomSize();
+		CImagePtr zoomedImage = pThis->m_imageZoomed;
+		if (zoomedImage != NULL && zoomedImage->getImageSize() == szZoom) {
+			continue;
+		}
+
+		if (pThis->m_imageRealSize == NULL) {
+			continue; // no source
+		}
+
+		CImagePtr rsImage = pThis->m_imageRealSize;
+		XLTRACE(_T("** before resize use count = %d\n"), zoomedImage.use_count());
+		zoomedImage.reset();
+		lock.unlock();
+
+		zoomedImage = rsImage->resize(szZoom.cx, szZoom.cy, true);
+
+		lock.lock(pThis);
+		if (rsImage == pThis->m_imageRealSize) {
+			pThis->m_imageZoomed = zoomedImage;
+		}
+		lock.unlock();
+		pThis->invalidate();
+	}
+
+	return 0;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // protected
@@ -131,7 +229,10 @@ void CImageView::_OnIndexChanged (int index) {
 			m_imageThumbnail = m_imageThumbnail->clone();
 		}
 
-		m_disp.realSize = image->getRealSize();;
+		CSize rs = image->getRealSize();
+		if (rs.cx != -1 && rs.cy != -1) {
+			m_disp.setRealSize(rs);
+		}
 	}
 	invalidate();
 }
@@ -145,29 +246,81 @@ void CImageView::_OnImageLoaded (int index) {
 		assert(image != NULL);
 		m_imageRealSize = image->getRealSizeImage();
 		assert(m_imageRealSize != NULL);
-		m_disp.realSize = image->getRealSize();
+		m_disp.setRealSize(image->getRealSize());
 
 		m_imageThumbnail = image->getThumbnail();
 		assert(m_imageThumbnail); // when loaded, the thumbnail is also created
 		m_imageThumbnail = m_imageThumbnail->clone();
 		invalidate();
+
+		_BeginZoom();
+	}
+}
+
+void CImageView::_CreateThreads () {
+	assert(m_hZoomThread == INVALID_HANDLE_VALUE);
+	assert(m_hZoomEvent == NULL);
+
+	xl::tchar name[MAX_PATH];
+
+	xl::CScopeLock lock(this);
+	_stprintf_s(name, MAX_PATH, 
+		_T("Local\\xlview::ImageView::ZoomEvent [created at %d]"), ::GetTickCount());
+	m_hZoomEvent = ::CreateEvent(NULL, FALSE, FALSE, name);
+	assert(m_hZoomEvent != NULL);
+	m_hZoomThread = (HANDLE)_beginthreadex(NULL, 0, _ZoomThread, this, 0, NULL);
+	assert(m_hZoomThread != INVALID_HANDLE_VALUE);
+}
+
+void CImageView::_TerminateThreads () {
+	assert(m_hZoomEvent != NULL);
+	assert(m_hZoomThread != INVALID_HANDLE_VALUE);
+
+	bool exiting = m_exiting;
+	m_exiting = true;
+	::SetEvent(m_hZoomEvent);
+	if (::WaitForSingleObject(m_hZoomThread, 3000) != WAIT_OBJECT_0) {
+		::TerminateThread(m_hZoomThread, -1);
+		XLTRACE(_T("** Thread [zoom] does not exit normally\n"));
+	}
+
+	CloseHandle(m_hZoomEvent);
+	CloseHandle(m_hZoomThread);
+	m_hZoomEvent = NULL;
+	m_hZoomThread = INVALID_HANDLE_VALUE;
+
+	m_exiting = exiting;
+}
+
+void CImageView::_BeginZoom () {
+	if (m_hZoomEvent != NULL) {
+		::SetEvent(m_hZoomEvent);
+	} else {
+		assert(false);
 	}
 }
 
 
 //////////////////////////////////////////////////////////////////////////
+// public
 
 CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, m_pImageManager(pImageManager)
+	, m_exiting(false)
+	, m_hZoomEvent(NULL)
+	, m_hZoomThread(INVALID_HANDLE_VALUE)
 {
 	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
 	setStyle(_T("background-color:#808080;"));
 
 	m_pImageManager->subscribe(this);
+
+	_CreateThreads();
 }
 
 CImageView::~CImageView (void) {
+	_TerminateThreads();
 }
 
 void CImageView::onSize () {
@@ -175,13 +328,20 @@ void CImageView::onSize () {
 	CRect rc = getClientRect();
 	m_pImageManager->onViewSizeChanged(rc);
 	lock();
-	m_disp.rcView = rc;
+	m_disp.setViewRect(rc);
+
+	if (m_imageRealSize != NULL) {
+		_BeginZoom();
+	}
 	unlock();
+	invalidate();
 }
 
 void CImageView::drawMe (HDC hdc) {
 	int stretchMode = HALFTONE;
 	assert(m_pImageManager != NULL);
+
+	xl::CTimerLogger logger(_T("drawMe cost"));
 
 	xl::CScopeLock lock(this);
 	CImagePtr image = m_imageZoomed;

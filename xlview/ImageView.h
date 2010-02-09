@@ -7,7 +7,7 @@
 
 #define ID_VIEW  99
 
-struct DisplayParameter {
+class CDisplayParameter {
 	bool suitable;
 	int zoomTo;
 	int zoomNow;
@@ -19,13 +19,25 @@ struct DisplayParameter {
 
 	int frameIndex;
 
-	DisplayParameter ();
-	~DisplayParameter ();
-
-	void reset (CRect rc);
-	void draw (HDC, CImagePtr);
-private:
 	void _DrawSuitable (HDC, CImagePtr);
+
+	void _CalacuteParameter ();
+
+public:
+	CDisplayParameter ();
+	~CDisplayParameter ();
+	void reset (CRect);
+
+	void setRealSize (CSize);
+	void setViewRect (CRect);
+
+	CSize getRealSize () const { return realSize; }
+	CSize getZoomSize () const { return zoomSize; }
+	int getZoomTo () const { return zoomTo; }
+	int getZoomNow () const { return zoomNow; }
+
+	void draw (HDC, CImagePtr);
+	void drawParameter (HDC);
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,7 +50,7 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 
-	DisplayParameter   m_disp;
+	CDisplayParameter   m_disp;
 	CImagePtr          m_imageThumbnail; // cloned
 	CImagePtr          m_imageZoomed; // cloned
 	CImagePtr          m_imageRealSize; // point to m_pImageManager->m_image[curr]->getRealSizeImage();
@@ -46,6 +58,15 @@ protected:
 	void _OnIndexChanged (int index);
 	void _OnImageLoaded (int index);
 
+	//////////////////////////////////////////////////////////////////////////
+	// thread related
+	bool m_exiting;
+	HANDLE m_hZoomEvent;
+	HANDLE m_hZoomThread;
+	static unsigned __stdcall _ZoomThread (void *);
+	void _CreateThreads ();
+	void _TerminateThreads ();
+	void _BeginZoom ();
 public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
