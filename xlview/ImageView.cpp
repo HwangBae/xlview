@@ -25,7 +25,7 @@ void CDisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(hdc);
-	xl::ui::CDIBSectionHelper selector(image->getImage(0), mdc);
+	xl::ui::CDIBSectionHelper selector(image->getImage(frameIndex), mdc);
 
 	if (sz == szImage) {
 		dc.BitBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, SRCCOPY);
@@ -49,33 +49,71 @@ void CDisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
 	selector.detach();
 }
 
+void CDisplayParameter::_DrawZoom (HDC hdc, CImagePtr image) {
+	CRect rc = rcView;
+	CSize szArea(rc.Width(), rc.Height());
+	CSize szZoom = getZoomNowSize();
+	CSize szImage = image->getImageSize();
+
+	int x = rc.left;
+	int w = rc.Width();
+	if (szZoom.cx < rc.Width()) {
+		x += (rc.Width() - szZoom.cx) / 2;
+		w = szZoom.cx;
+	}
+	int y = rc.top;
+	int h = rc.Height();
+	if (szZoom.cy < rc.Height()) {
+		y += (rc.Height() - szZoom.cy) / 2;
+		h = szZoom.cy;
+	}
+
+	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CDC mdc;
+	mdc.CreateCompatibleDC(hdc);
+	xl::ui::CDIBSectionHelper selector(image->getImage(frameIndex), mdc);
+
+	if (szZoom == szImage) {
+		dc.BitBlt(x, y, w, h, mdc, srcX, srcY, SRCCOPY);
+	} else {
+		int srcW = w * szImage.cx / szZoom.cx;
+		int srcH = h * szImage.cy / szZoom.cy;
+		int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
+		dc.StretchBlt(x, y, w, h, mdc, srcX, srcY, srcW, srcH, SRCCOPY);
+		dc.SetStretchBltMode(oldMode);
+	}
+
+	selector.detach();
+}
+
 
 void CDisplayParameter::_CalacuteParameter () {
 	assert(realSize.cx > 0 && realSize.cy > 0);
 	assert(rcView.Width() > 0 && rcView.Height() > 0);
 	if (suitable) {
 		CSize szArea(rcView.Width(), rcView.Height());
-		zoomSize = CImage::getSuitableSize(szArea, realSize);
-		int zoom = (int)(100 * zoomSize.cx / realSize.cx);
+		CSize szZoom = CImage::getSuitableSize(szArea, realSize);
+		int zoom = (int)(100 * szZoom.cx / realSize.cx);
 		zoomTo = zoom;
 		zoomNow = zoom;
 		srcX = 0;
 		srcY = 0;
 	} else {
-		assert(false);
+		// assert(false);
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////
 // public
 CDisplayParameter::CDisplayParameter ()
-	: suitable(true)
+	: loaded(false)
+	, suitable(true)
 	, zoomTo(0)
 	, zoomNow(0)
 	, srcX(0)
 	, srcY(0)
 	, realSize(-1, -1)
-	, zoomSize(-1, -1)
+	// , zoomSize(-1, -1)
 	, rcView(0, 0, 0, 0)
 	, frameIndex(0)
 {
@@ -86,22 +124,29 @@ CDisplayParameter::~CDisplayParameter () {
 }
 
 void CDisplayParameter::reset (CRect rc) {
+	loaded = false;
 	suitable = true;
 	zoomTo = zoomNow = 0;
 	srcX = srcY = 0;
 	realSize.cx = realSize.cy = -1;
-	zoomSize.cx = zoomSize.cy = -1;
+	// zoomSize.cx = zoomSize.cy = -1;
 	rcView = rc;
 	frameIndex = 0;
 }
 
 void CDisplayParameter::setRealSize (CSize rs) {
+	assert(rs.cx > 0 && rs.cy > 0);
 	realSize = rs;
 	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
 		return;
 	}
 
 	_CalacuteParameter();
+}
+
+void CDisplayParameter::setLoaded () {
+	assert(!loaded);
+	loaded = true;
 }
 
 void CDisplayParameter::setViewRect (CRect rc) {
@@ -115,39 +160,109 @@ void CDisplayParameter::setViewRect (CRect rc) {
 	}
 }
 
+CSize CDisplayParameter::getZoomToSize () const {
+	assert(realSize.cx > 0 && realSize.cy > 0);
+	int w = (int)(realSize.cx * zoomTo / 100);
+	if (w == 0) {
+		w = 1;
+	}
+	int h = (int)(realSize.cy * zoomTo / 100);
+	if (h == 0) {
+		h = 0;
+	}
+
+	return CSize(w, h);
+}
+
+
+CSize CDisplayParameter::getZoomNowSize () const {
+	assert(realSize.cx > 0 && realSize.cy > 0);
+	int w = (int)(realSize.cx * zoomNow / 100);
+	if (w == 0) {
+		w = 1;
+	}
+	int h = (int)(realSize.cy * zoomNow / 100);
+	if (h == 0) {
+		h = 0;
+	}
+
+	return CSize(w, h);
+}
+
+bool CDisplayParameter::showLarger () {
+	suitable = false;
+	int offset = zoomTo * 15 / 100;
+	if (offset == 0) {
+		offset = 1;
+	}
+	zoomTo += offset;
+	if (abs(zoomTo - 100) < 5) {
+		zoomTo = 100;
+	}
+
+	if (zoomTo >= 100) {
+		return false;
+	}
+
+	return true;
+}
+
+bool CDisplayParameter::onTimer () {
+	if (zoomNow == zoomTo) {
+		return false;
+	}
+
+	++ zoomNow;
+	if (zoomNow == zoomTo) {
+		return false;
+	}
+
+	if (zoomTo >= 100) {
+		return false;
+	}
+
+	return true;
+}
 
 void CDisplayParameter::draw (HDC hdc, CImagePtr image) {
 	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
 		return;
 	}
 
-	if (realSize.cx == -1 || realSize.cy == -1) {
-		assert(image == NULL);
-		xl::CLanguage *pLang = xl::CLanguage::getInstance();
-		xl::tstring strLoading = pLang->getString(_T("loading..."));
-
-		xl::ui::CDCHandle dc(hdc);
-		xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
-		HFONT font = pResMgr->getSysFont();
-		HFONT oldFont = dc.SelectFont(font);
-
-		UINT fmt = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
-		dc.DrawText(strLoading, strLoading.length(), rcView, fmt);
-
-		dc.SelectFont(oldFont);
-		return;
+	if (image != NULL) {
+		assert(realSize != CSize(-1, -1));
+		if (suitable) {
+			_DrawSuitable(hdc, image);
+		} else {
+			_DrawZoom(hdc, image);
+		}
 	}
 
-	assert(image != NULL);
-	if (suitable) {
-		_DrawSuitable(hdc, image);
-	} else {
-		assert(false); // do later
+	if (!isLoaded()) {
+		drawLoading(hdc);
 	}
 
 #ifndef NDEBUG
 	drawParameter(hdc);
 #endif
+}
+
+void CDisplayParameter::drawLoading (HDC hdc) {
+	xl::CLanguage *pLang = xl::CLanguage::getInstance();
+	xl::tstring strLoading = pLang->getString(_T("loading..."));
+
+	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
+	HFONT font = pResMgr->getSysFont();
+	HFONT oldFont = dc.SelectFont(font);
+	int oldMode = dc.SetBkMode(TRANSPARENT);
+
+	UINT fmt = DT_SINGLELINE | DT_CENTER | DT_TOP;//DT_VCENTER;
+	dc.DrawShadowText(strLoading, strLoading.length(), rcView, fmt, 
+		RGB(80,80,80), RGB(232,232,232), 1, 1);
+
+	dc.SetBkMode(oldMode);
+	dc.SelectFont(oldFont);
 }
 
 void CDisplayParameter::drawParameter (HDC hdc) {
@@ -177,7 +292,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		}
 
 		xl::CScopeLock lock(pThis);
-		CSize szZoom = pThis->m_disp.getZoomSize();
+		CSize szZoom = pThis->m_disp.getZoomToSize();
 		CImagePtr zoomedImage = pThis->m_imageZoomed;
 		if (zoomedImage != NULL && zoomedImage->getImageSize() == szZoom) {
 			continue;
@@ -188,7 +303,6 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		}
 
 		CImagePtr rsImage = pThis->m_imageRealSize;
-		XLTRACE(_T("** before resize use count = %d\n"), zoomedImage.use_count());
 		zoomedImage.reset();
 		lock.unlock();
 
@@ -247,6 +361,7 @@ void CImageView::_OnImageLoaded (int index) {
 		m_imageRealSize = image->getRealSizeImage();
 		assert(m_imageRealSize != NULL);
 		m_disp.setRealSize(image->getRealSize());
+		m_disp.setLoaded();
 
 		m_imageThumbnail = image->getThumbnail();
 		assert(m_imageThumbnail); // when loaded, the thumbnail is also created
@@ -296,7 +411,7 @@ void CImageView::_BeginZoom () {
 	if (m_hZoomEvent != NULL) {
 		::SetEvent(m_hZoomEvent);
 	} else {
-		assert(false);
+		::SetEvent(m_hZoomEvent);
 	}
 }
 
@@ -323,6 +438,19 @@ CImageView::~CImageView (void) {
 	_TerminateThreads();
 }
 
+void CImageView::showLarger () {
+	if (!m_disp.isLoaded()) {
+		// how to handle?
+		return;
+	}
+
+	if (m_disp.showLarger()) {
+		_SetTimer(50, m_id);
+		_BeginZoom();
+	}
+	invalidate();
+}
+
 void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
@@ -340,8 +468,6 @@ void CImageView::onSize () {
 void CImageView::drawMe (HDC hdc) {
 	int stretchMode = HALFTONE;
 	assert(m_pImageManager != NULL);
-
-	xl::CTimerLogger logger(_T("drawMe cost"));
 
 	xl::CScopeLock lock(this);
 	CImagePtr image = m_imageZoomed;
@@ -375,6 +501,15 @@ void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
 }
 
 void CImageView::onMouseMove (CPoint pt, xl::uint key) {
+}
+
+void CImageView::onTimer (xl::uint id) {
+	if (m_disp.onTimer()) {
+		XLTRACE(_T("--- ON TIMER ---\n"));
+		_SetTimer(50, m_id);
+	}
+
+	invalidate();
 }
 
 void CImageView::onLostCapture () {

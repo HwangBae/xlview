@@ -16,6 +16,7 @@ class CMainWindow
 {
 
 	xl::ui::CControlPtr                            m_slider;
+	xl::ui::CControlPtr                            m_view;
 
 public:
 	virtual void onCommand (xl::uint id, xl::ui::CControlPtr ctrl);

@@ -8,18 +8,20 @@
 #define ID_VIEW  99
 
 class CDisplayParameter {
+	bool loaded;
 	bool suitable;
 	int zoomTo;
 	int zoomNow;
 	int srcX;
 	int srcY;
 	CSize realSize;
-	CSize zoomSize;
+	// CSize zoomSize;
 	CRect rcView;
 
 	int frameIndex;
 
 	void _DrawSuitable (HDC, CImagePtr);
+	void _DrawZoom (HDC, CImagePtr);
 
 	void _CalacuteParameter ();
 
@@ -29,14 +31,21 @@ public:
 	void reset (CRect);
 
 	void setRealSize (CSize);
+	void setLoaded ();
 	void setViewRect (CRect);
 
+	bool isLoaded () const { return loaded; }
 	CSize getRealSize () const { return realSize; }
-	CSize getZoomSize () const { return zoomSize; }
+	CSize getZoomToSize () const;
+	CSize getZoomNowSize () const;
 	int getZoomTo () const { return zoomTo; }
 	int getZoomNow () const { return zoomNow; }
 
+	bool showLarger ();
+	bool onTimer ();
+
 	void draw (HDC, CImagePtr);
+	void drawLoading (HDC);
 	void drawParameter (HDC);
 };
 
@@ -71,6 +80,8 @@ public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
 
+	void showLarger ();
+
 	//////////////////////////////////////////////////////////////////////////
 	// virtual
 
@@ -81,6 +92,7 @@ public:
 	virtual void onLButtonDown (CPoint pt, xl::uint key);
 	virtual void onLButtonUp (CPoint pt, xl::uint key);
 	virtual void onMouseMove (CPoint pt, xl::uint key);
+	virtual void onTimer (xl::uint id);
 	virtual void onLostCapture ();
 
 	// CImageManager::IObserver

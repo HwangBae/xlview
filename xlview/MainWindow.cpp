@@ -56,6 +56,14 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("Prev");
 	}
 
+	if (gesture == _T("U")) {
+		if (release) {
+			CImageView *pView = (CImageView *)m_view.get();
+			pView->showLarger();
+		}
+		return _T("Larger");
+	}
+
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
 }
 
@@ -75,8 +83,8 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
 	gestureCtrl->setStyle(_T("color:#ff0000"));
 
-	CImageView *pView = new CImageView(this);
-	m_ctrlMain->insertChild(xl::ui::CControlPtr(pView));
+	m_view = xl::ui::CControlPtr(new CImageView(this));
+	m_ctrlMain->insertChild(m_view);
 	
 	xl::ui::CControlPtr slider(new CSlider());
 	m_slider = slider;

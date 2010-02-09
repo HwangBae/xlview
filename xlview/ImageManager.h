@@ -9,6 +9,10 @@
 #include "DisplayImage.h"
 #include "ImageLoader.h"
 
+// when zooming, we don't generate image that is smaller than that
+static const int MIN_VIEW_WIDTH = 160;
+static const int MIN_VIEW_HEIGHT = 120;
+
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
