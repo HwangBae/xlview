@@ -1,10 +1,93 @@
 #include <assert.h>
 #include <Windows.h>
 #include "libxl/include/utilities.h"
+#include "libxl/include/Language.h"
 #include "libxl/include/ui/Gdi.h"
 #include "libxl/include/ui/CtrlMain.h"
 #include "ImageView.h"
 #include "MainWindow.h"
+
+//////////////////////////////////////////////////////////////////////////
+// DisplayParameter
+DisplayParameter::DisplayParameter ()
+	: suitable(true)
+	, zoomTo(0)
+	, zoomNow(0)
+	, srcX(0)
+	, srcY(0)
+	, realSize(-1, -1)
+	, zoomSize(-1, -1)
+	, frameIndex(0)
+{
+}
+
+DisplayParameter::~DisplayParameter () {
+
+}
+
+void DisplayParameter::reset () {
+	suitable = true;
+	zoomTo = zoomNow = 0;
+	srcX = srcY = 0;
+	realSize.cx = realSize.cy = -1;
+	zoomSize.cx = zoomSize.cy = -1;
+	frameIndex = 0;
+}
+
+void DisplayParameter::draw (HDC hdc, CRect rc, CImagePtr image) {
+	if (realSize.cx == -1 || realSize.cy == -1) {
+		assert(image == NULL);
+		xl::CLanguage *pLang = xl::CLanguage::getInstance();
+		xl::tstring strLoading = pLang->getString(_T("loading..."));
+
+		xl::ui::CDCHandle dc(hdc);
+		xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
+		HFONT font = pResMgr->getSysFont();
+		HFONT oldFont = dc.SelectFont(font);
+
+		UINT fmt = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
+		dc.DrawText(strLoading, strLoading.length(), rc, fmt);
+
+		dc.SelectFont(oldFont);
+		return;
+	}
+
+	assert(image != NULL);
+	if (suitable) {
+		_DrawSuitable(hdc, rc, image);
+	} else {
+		assert(false); // do later
+	}
+}
+
+void DisplayParameter::_DrawSuitable (HDC hdc, CRect rc, CImagePtr image) {
+	CSize szArea(rc.Width(), rc.Height());
+	CSize szImage = image->getImageSize();
+	CSize sz = CImage::getSuitableSize(szArea, realSize);
+
+	int x = rc.left + (rc.Width() - sz.cx) / 2;
+	int y = rc.top + (rc.Height() - sz.cy) / 2;
+
+	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CDC mdc;
+	mdc.CreateCompatibleDC(hdc);
+	xl::ui::CDIBSectionHelper selector(image->getImage(0), mdc);
+
+	if (sz == szImage) {
+		dc.BitBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, SRCCOPY);
+		dc.TextOut(10, 10, _T("BitBlt"));
+	} else {
+		int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
+		dc.StretchBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, szImage.cx, szImage.cy, SRCCOPY);
+		dc.SetStretchBltMode(oldMode);
+		dc.TextOut(10, 10, _T("StretchBlt with ColorOnColor"));
+	}
+
+	selector.detach();
+
+
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 // static
@@ -16,6 +99,7 @@ void CImageView::_OnIndexChanged (int index) {
 	assert(getLockLevel() > 0); // must be called in lock
 	assert(m_pImageManager != NULL);
 
+	m_disp.reset();
 	m_imageRealSize.reset();
 	m_imageZoomed.reset();
 	m_imageThumbnail.reset();
@@ -26,13 +110,14 @@ void CImageView::_OnIndexChanged (int index) {
 		m_imageZoomed = image->getZoomedImage();
 		if (m_imageZoomed != NULL) {
 			m_imageZoomed = m_imageZoomed->clone();
-			m_szImage = image->getRealSize();
 		}
 
 		m_imageThumbnail = image->getThumbnail();
 		if (m_imageThumbnail != NULL) {
 			m_imageThumbnail = m_imageThumbnail->clone();
 		}
+
+		m_disp.realSize = image->getRealSize();;
 	}
 	invalidate();
 }
@@ -46,7 +131,7 @@ void CImageView::_OnImageLoaded (int index) {
 		assert(image != NULL);
 		m_imageRealSize = image->getRealSizeImage();
 		assert(m_imageRealSize != NULL);
-		m_szImage = image->getRealSize();
+		m_disp.realSize = image->getRealSize();
 
 		m_imageThumbnail = image->getThumbnail();
 		assert(m_imageThumbnail); // when loaded, the thumbnail is also created
@@ -61,7 +146,6 @@ void CImageView::_OnImageLoaded (int index) {
 CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, m_pImageManager(pImageManager)
-	, m_szImage(0, 0)
 {
 	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
 	setStyle(_T("background-color:#808080;"));
@@ -100,35 +184,11 @@ void CImageView::drawMe (HDC hdc) {
 		lock.unlock();
 	}
 
-	if (image != NULL) {
-		CSize szArea(rc.Width(), rc.Height());
-		CSize szImage = image->getImageSize();
-		CSize sz = CImage::getSuitableSize(szArea, m_szImage);
+	m_disp.draw(hdc, rc, image);
 
-		int x = rc.left + (rc.Width() - sz.cx) / 2;
-		int y = rc.top + (rc.Height() - sz.cy) / 2;
-		
-		xl::ui::CDCHandle dc(hdc);
-		xl::ui::CDC mdc;
-		mdc.CreateCompatibleDC(hdc);
-		xl::ui::CDIBSectionHelper selector(image->getImage(0), mdc);
-
-		int oldMode = dc.SetStretchBltMode(stretchMode);
-		dc.StretchBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, szImage.cx, szImage.cy, SRCCOPY);
-		dc.SetStretchBltMode(oldMode);
-
-		selector.detach();
-
-		dc.TextOut(10, 10, stretchMode == COLORONCOLOR ? _T("ColorOnColor") : _T("HalfTone"));
-
-		lock.lock(m_pImageManager);
-		image.reset();
-		lock.unlock();
-	} else {
-		xl::ui::CDCHandle dc(hdc);
-		dc.drawTransparentTextWithDefaultFont(_T("Loading...."), -1, rc, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
-	}
-
+	lock.lock(m_pImageManager);
+	image.reset();
+	lock.unlock();
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {

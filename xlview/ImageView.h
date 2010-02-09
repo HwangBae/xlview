@@ -7,6 +7,28 @@
 
 #define ID_VIEW  99
 
+struct DisplayParameter {
+	bool suitable;
+	int zoomTo;
+	int zoomNow;
+	int srcX;
+	int srcY;
+	CSize realSize;
+	CSize zoomSize;
+
+	int frameIndex;
+
+	DisplayParameter ();
+	~DisplayParameter ();
+
+	void reset ();
+	void draw (HDC, CRect, CImagePtr);
+private:
+	void _DrawSuitable (HDC, CRect, CImagePtr);
+};
+
+//////////////////////////////////////////////////////////////////////////
+// CImageView
 class CImageView 
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
@@ -15,7 +37,7 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 
-	CSize              m_szImage;
+	DisplayParameter   m_disp;
 	CImagePtr          m_imageThumbnail; // cloned
 	CImagePtr          m_imageZoomed; // cloned
 	CImagePtr          m_imageRealSize; // point to m_pImageManager->m_image[curr]->getRealSizeImage();

@@ -38,7 +38,8 @@ void CImageManager::_SetIndexNoLock (int index) {
 		m_indexChanged = true;
 
 		if (lastIndex != (xl::uint)-1) {
-			m_images[lastIndex]->clearRealSize();
+			assert(m_images[lastIndex]->getRealSizeImage() == NULL);
+			// m_images[lastIndex]->clearRealSize();
 		}
 
 		// start prefetch first
@@ -137,21 +138,8 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 			}
 			int indexLoaded = currIndex;
 			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &indexLoaded);
+			displayImage->clearRealSize(); // transport the ownership to the subscriber (CImageView)
 			lock.unlock();
-// 			CSize szImage = displayImage->getRealSize();
-// 			CSize szArea = pThis->m_szPrefetch;
-// 			CSize szZoom = CImage::getSuitableSize(szArea, szImage, true);
-// 
-// 			displayImage->loadZoomed(szZoom.cx, szZoom.cy, pThis);
-// 
-// 			lock.lock(pThis);
-// 			if (pThis->shouldCancel()) {
-// 				continue;
-// 			}
-// 			int indexLoaded = currIndex;
-// 			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &indexLoaded);
-// 			lock.unlock();
-
 		} else {
 			if (pThis->shouldCancel()) {
 				continue;
