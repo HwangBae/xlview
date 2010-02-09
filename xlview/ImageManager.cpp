@@ -14,6 +14,7 @@ static const int MIN_VIEW_WIDTH = 160;
 static const int MIN_VIEW_HEIGHT = 120;
 
 void CImageManager::_SetIndexNoLock (int index) {
+	assert(getLockLevel() > 0);
 	if (m_currIndex != index) {
 		XLTRACE(_T("--== change index from %d to %d ==--\n"), m_currIndex, index);
 		if ((int)m_currIndex < index) {
@@ -38,8 +39,10 @@ void CImageManager::_SetIndexNoLock (int index) {
 		m_indexChanged = true;
 
 		if (lastIndex != (xl::uint)-1) {
-			assert(m_images[lastIndex]->getRealSizeImage() == NULL);
-			// m_images[lastIndex]->clearRealSize();
+			// this could happen if ui thread enter the CRITICAL SECTION before _PrefetchThread,
+			// after it loaded the real size image, but before _PrefetchThread enter CS, the 
+			// realsize image would remain there, so we just clear it
+			m_images[lastIndex]->clearRealSize();
 		}
 
 		// start prefetch first
@@ -134,6 +137,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		if (displayImage->loadRealSize(pThis)) {
 			lock.lock(pThis);
 			if (pThis->shouldCancel()) {
+				displayImage->clearRealSize();
 				continue;
 			}
 			int indexLoaded = currIndex;

@@ -15,16 +15,17 @@ struct DisplayParameter {
 	int srcY;
 	CSize realSize;
 	CSize zoomSize;
+	CRect rcView;
 
 	int frameIndex;
 
 	DisplayParameter ();
 	~DisplayParameter ();
 
-	void reset ();
-	void draw (HDC, CRect, CImagePtr);
+	void reset (CRect rc);
+	void draw (HDC, CImagePtr);
 private:
-	void _DrawSuitable (HDC, CRect, CImagePtr);
+	void _DrawSuitable (HDC, CImagePtr);
 };
 
 //////////////////////////////////////////////////////////////////////////

@@ -17,6 +17,7 @@ DisplayParameter::DisplayParameter ()
 	, srcY(0)
 	, realSize(-1, -1)
 	, zoomSize(-1, -1)
+	, rcView(0, 0, 0, 0)
 	, frameIndex(0)
 {
 }
@@ -25,16 +26,21 @@ DisplayParameter::~DisplayParameter () {
 
 }
 
-void DisplayParameter::reset () {
+void DisplayParameter::reset (CRect rc) {
 	suitable = true;
 	zoomTo = zoomNow = 0;
 	srcX = srcY = 0;
 	realSize.cx = realSize.cy = -1;
 	zoomSize.cx = zoomSize.cy = -1;
+	rcView = rc;
 	frameIndex = 0;
 }
 
-void DisplayParameter::draw (HDC hdc, CRect rc, CImagePtr image) {
+void DisplayParameter::draw (HDC hdc, CImagePtr image) {
+	if (rcView.Width() <= 0 || rcView.Height() <= 0) {
+		return;
+	}
+
 	if (realSize.cx == -1 || realSize.cy == -1) {
 		assert(image == NULL);
 		xl::CLanguage *pLang = xl::CLanguage::getInstance();
@@ -46,7 +52,7 @@ void DisplayParameter::draw (HDC hdc, CRect rc, CImagePtr image) {
 		HFONT oldFont = dc.SelectFont(font);
 
 		UINT fmt = DT_SINGLELINE | DT_VCENTER | DT_CENTER;
-		dc.DrawText(strLoading, strLoading.length(), rc, fmt);
+		dc.DrawText(strLoading, strLoading.length(), rcView, fmt);
 
 		dc.SelectFont(oldFont);
 		return;
@@ -54,13 +60,14 @@ void DisplayParameter::draw (HDC hdc, CRect rc, CImagePtr image) {
 
 	assert(image != NULL);
 	if (suitable) {
-		_DrawSuitable(hdc, rc, image);
+		_DrawSuitable(hdc, image);
 	} else {
 		assert(false); // do later
 	}
 }
 
-void DisplayParameter::_DrawSuitable (HDC hdc, CRect rc, CImagePtr image) {
+void DisplayParameter::_DrawSuitable (HDC hdc, CImagePtr image) {
+	CRect rc = rcView;
 	CSize szArea(rc.Width(), rc.Height());
 	CSize szImage = image->getImageSize();
 	CSize sz = CImage::getSuitableSize(szArea, realSize);
@@ -75,17 +82,24 @@ void DisplayParameter::_DrawSuitable (HDC hdc, CRect rc, CImagePtr image) {
 
 	if (sz == szImage) {
 		dc.BitBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, SRCCOPY);
-		dc.TextOut(10, 10, _T("BitBlt"));
+#ifndef NDEBUG
+		xl::tchar info[128];
+		_stprintf_s(info, 128, _T("BitBlt: %d-%d; RS: %d-%d"), sz.cx, sz.cy, realSize.cx, realSize.cy);
+		dc.TextOut(10, 10, info);
+#endif
 	} else {
 		int oldMode = dc.SetStretchBltMode(COLORONCOLOR);
 		dc.StretchBlt(x, y, sz.cx, sz.cy, mdc, 0, 0, szImage.cx, szImage.cy, SRCCOPY);
 		dc.SetStretchBltMode(oldMode);
-		dc.TextOut(10, 10, _T("StretchBlt with ColorOnColor"));
+
+#ifndef NDEBUG
+		xl::tchar info[128];
+		_stprintf_s(info, 128, _T("SBlt[COC]: %d-%d; RS: %d-%d"), sz.cx, sz.cy, realSize.cx, realSize.cy);
+		dc.TextOut(10, 10, info);
+#endif
 	}
 
 	selector.detach();
-
-
 }
 
 
@@ -99,7 +113,7 @@ void CImageView::_OnIndexChanged (int index) {
 	assert(getLockLevel() > 0); // must be called in lock
 	assert(m_pImageManager != NULL);
 
-	m_disp.reset();
+	m_disp.reset(getClientRect());
 	m_imageRealSize.reset();
 	m_imageZoomed.reset();
 	m_imageThumbnail.reset();
@@ -160,6 +174,9 @@ void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
 	m_pImageManager->onViewSizeChanged(rc);
+	lock();
+	m_disp.rcView = rc;
+	unlock();
 }
 
 void CImageView::drawMe (HDC hdc) {
@@ -184,7 +201,7 @@ void CImageView::drawMe (HDC hdc) {
 		lock.unlock();
 	}
 
-	m_disp.draw(hdc, rc, image);
+	m_disp.draw(hdc, image);
 
 	lock.lock(m_pImageManager);
 	image.reset();
