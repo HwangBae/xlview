@@ -43,7 +43,7 @@ bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
 	return false;
 }
 
-CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *pCancel) {
+CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageOperateCancel *pCancel) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
 		return CImagePtr();
@@ -63,7 +63,14 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *p
 	return CImagePtr();
 }
 
-CImagePtr CImageLoader::loadThumbnail (const xl::tstring &fileName, int tw, int th, IImageLoaderCancel *pCancel) {
+CImagePtr CImageLoader::loadThumbnail (
+                                       const xl::tstring &fileName,
+                                       int tw, 
+                                       int th,
+                                       int &imageWidth,
+                                       int &imageHeight,
+                                       IImageOperateCancel *pCancel
+                                      ) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
 		return CImagePtr();
@@ -76,15 +83,18 @@ CImagePtr CImageLoader::loadThumbnail (const xl::tstring &fileName, int tw, int 
 	std::string header = data.substr(0, IMAGE_HEADER_LENGTH);
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
-			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, pCancel);
+			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, imageWidth, imageHeight, pCancel);
 			if (thumbnail != NULL) {
 				return thumbnail;
 			} else if (!pCancel->shouldCancel()) {
 				CImagePtr image = (*it)->load(data, pCancel);
 				if (image) {
 					CSize szArea(tw, th);
-					CSize sz = CImage::getSuitableSize(szArea, image->getImageSize());
-					thumbnail = image->resize(sz.cx, sz.cy);
+					CSize szImage = image->getImageSize();
+					imageWidth = szImage.cx;
+					imageHeight = szImage.cy;
+					CSize sz = CImage::getSuitableSize(szArea, szImage, false);
+					thumbnail = image->resize(sz.cx, sz.cy, true);
 					return thumbnail;
 				}
 			}
@@ -159,7 +169,7 @@ public:
 		}
 	}
 
-	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) {
+	virtual CImagePtr load (const std::string &data, IImageOperateCancel *pCancel = NULL) {
 		xl::ui::CDIBSectionPtr dib;
 
 		// load JPEG

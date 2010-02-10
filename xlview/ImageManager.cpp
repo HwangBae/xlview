@@ -21,9 +21,9 @@ void CImageManager::_SetIndexNoLock (int index) {
 		}
 
 		// check marginal condition
-		if (m_currIndex == 0 && index == m_images.size() - 1) {
+		if (m_currIndex == 0 && index == m_cachedImages.size() - 1) {
 			m_direction = BACKWARD;
-		} else if (m_currIndex == m_images.size() - 1 && index == 0) {
+		} else if (m_currIndex == m_cachedImages.size() - 1 && index == 0) {
 			m_direction = FORWARD;
 		}
 
@@ -39,7 +39,7 @@ void CImageManager::_SetIndexNoLock (int index) {
 			// this could happen if ui thread enter the CRITICAL SECTION before _PrefetchThread,
 			// after it loaded the real size image, but before _PrefetchThread enter CS, the 
 			// realsize image would remain there, so we just clear it
-			m_images[lastIndex]->clearRealSize();
+			m_cachedImages[lastIndex]->clearRealSize();
 		}
 
 		// start prefetch first
@@ -118,7 +118,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		xl::CScopeLock lock(pThis);
 		CSize szPrefetch = pThis->m_szPrefetch;
-		if (szPrefetch.cx <= 0 || szPrefetch.cy <= 0 || pThis->m_images.size() == 0) {
+		if (szPrefetch.cx <= 0 || szPrefetch.cy <= 0 || pThis->m_cachedImages.size() == 0) {
 			continue;
 		}
 
@@ -154,7 +154,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 			continue;
 		} // make sure the index and count is not changed
 		_Indexes indexes;
-		_Images images;
+		_CachedImages images;
 		pThis->_GetPrefetchIndexes(indexes, currIndex, count, pThis->m_direction, PREFETCH_RANGE);
 		images.reserve(indexes.size());
 		for (_Indexes::iterator it = indexes.begin(); it != indexes.end(); ++ it) {
@@ -163,7 +163,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		// 2.2 clear the useless zoomed images, and unlock
 		// note that 2.1 and 2.2 should be fast enough for a lock operation
-		for (xl::uint i = 0; i < pThis->m_images.size(); ++ i) {
+		for (xl::uint i = 0; i < pThis->m_cachedImages.size(); ++ i) {
 			bool removed = true;
 			if (i == currIndex) {
 				removed = false;
@@ -175,13 +175,13 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 				}
 			}
 			if (removed) {
-				pThis->m_images[i]->clearZoomed();
+				pThis->m_cachedImages[i]->clearZoomed();
 			}
 		}
 		lock.unlock();
 
 		// 2.3 load the zoomed images
-		for (_Images::iterator it = images.begin(); it != images.end() && !pThis->shouldCancel(); ++ it) {
+		for (_CachedImages::iterator it = images.begin(); it != images.end() && !pThis->shouldCancel(); ++ it) {
 			CDisplayImagePtr image = *it;
 			if (image->getZoomedImage() == NULL) {
 				if (image->getRealSizeImage() == NULL) {
@@ -282,13 +282,13 @@ int CImageManager::getCurrIndex () const {
 
 int CImageManager::getImageCount () const {
 	xl::CScopeLock lock(this);
-	return (int)m_images.size();
+	return (int)m_cachedImages.size();
 }
 
 bool CImageManager::setFile (const xl::tstring &file) {
 	xl::CScopeLock lock(this);
 
-	assert(m_images.size() == 0);
+	assert(m_cachedImages.size() == 0);
 	xl::tstring fileName = xl::file_get_name(file);
 	m_directory = xl::file_get_directory(file);
 	m_directory += _T("\\");
@@ -311,22 +311,22 @@ bool CImageManager::setFile (const xl::tstring &file) {
 			xl::tstring name = m_directory + wfd.cFileName;
 			if (pLoader->isFileSupported(name)) {
 				if (_tcsicmp(wfd.cFileName, fileName) == 0) {
-					new_index = (int)m_images.size();
+					new_index = (int)m_cachedImages.size();
 				}
-				m_images.push_back(CDisplayImagePtr(new CDisplayImage(name)));
+				m_cachedImages.push_back(CDisplayImagePtr(new CDisplayImage(name)));
 			}
 		} while (::FindNextFile(hFind, &wfd));
 		::FindClose(hFind);
 
-		xl::trace(_T("get %d files\n"), m_images.size());
+		xl::trace(_T("get %d files\n"), m_cachedImages.size());
 	}
 
-	if (m_images.size() == 0) {
+	if (m_cachedImages.size() == 0) {
 		::MessageBox(NULL, _T("Can not find any image files"), 0, MB_OK);
 		return false;
 	}
 
-	size_t count = m_images.size();
+	size_t count = m_cachedImages.size();
 	_TriggerEvent(EVT_FILELIST_READY, &count);
 
 	if (new_index == -1 && count > 0) {
@@ -344,7 +344,7 @@ void CImageManager::setIndex (int index) {
 CDisplayImagePtr CImageManager::getImage (int index) {
 	xl::CScopeLock lock(this);
 	assert(index >= 0 && index < getImageCount());
-	CDisplayImagePtr image = m_images[index];
+	CDisplayImagePtr image = m_cachedImages[index];
 	lock.unlock();
 	return image;
 }

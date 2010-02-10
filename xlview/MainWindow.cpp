@@ -35,7 +35,7 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 	if (gesture == _T("R")) {
 		if (release) {
 			int new_index = m_currIndex + 1;
-			if (new_index == m_images.size()) {
+			if (new_index == m_cachedImages.size()) {
 				new_index = 0;
 			}
 			setIndex(new_index);
@@ -47,7 +47,7 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		if (release) {
 			int new_index = m_currIndex;
 			if (new_index == 0) {
-				new_index = m_images.size() - 1;
+				new_index = m_cachedImages.size() - 1;
 			} else {
 				new_index --;
 			}
@@ -117,14 +117,14 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	case CImageManager::EVT_INDEX_CHANGED:
 		{
 			assert(param != NULL);
-			int _min = 0, _max = m_images.size() - 1, _curr = *(int *)param;
+			int _min = 0, _max = m_cachedImages.size() - 1, _curr = *(int *)param;
 			assert(_curr == m_currIndex);
 			TCHAR buf[128];
 			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
 			pSlider->setStyle(buf);
 
 			xl::tstring title = MAIN_TITLE;
-			title += _T(" - ( ") + m_images[_curr]->getFileName() + _T(" )");
+			title += _T(" - ( ") + m_cachedImages[_curr]->getFileName() + _T(" )");
 			SetWindowText(title);
 		}
 		break;

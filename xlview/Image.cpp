@@ -3,6 +3,7 @@
 #include <process.h>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
+#include "ImageConfig.h"
 #include "Image.h"
 #include "ImageLoader.h"
 

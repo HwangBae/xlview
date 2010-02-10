@@ -28,9 +28,9 @@ public:
 	virtual ~CDisplayImage ();
 	CDisplayImagePtr clone ();
 
-	bool loadZoomed (int width, int height, IImageLoaderCancel *pCancel = NULL);
-	bool loadRealSize (IImageLoaderCancel *pCancel = NULL);
-	bool loadThumbnail (IImageLoaderCancel *pCancel = NULL);
+	bool loadZoomed (int width, int height, IImageOperateCancel *pCancel = NULL);
+	bool loadRealSize (IImageOperateCancel *pCancel = NULL);
+	bool loadThumbnail (IImageOperateCancel *pCancel = NULL);
 
 	void clearThumbnail ();
 	void clearRealSize ();

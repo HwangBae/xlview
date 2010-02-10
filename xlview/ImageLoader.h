@@ -8,8 +8,8 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-// interface for canceling image loading
-class IImageLoaderCancel {
+// interface for canceling image operation
+class IImageOperateCancel {
 public:
 	virtual bool shouldCancel () = 0;
 };
@@ -23,12 +23,18 @@ public:
 	virtual xl::tstring getPluginName () = 0;
 	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool checkHeader (const std::string &header) = 0;
-	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) = 0;
-	virtual CImagePtr loadThumbnail (const std::string &data, int tw, int th, IImageLoaderCancel *pCancel = NULL) {
+	virtual CImagePtr load (const std::string &data, IImageOperateCancel *pCancel = NULL) = 0;
+	virtual CImagePtr loadThumbnail (
+	                                 const std::string &data,
+	                                 int tw,
+	                                 int th,
+					 int &imageWidth,
+					 int &imageHeight,
+	                                 IImageOperateCancel *pCancel = NULL
+	                                ) {
 		return CImagePtr();
 	}
 };
-// typedef std::tr1::shared_ptr<IImageLoaderPlugin>       ImageLoaderPluginRawPtr;
 typedef IImageLoaderPlugin                            *ImageLoaderPluginRawPtr;
 
 
@@ -46,8 +52,15 @@ public:
 
 	void registerPlugin (ImageLoaderPluginRawPtr);
 	bool isFileSupported (const xl::tstring &fileName);
-	CImagePtr load (const xl::tstring &fileName, IImageLoaderCancel *pCancel = NULL);
-	CImagePtr loadThumbnail (const xl::tstring &fileName, int tw, int th, IImageLoaderCancel *pCancel = NULL);
+	CImagePtr load (const xl::tstring &fileName, IImageOperateCancel *pCancel = NULL);
+	CImagePtr loadThumbnail (
+	                         const xl::tstring &fileName,
+	                         int tw,
+	                         int th,
+	                         int &imageWidth,
+	                         int &imageHeight,
+	                         IImageOperateCancel *pCancel = NULL
+	                        );
 };
 
 

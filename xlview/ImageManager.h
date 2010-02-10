@@ -6,17 +6,14 @@
 #include "libxl/include/string.h"
 #include "libxl/include/utilities.h"
 #include "libxl/include/dp/Observable.h"
-#include "DisplayImage.h"
+#include "ImageConfig.h"
+#include "CachedImage.h"
 #include "ImageLoader.h"
-
-// when zooming, we don't generate image that is smaller than that
-static const int MIN_VIEW_WIDTH = 160;
-static const int MIN_VIEW_HEIGHT = 120;
 
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
-	, public IImageLoaderCancel
+	, public IImageOperateCancel
 	, public xl::CUserLock
 {
 protected:
@@ -25,10 +22,10 @@ protected:
 		BACKWARD
 	};
 	typedef std::vector<xl::uint>                  _Indexes;
-	typedef std::vector<CDisplayImagePtr>          _Images;
-	typedef _Images::iterator                      _ImageIter;
+	typedef std::vector<CCachedImagePtr>           _CachedImages;
+	typedef _CachedImages::iterator                _CachedImageIter;
 	xl::tstring        m_directory; // include the last '\\'
-	_Images            m_images;
+	_CachedImages      m_cachedImages;
 	xl::uint           m_currIndex;
 	DIRECTION          m_direction;
 
@@ -77,7 +74,7 @@ public:
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
 
-	// IImageLoaderCancel
+	// IImageOperateCancel
 	virtual bool shouldCancel ();
 };
 

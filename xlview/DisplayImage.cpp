@@ -40,7 +40,7 @@ CDisplayImagePtr CDisplayImage::clone () {
 	return image;
 }
 
-bool CDisplayImage::loadZoomed (int width, int height, IImageLoaderCancel *pCancel) {
+bool CDisplayImage::loadZoomed (int width, int height, IImageOperateCancel *pCancel) {
 	xl::CScopeLock lock(this);;
 	bool clearRealSize = !m_imgRealSize;
 	if (!m_imgRealSize && !loadRealSize(pCancel)) {
@@ -74,7 +74,7 @@ bool CDisplayImage::loadZoomed (int width, int height, IImageLoaderCancel *pCanc
 	return (!!m_imgZoomed) && (m_imgZoomed->getImageCount() > 0);
 }
 
-bool CDisplayImage::loadRealSize (IImageLoaderCancel *pCancel) {
+bool CDisplayImage::loadRealSize (IImageOperateCancel *pCancel) {
 	xl::CScopeLock lock(this);;
 	xl::tstring fileName = getFileName();
 	assert(m_imgRealSize == NULL);
@@ -109,7 +109,7 @@ bool CDisplayImage::loadRealSize (IImageLoaderCancel *pCancel) {
 	}
 }
 
-bool CDisplayImage::loadThumbnail (IImageLoaderCancel *pCancel) {
+bool CDisplayImage::loadThumbnail (IImageOperateCancel *pCancel) {
 	xl::CScopeLock lock(this);;
 	if (m_imgZoomed) {
 		assert(m_imgZoomed->getImageCount() > 0);
