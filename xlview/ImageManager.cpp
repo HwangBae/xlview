@@ -33,16 +33,12 @@ void CImageManager::_SetIndexNoLock (int index) {
 
 		xl::uint lastIndex = m_currIndex;
 		m_currIndex = index;
-		m_indexChanged = true;
-
-		if (lastIndex != (xl::uint)-1) {
-			// this could happen if ui thread enter the CRITICAL SECTION before _PrefetchThread,
-			// after it loaded the real size image, but before _PrefetchThread enter CS, the 
-			// realsize image would remain there, so we just clear it
-			m_cachedImages[lastIndex]->clearRealSize();
+		for (int i = 0; i < COUNT_OF(m_cancels); ++i) {
+			m_cancels[i].m_indexChanged = true;
 		}
 
 		// start prefetch first
+		_BeginLoad();
 		_BeginPrefetch();
 
 		_TriggerEvent(EVT_INDEX_CHANGED, &index);
@@ -106,10 +102,42 @@ void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int c
 
 //////////////////////////////////////////////////////////////////////////
 // thread
+unsigned __stdcall CImageManager::_LoadThread (void *param) {
+	CImageManager *pThis = (CImageManager *)param;
+	assert(pThis != NULL);
+	HANDLE hEvent = pThis->m_hEvents[THREAD_LOAD];
+
+	CImageLoader *pImageLoader = CImageLoader::getInstance();
+
+	for (;;) {
+		::WaitForSingleObject(hEvent, INFINITE);
+		if (pThis->m_exiting) {
+			break;
+		}
+
+		xl::CScopeLock lock(pThis);
+		xl::tstring fileName = pThis->getCurrentFileName();
+		pThis->m_cancels[THREAD_LOAD].m_indexChanged = false;
+		lock.unlock();
+
+		CImagePtr image = pImageLoader->load(fileName, &pThis->m_cancels[THREAD_LOAD]);
+		if (image == NULL) {
+			assert(pThis->m_cancels[THREAD_LOAD].shouldCancel());
+		} else {
+			lock.lock(pThis);
+			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
+			lock.unlock();
+		}
+	}
+
+	return 0;
+}
+
+
 unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 	CImageManager *pThis = (CImageManager *)param;
 	assert(pThis != NULL);
-	HANDLE hEvent = pThis->m_hPrefetchEvent;
+	HANDLE hEvent = pThis->m_hEvents[THREAD_PREFETCH];
 	for (;;) {
 		::WaitForSingleObject(hEvent, INFINITE);
 		if (pThis->m_exiting) {
@@ -124,50 +152,26 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		int currIndex = pThis->getCurrIndex();
 		size_t count = pThis->getImageCount();
-		CDisplayImagePtr displayImage = pThis->getImage(currIndex);
-		assert(displayImage->getRealSizeImage() == NULL);
-		pThis->m_indexChanged = false;
-		lock.unlock();
+		pThis->m_cancels[THREAD_PREFETCH].m_indexChanged = false;
 
-		// 1. load current
-		assert(currIndex >= 0 && currIndex < (int)count);
-		if (displayImage->loadRealSize(pThis)) {
-			lock.lock(pThis);
-			if (pThis->shouldCancel()) {
-				displayImage->clearRealSize();
-				continue;
-			}
-			int indexLoaded = currIndex;
-			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &indexLoaded);
-			displayImage->clearRealSize(); // transport the ownership to the subscriber (CImageView)
-			lock.unlock();
-		} else {
-			if (pThis->shouldCancel()) {
-				continue;
-			}
-		}
-
-		// 2. prefetch
-		// 2.1 lock, and get the image ptrs
-		lock.lock(pThis);
-		if (pThis->shouldCancel()) {
-			continue;
-		} // make sure the index and count is not changed
+		// 1. prefetch
+		// 1.1 get the image Ptrs
 		_Indexes indexes;
 		_CachedImages images;
 		pThis->_GetPrefetchIndexes(indexes, currIndex, count, pThis->m_direction, PREFETCH_RANGE);
 		images.reserve(indexes.size());
 		for (_Indexes::iterator it = indexes.begin(); it != indexes.end(); ++ it) {
-			images.push_back(pThis->getImage(*it));
+			images.push_back(pThis->m_cachedImages[*it]);
 		}
 
-		// 2.2 clear the useless zoomed images, and unlock
+		// 1.2 clear the useless zoomed images, and unlock
 		// note that 2.1 and 2.2 should be fast enough for a lock operation
 		for (xl::uint i = 0; i < pThis->m_cachedImages.size(); ++ i) {
 			bool removed = true;
 			if (i == currIndex) {
 				removed = false;
 			} else {
+				// TODO: use std::find instead
 				for (xl::uint j = 0; j < indexes.size(); ++ j) {
 					if (i == indexes[j]) {
 						removed = false;
@@ -175,85 +179,33 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 				}
 			}
 			if (removed) {
-				pThis->m_cachedImages[i]->clearZoomed();
+				pThis->m_cachedImages[i]->clear(false); // remain the thumbnail
 			}
 		}
 		lock.unlock();
 
-		// 2.3 load the zoomed images
-		for (_CachedImages::iterator it = images.begin(); it != images.end() && !pThis->shouldCancel(); ++ it) {
-			CDisplayImagePtr image = *it;
-			if (image->getZoomedImage() == NULL) {
-				if (image->getRealSizeImage() == NULL) {
-					image->loadRealSize(pThis);
-				}
+		// 1.3 load the zoomed images
+		for (_CachedImages::iterator it = images.begin(); 
+			it != images.end() && !pThis->m_cancels[THREAD_PREFETCH].shouldCancel();
+			++ it)
+		{
+			CCachedImagePtr image = *it;
+			image->load(szPrefetch, &pThis->m_cancels[THREAD_PREFETCH]);
+		} 
 
-				if (image->getRealSizeImage() != NULL && !pThis->shouldCancel()) {
-					CSize szImage = image->getRealSize();
-					CSize szArea = pThis->m_szPrefetch;
-					CSize szZoom = CImage::getSuitableSize(szArea, szImage, true);
-
-					image->loadZoomed(szZoom.cx, szZoom.cy, pThis);
-
-					lock.lock(pThis);
-					if (!pThis->shouldCancel()) {
-						int indexZoomed = indexes[std::distance(images.begin(), it)];
-						pThis->_TriggerEvent(EVT_IMAGE_ZOOMED, &indexZoomed);
-					}
-					lock.unlock();
-				}
-
-				image->clearRealSize();
-				XLTRACE(_T("prefetched: %s\n"), image->getFileName().c_str());
-			}
-		} // the for loop
+		// TODO: 1.4 load the thumbnail
 	}
 
 	return 0;
 }
 
-void CImageManager::_CreateThreads () {
-	assert(m_hPrefetchThread == INVALID_HANDLE_VALUE);
-	assert(m_hPrefetchEvent == NULL);
 
-	xl::tchar name[MAX_PATH];
-
-	xl::CScopeLock lock(this);
-	_stprintf_s(name, MAX_PATH, 
-		_T("Local\\xlview::ImageManger::PrefetchEvent [created at %d]"), ::GetTickCount());
-	m_hPrefetchEvent = ::CreateEvent(NULL, FALSE, FALSE, name);
-	assert(m_hPrefetchEvent != NULL);
-	m_hPrefetchThread = (HANDLE)_beginthreadex(NULL, 0, _PrefetchThread, this, 0, NULL);
-	assert(m_hPrefetchThread != INVALID_HANDLE_VALUE);
-}
-
-void CImageManager::_TerminateThreads () {
-	assert(m_hPrefetchEvent != NULL);
-	assert(m_hPrefetchThread != INVALID_HANDLE_VALUE);
-
-	bool exiting = m_exiting;
-	m_exiting = true;
-	::SetEvent(m_hPrefetchEvent);
-	if (::WaitForSingleObject(m_hPrefetchThread, 3000) != WAIT_OBJECT_0) {
-		::TerminateThread(m_hPrefetchThread, -1);
-		XLTRACE(_T("** Thread [prefetch] does not exit normally\n"));
-	}
-
-	CloseHandle(m_hPrefetchEvent);
-	CloseHandle(m_hPrefetchThread);
-	m_hPrefetchEvent = NULL;
-	m_hPrefetchThread = INVALID_HANDLE_VALUE;
-
-	m_exiting = exiting;
+void CImageManager::_BeginLoad () {
+	_RunThread(THREAD_LOAD);
 }
 
 void CImageManager::_BeginPrefetch () {
-	// xl::CScopeLock lock(this);
-	if (m_hPrefetchEvent != NULL) {
-		::SetEvent(m_hPrefetchEvent);
-	} else {
-		assert(false);
-	}
+	_RunThread(THREAD_PREFETCH);
 }
 
 
@@ -264,11 +216,13 @@ CImageManager::CImageManager ()
 	, m_direction(CImageManager::FORWARD)
 	, m_szPrefetch(MIN_VIEW_WIDTH, MIN_VIEW_HEIGHT)
 	, m_exiting(false)
-	, m_indexChanged(false)
-	, m_hPrefetchThread(INVALID_HANDLE_VALUE)
-	, m_hPrefetchEvent(NULL)
 {
+	for (int i = 0; i < THREAD_COUNT; ++ i) {
+		m_cancels[i].m_pExiting = &m_exiting;
+	}
 	_CreateThreads();
+
+	::SetThreadPriority(m_hThreads[THREAD_PREFETCH], THREAD_PRIORITY_BELOW_NORMAL);
 }
 
 CImageManager::~CImageManager () {
@@ -280,9 +234,9 @@ int CImageManager::getCurrIndex () const {
 	return m_currIndex;
 }
 
-int CImageManager::getImageCount () const {
+size_t CImageManager::getImageCount () const {
 	xl::CScopeLock lock(this);
-	return (int)m_cachedImages.size();
+	return m_cachedImages.size();
 }
 
 bool CImageManager::setFile (const xl::tstring &file) {
@@ -313,7 +267,7 @@ bool CImageManager::setFile (const xl::tstring &file) {
 				if (_tcsicmp(wfd.cFileName, fileName) == 0) {
 					new_index = (int)m_cachedImages.size();
 				}
-				m_cachedImages.push_back(CDisplayImagePtr(new CDisplayImage(name)));
+				m_cachedImages.push_back(CCachedImagePtr(new CCachedImage(name)));
 			}
 		} while (::FindNextFile(hFind, &wfd));
 		::FindClose(hFind);
@@ -341,16 +295,36 @@ void CImageManager::setIndex (int index) {
 	_SetIndexNoLock(index);
 }
 
-CDisplayImagePtr CImageManager::getImage (int index) {
+CCachedImagePtr CImageManager::getCurrentCachedImage () {
 	xl::CScopeLock lock(this);
-	assert(index >= 0 && index < getImageCount());
-	CDisplayImagePtr image = m_cachedImages[index];
+	assert(m_currIndex >= 0 && m_currIndex < getImageCount());
+	CCachedImagePtr cachedImage = m_cachedImages[m_currIndex];
 	lock.unlock();
-	return image;
+	return cachedImage;
+}
+
+xl::tstring CImageManager::getCurrentFileName () {
+	xl::CScopeLock lock(this);
+	assert(m_currIndex >= 0 && m_currIndex < getImageCount());
+	CCachedImagePtr cachedImage = m_cachedImages[m_currIndex];
+	lock.unlock();
+	return cachedImage->getFileName();
+}
+
+void CImageManager::markThreadExit () {
+	m_exiting = true;
+}
+
+void CImageManager::assignThreadProc() {
+	m_procThreads[THREAD_LOAD] = &_LoadThread;
+	m_procThreads[THREAD_PREFETCH] = &_PrefetchThread;
+}
+
+const xl::tchar* CImageManager::getThreadName() {
+	return _T("xlview::ImageManager");
 }
 
 void CImageManager::onViewSizeChanged (CRect rc) {
-	xl::CScopeLock lock(this);
 	CSize sz(rc.Width(), rc.Height());
 	if (sz.cx < MIN_VIEW_WIDTH) {
 		sz.cx = MIN_VIEW_WIDTH;
@@ -359,13 +333,9 @@ void CImageManager::onViewSizeChanged (CRect rc) {
 		sz.cy = MIN_VIEW_HEIGHT;
 	}
 
+	xl::CScopeLock lock(this);
 	if (m_szPrefetch == sz) {
 		return;
 	}
-
 	m_szPrefetch = sz;
-}
-
-bool CImageManager::shouldCancel () {
-	return m_indexChanged || m_exiting;
 }

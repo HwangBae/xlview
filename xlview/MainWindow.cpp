@@ -130,8 +130,6 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_IMAGE_LOADED:
 		break;
-	case CImageManager::EVT_IMAGE_ZOOMED:
-		break;
 	default:
 		assert(false);
 		break;

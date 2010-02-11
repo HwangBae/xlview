@@ -6,15 +6,27 @@
 #include "libxl/include/string.h"
 #include "libxl/include/utilities.h"
 #include "libxl/include/dp/Observable.h"
+#include "ClassWithThreads.h"
 #include "ImageConfig.h"
 #include "CachedImage.h"
 #include "ImageLoader.h"
 
+class CImageOperateCancel : public IImageOperateCancel {
+public:
+	bool *m_pExiting;
+	bool m_indexChanged;
+	CImageOperateCancel () : m_indexChanged(false) {
+		m_pExiting = NULL;
+	}
+	virtual bool shouldCancel () {
+		return m_indexChanged;
+	}
+};
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
-	, public IImageOperateCancel
 	, public xl::CUserLock
+	, public ClassWithThreadT<CImageManager, 2>
 {
 protected:
 	enum DIRECTION {
@@ -38,15 +50,17 @@ protected:
 
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
-	bool               m_exiting;
-	bool               m_indexChanged;
-	HANDLE             m_hPrefetchThread;
-	HANDLE             m_hPrefetchEvent;
+	enum {
+		THREAD_LOAD     = 0,
+		THREAD_PREFETCH = 1,
+		THREAD_COUNT
+	};
+	bool                                           m_exiting;
+	CImageOperateCancel                            m_cancels[THREAD_COUNT];
+	static unsigned __stdcall _LoadThread (void *);
 	static unsigned __stdcall _PrefetchThread (void *);
-	void _CreateThreads ();
-	void _TerminateThreads ();
+	void _BeginLoad ();
 	void _BeginPrefetch ();
-
 public:
 	// event
 	enum EVENT 
@@ -54,8 +68,7 @@ public:
 	{
 		EVT_FILELIST_READY,                    // param (pointer to total count)
 		EVT_INDEX_CHANGED,                     // param (pointer to the current index)
-		EVT_IMAGE_LOADED,                      // param (pointer to the loaded index)
-		EVT_IMAGE_ZOOMED,                      // param (pointer to the zoomed index)
+		EVT_IMAGE_LOADED,                      // param (pointer to the CImagePtr)
 		EVT_NUM
 	};
 
@@ -63,19 +76,23 @@ public:
 	virtual ~CImageManager ();
 
 	int getCurrIndex () const;
-	int getImageCount () const;
+	size_t getImageCount () const;
 
 	bool setFile (const xl::tstring &file);
 	void setIndex (int index);
 
-	CDisplayImagePtr getImage (int index);
+	CCachedImagePtr getCurrentCachedImage ();
+	xl::tstring getCurrentFileName ();
+
+	//////////////////////////////////////////////////////////////////////////
+	// for ClassWithThreads
+	void markThreadExit ();
+	void assignThreadProc();
+	const xl::tchar* getThreadName(); 
 
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
-
-	// IImageOperateCancel
-	virtual bool shouldCancel ();
 };
 
 #endif

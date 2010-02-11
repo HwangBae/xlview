@@ -99,7 +99,14 @@ void CCachedImage::clear (bool clearThumbnail) {
 	unlock();
 }
 
-CSize CCachedImage::getImageSize () {
+xl::tstring CCachedImage::getFileName () const {
+	lock();
+	xl::tstring fileName = m_fileName;
+	unlock();
+	return fileName;
+}
+
+CSize CCachedImage::getImageSize () const {
 	lock();
 	CSize sz = m_imageSize;
 	unlock();
@@ -107,13 +114,15 @@ CSize CCachedImage::getImageSize () {
 	return sz;
 }
 
-CImagePtr CCachedImage::getCachedImage () {
+CImagePtr CCachedImage::getCachedImage () const {
 	lock();
 	CImagePtr image = m_suitableImage;
 	if (image == NULL) {
 		image = m_thumbnailImage;
 	}
-	image = image->clone();
+	if (image != NULL) {
+		image = image->clone();
+	}
 	unlock();
 
 	return image;

@@ -331,45 +331,22 @@ void CImageView::_OnIndexChanged (int index) {
 	m_imageThumbnail.reset();
 
 	if (index == m_pImageManager->getCurrIndex()) {
-		CDisplayImagePtr image = m_pImageManager->getImage(index);
-		assert(image != NULL);
-		m_imageZoomed = image->getZoomedImage();
+		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
+		m_imageZoomed = cachedImage->getCachedImage();
 		if (m_imageZoomed != NULL) {
-			m_imageZoomed = m_imageZoomed->clone();
-		}
-
-		m_imageThumbnail = image->getThumbnail();
-		if (m_imageThumbnail != NULL) {
-			m_imageThumbnail = m_imageThumbnail->clone();
-		}
-
-		CSize rs = image->getRealSize();
-		if (rs.cx != -1 && rs.cy != -1) {
-			m_disp.setRealSize(rs);
+			m_disp.setRealSize(cachedImage->getImageSize());
 		}
 	}
 	invalidate();
 }
 
-void CImageView::_OnImageLoaded (int index) {
+void CImageView::_OnImageLoaded (CImagePtr image) {
 	assert(getLockLevel() > 0); // must be called in lock
 	assert(m_pImageManager != NULL);
 
-	if (index == m_pImageManager->getCurrIndex()) {
-		CDisplayImagePtr image = m_pImageManager->getImage(index);
-		assert(image != NULL);
-		m_imageRealSize = image->getRealSizeImage();
-		assert(m_imageRealSize != NULL);
-		m_disp.setRealSize(image->getRealSize());
-		m_disp.setLoaded();
-
-		m_imageThumbnail = image->getThumbnail();
-		assert(m_imageThumbnail); // when loaded, the thumbnail is also created
-		m_imageThumbnail = m_imageThumbnail->clone();
-		invalidate();
-
-		_BeginZoom();
-	}
+	m_disp.setRealSize(image->getImageSize());
+	m_imageRealSize = image;
+	invalidate();
 }
 
 void CImageView::_CreateThreads () {
@@ -530,16 +507,7 @@ void CImageView::onEvent (EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_IMAGE_LOADED:
 		assert(param);
-		_OnImageLoaded(*(int *)param);
-		break;
-	case CImageManager::EVT_IMAGE_ZOOMED:
-		{ // in fact, we don't care this event
-			assert(param != NULL);
-			int index = *(int *)param;
-			if (index == m_pImageManager->getCurrIndex()) {
-				assert(false); // the loader thread doesn't load the current image
-			}
-		}
+		_OnImageLoaded(*(CImagePtr *)param);
 		break;
 	default:
 		assert(false);

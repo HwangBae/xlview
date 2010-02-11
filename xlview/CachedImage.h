@@ -24,8 +24,9 @@ public:
 	bool loadThumbnail (IImageOperateCancel *pCancel = NULL);
 	void clear (bool clearThumbnail = false);
 
-	CSize getImageSize ();
-	CImagePtr getCachedImage ();
+	xl::tstring getFileName () const;
+	CSize getImageSize () const;
+	CImagePtr getCachedImage () const;
 };
 
 

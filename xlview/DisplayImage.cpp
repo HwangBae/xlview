@@ -1,6 +1,7 @@
 #include <assert.h>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
+#include "ImageConfig.h"
 #include "DisplayImage.h"
 
 
