@@ -35,6 +35,7 @@ bool CCachedImage::load (CSize szView, IImageOperateCancel *pCancel) {
 	}
 	CSize szImage = image->getImageSize();
 	CSize szSuitable = CImage::getSuitableSize(szView, szImage);
+	assert(szSuitable.cx < 10000);
 
 	if (thumbnailImage == NULL) {
 		CSize szThumbnail(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);

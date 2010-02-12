@@ -19,7 +19,8 @@ public:
 		m_pExiting = NULL;
 	}
 	virtual bool shouldCancel () {
-		return m_indexChanged;
+		assert(m_pExiting != NULL);
+		return m_indexChanged || *m_pExiting;
 	}
 };
 

@@ -428,6 +428,7 @@ void CImageView::showLarger () {
 	invalidate();
 }
 
+CRect rect;
 void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
