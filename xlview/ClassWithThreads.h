@@ -3,6 +3,17 @@
 #include <Windows.h>
 #include "libxl/include/string.h"
 
+/**
+ * usage:
+ * class YourClass : public ClassWithThreadT<YourClass, N>
+ * {
+   public:
+  	const xl::tchar* getThreadName();
+  	void assignThreadProc();
+	void markThreadExit();	
+ * }
+ */
+
 template <class T, int THREAD_COUNT>
 class ClassWithThreadT
 {

@@ -1,7 +1,7 @@
 #ifndef XLVIEW_IMAGE_VIEW_H
 #define XLVIEW_IMAGE_VIEW_H
 #include "libxl/include/ui/Control.h"
-#include "DisplayImage.h"
+#include "ClassWithThreads.h"
 #include "ImageLoader.h"
 #include "ImageManager.h"
 
@@ -55,14 +55,14 @@ class CImageView
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
 	, public xl::CUserLock
+	, public ClassWithThreadT<CImageView, 1>
 {
 protected:
 	CImageManager     *m_pImageManager;
 
-	CDisplayParameter   m_disp;
-	CImagePtr          m_imageThumbnail; // cloned
+	CDisplayParameter  m_disp;
 	CImagePtr          m_imageZoomed; // cloned
-	CImagePtr          m_imageRealSize; // point to m_pImageManager->m_image[curr]->getRealSizeImage();
+	CImagePtr          m_imageRealSize;
 
 	void _OnIndexChanged (int index);
 	void _OnImageLoaded (CImagePtr);
@@ -70,11 +70,7 @@ protected:
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
 	bool m_exiting;
-	HANDLE m_hZoomEvent;
-	HANDLE m_hZoomThread;
 	static unsigned __stdcall _ZoomThread (void *);
-	void _CreateThreads ();
-	void _TerminateThreads ();
 	void _BeginZoom ();
 public:
 	CImageView(CImageManager *pImageManager);
@@ -97,6 +93,11 @@ public:
 
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
+
+	// used by ClassWithThreads
+	const xl::tchar* getThreadName();
+	void assignThreadProc();
+	void markThreadExit();	
 };
 
 #endif

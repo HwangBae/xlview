@@ -283,7 +283,7 @@ void CDisplayParameter::drawParameter (HDC hdc) {
 unsigned __stdcall CImageView::_ZoomThread (void *param) {
 	CImageView *pThis = (CImageView *)param;
 	assert(pThis != NULL);
-	HANDLE hEvent = pThis->m_hZoomEvent;
+	HANDLE hEvent = pThis->m_hEvents[0];
 	assert(hEvent != NULL);
 	for (;;) {
 		::WaitForSingleObject(hEvent, INFINITE);
@@ -328,7 +328,6 @@ void CImageView::_OnIndexChanged (int index) {
 	m_disp.reset(getClientRect());
 	m_imageRealSize.reset();
 	m_imageZoomed.reset();
-	m_imageThumbnail.reset();
 
 	if (index == m_pImageManager->getCurrIndex()) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
@@ -346,50 +345,13 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 
 	m_disp.setRealSize(image->getImageSize());
 	m_imageRealSize = image;
+	_BeginZoom();
 	invalidate();
 }
 
-void CImageView::_CreateThreads () {
-	assert(m_hZoomThread == INVALID_HANDLE_VALUE);
-	assert(m_hZoomEvent == NULL);
-
-	xl::tchar name[MAX_PATH];
-
-	xl::CScopeLock lock(this);
-	_stprintf_s(name, MAX_PATH, 
-		_T("Local\\xlview::ImageView::ZoomEvent [created at %d]"), ::GetTickCount());
-	m_hZoomEvent = ::CreateEvent(NULL, FALSE, FALSE, name);
-	assert(m_hZoomEvent != NULL);
-	m_hZoomThread = (HANDLE)_beginthreadex(NULL, 0, _ZoomThread, this, 0, NULL);
-	assert(m_hZoomThread != INVALID_HANDLE_VALUE);
-}
-
-void CImageView::_TerminateThreads () {
-	assert(m_hZoomEvent != NULL);
-	assert(m_hZoomThread != INVALID_HANDLE_VALUE);
-
-	bool exiting = m_exiting;
-	m_exiting = true;
-	::SetEvent(m_hZoomEvent);
-	if (::WaitForSingleObject(m_hZoomThread, 3000) != WAIT_OBJECT_0) {
-		::TerminateThread(m_hZoomThread, -1);
-		XLTRACE(_T("** Thread [zoom] does not exit normally\n"));
-	}
-
-	CloseHandle(m_hZoomEvent);
-	CloseHandle(m_hZoomThread);
-	m_hZoomEvent = NULL;
-	m_hZoomThread = INVALID_HANDLE_VALUE;
-
-	m_exiting = exiting;
-}
 
 void CImageView::_BeginZoom () {
-	if (m_hZoomEvent != NULL) {
-		::SetEvent(m_hZoomEvent);
-	} else {
-		::SetEvent(m_hZoomEvent);
-	}
+	_RunThread(0);
 }
 
 
@@ -400,8 +362,6 @@ CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, m_pImageManager(pImageManager)
 	, m_exiting(false)
-	, m_hZoomEvent(NULL)
-	, m_hZoomThread(INVALID_HANDLE_VALUE)
 {
 	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
 	setStyle(_T("background-color:#808080;"));
@@ -428,7 +388,6 @@ void CImageView::showLarger () {
 	invalidate();
 }
 
-CRect rect;
 void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
@@ -456,12 +415,6 @@ void CImageView::drawMe (HDC hdc) {
 		stretchMode = COLORONCOLOR;
 		lock.lock(m_pImageManager);
 		image = m_imageRealSize;
-		lock.unlock();
-
-		lock.lock(this);
-		if (image == NULL) {
-			image = m_imageThumbnail;
-		}
 		lock.unlock();
 	}
 
@@ -515,3 +468,15 @@ void CImageView::onEvent (EVT evt, void *param) {
 		break;
 	}
 }
+
+const xl::tchar* CImageView::getThreadName() {
+	return _T("xlview::CImageView");
+}
+
+void CImageView::assignThreadProc() {
+	m_procThreads[0] = &_ZoomThread;
+}
+
+void CImageView::markThreadExit() {
+	m_exiting = true;
+}	

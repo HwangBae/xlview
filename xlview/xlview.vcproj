@@ -183,10 +183,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\DisplayImage.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\Image.cpp"
 				>
 			</File>
@@ -218,10 +214,6 @@
 			>
 			<File
 				RelativePath=".\CachedImage.h"
-				>
-			</File>
-			<File
-				RelativePath=".\DisplayImage.h"
 				>
 			</File>
 			<File

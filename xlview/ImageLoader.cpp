@@ -240,6 +240,8 @@ public:
 			} else {
 				jpeg_finish_decompress(&cinfo);
 			}
+		} else {
+			assert(false); // out of memory ?
 		}
 		jpeg_destroy_decompress(&cinfo);
 
