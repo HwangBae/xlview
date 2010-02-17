@@ -7,47 +7,19 @@
 
 #define ID_VIEW  99
 
-class CDisplayParameter {
-	bool loaded;
-	bool suitable;
-	int zoomTo;
-	int zoomNow;
-	int srcX;
-	int srcY;
-	CSize realSize;
-	// CSize zoomSize;
-	CRect rcView;
+struct DisplayInfo
+{
+	CSize szImageSize;
 
-	int frameIndex;
+	DisplayInfo () {
+		reset();
+	}
 
-	void _DrawSuitable (HDC, CImagePtr);
-	void _DrawZoom (HDC, CImagePtr);
-
-	void _CalacuteParameter ();
-
-public:
-	CDisplayParameter ();
-	~CDisplayParameter ();
-	void reset (CRect);
-
-	void setRealSize (CSize);
-	void setLoaded ();
-	void setViewRect (CRect);
-
-	bool isLoaded () const { return loaded; }
-	CSize getRealSize () const { return realSize; }
-	CSize getZoomToSize () const;
-	CSize getZoomNowSize () const;
-	int getZoomTo () const { return zoomTo; }
-	int getZoomNow () const { return zoomNow; }
-
-	bool showLarger ();
-	bool onTimer ();
-
-	void draw (HDC, CImagePtr);
-	void drawLoading (HDC);
-	void drawParameter (HDC);
+	void reset () {
+		szImageSize = CSize(-1, -1);
+	}
 };
+
 
 //////////////////////////////////////////////////////////////////////////
 // CImageView
@@ -59,8 +31,7 @@ class CImageView
 {
 protected:
 	CImageManager     *m_pImageManager;
-
-	CDisplayParameter  m_disp;
+	DisplayInfo        m_di;
 	CImagePtr          m_imageZoomed; // cloned
 	CImagePtr          m_imageRealSize;
 

@@ -226,6 +226,18 @@ public:
 					}
 				} else if (cinfo.out_color_space == JCS_RGB) {
 					memcpy (p1, p2, row_stride);
+				} else if (cinfo.out_color_space == JCS_CMYK) {
+					assert(cinfo.out_color_components == 4);
+					unsigned char *dst = p1;
+					unsigned char *src = p2;
+					for (int i = 0; i < w; ++ i) {
+						unsigned int K = (unsigned int)src[3];
+						dst[2]   = (unsigned char)((K * src[0]) / 255);
+						dst[1] = (unsigned char)((K * src[1]) / 255);
+						dst[0]  = (unsigned char)((K * src[2]) / 255);
+						src += 4;
+						dst += 3;
+					}
 				} else {
 					assert(false); // not supported
 					canceled = true;
