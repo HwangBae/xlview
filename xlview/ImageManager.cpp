@@ -326,12 +326,7 @@ const xl::tchar* CImageManager::getThreadName() {
 
 void CImageManager::onViewSizeChanged (CRect rc) {
 	CSize sz(rc.Width(), rc.Height());
-	if (sz.cx < MIN_VIEW_WIDTH) {
-		sz.cx = MIN_VIEW_WIDTH;
-	}
-	if (sz.cy < MIN_VIEW_HEIGHT) {
-		sz.cy = MIN_VIEW_HEIGHT;
-	}
+	CHECK_VIEW_SIZE(sz);
 
 	xl::CScopeLock lock(this);
 	if (m_szPrefetch == sz) {

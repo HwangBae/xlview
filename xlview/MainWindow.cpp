@@ -124,7 +124,9 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 			pSlider->setStyle(buf);
 
 			xl::tstring title = MAIN_TITLE;
-			title += _T(" - ( ") + m_cachedImages[_curr]->getFileName() + _T(" )");
+			_stprintf_s(buf, 128, _T(" (%d/%d)"), _curr + 1, _max + 1);
+			title += _T(" - ") + m_cachedImages[_curr]->getFileName();
+			title += buf;
 			SetWindowText(title);
 		}
 		break;

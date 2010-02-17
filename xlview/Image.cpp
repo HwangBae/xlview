@@ -24,11 +24,11 @@ CImage::Frame::~Frame () {
 
 
 CImage::CImage () : m_width(-1), m_height(-1) {
-	XLTRACE(_T("CImage(0x%08x) created by thread(%d)\n"), this, ::GetCurrentThreadId());
+	//XLTRACE(_T("CImage(0x%08x) created by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 CImage::~CImage () {
-	XLTRACE(_T("CImage(0x%08x) destroyed by thread(%d)\n"), this, ::GetCurrentThreadId());
+	//XLTRACE(_T("CImage(0x%08x) destroyed by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 

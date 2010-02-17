@@ -22,10 +22,26 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		}
 
 		xl::CScopeLock lock(pThis);
-
 		if (pThis->m_imageRealSize == NULL) {
 			continue; // no source
 		}
+		CSize szZoomTo = pThis->m_di.getZoomSize();
+		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
+			continue; // zoom not needed
+		}
+
+		int index = pThis->m_pImageManager->getCurrIndex();
+		CImagePtr imageRS = pThis->m_imageRealSize;
+		lock.unlock();
+
+		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true);
+
+		lock.lock(pThis);
+		if (index == pThis->m_pImageManager->getCurrIndex()) {
+			pThis->m_imageZoomed = imageZoomed;
+			pThis->invalidate();
+		}
+		lock.unlock();
 	}
 
 	return 0;
@@ -45,8 +61,8 @@ void CImageView::_OnIndexChanged (int index) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
 		m_imageZoomed = cachedImage->getCachedImage();
 		if (m_imageZoomed != NULL) {
-			m_di.szImageSize = cachedImage->getImageSize();
-			assert(m_di.szImageSize != CSize(-1, -1));
+			m_di.setImageSize(cachedImage->getImageSize());
+			assert(cachedImage->getImageSize() != CSize(-1, -1));
 		}
 	}
 	invalidate();
@@ -57,7 +73,7 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 	assert(m_pImageManager != NULL);
 
 	m_imageRealSize = image;
-	m_di.szImageSize = image->getImageSize();
+	m_di.setImageSize(image->getImageSize());
 	_BeginZoom();
 	invalidate();
 }
@@ -95,8 +111,9 @@ void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
 	m_pImageManager->onViewSizeChanged(rc);
-	lock();
+	m_di.setViewSize(rc);
 
+	lock();
 	if (m_imageRealSize != NULL) {
 		_BeginZoom();
 	}
@@ -105,12 +122,15 @@ void CImageView::onSize () {
 }
 
 void CImageView::drawMe (HDC hdc) {
-	int stretchMode = HALFTONE;
+	int stretchMode = COLORONCOLOR;//HALFTONE;
 	assert(m_pImageManager != NULL);
 
 	xl::CScopeLock lock(this);
-	CImagePtr image = m_imageZoomed;
 	CRect rc = getClientRect();
+	if (rc.Width() <= 0 || rc.Height() <= 0) {
+		return;
+	}
+	CImagePtr image = m_imageZoomed;
 	lock.unlock();
 
 	if (image == NULL) {
@@ -123,12 +143,10 @@ void CImageView::drawMe (HDC hdc) {
 	if (image == NULL) {
 		return;
 	}
-	assert(m_di.szImageSize != CSize(-1, -1));
 	CSize szImage = image->getImageSize();
-	CSize szArea(rc.Width(), rc.Height());
-	CSize szDisplay = CImage::getSuitableSize(szArea, m_di.szImageSize);
-	int x = (rc.Width() - szDisplay.cx) / 2;
-	int y = (rc.Height() - szDisplay.cy) / 2;
+	CSize szDisplay = m_di.getSuitableSize();
+	int x = rc.left + (rc.Width() - szDisplay.cx) / 2;
+	int y = rc.top + (rc.Height() - szDisplay.cy) / 2;
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
@@ -136,13 +154,16 @@ void CImageView::drawMe (HDC hdc) {
 	xl::ui::CDIBSectionHelper selector(image->getImage(0), mdc);
 	int oldmode = dc.SetStretchBltMode(stretchMode);
 	dc.StretchBlt(x, y, szDisplay.cx, szDisplay.cy, mdc, 0, 0, szImage.cx, szImage.cy, SRCCOPY);
+	// dc.BitBlt(x, y, szDisplay.cx, szDisplay.cy, mdc, 0, 0, SRCCOPY);
 	dc.SetStretchBltMode(oldmode);
-
 
 
 	lock.lock(m_pImageManager);
 	image.reset();
 	lock.unlock();
+
+	m_di.drawDebugInfo(hdc, rc);
+
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
