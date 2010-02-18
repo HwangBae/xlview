@@ -9,9 +9,9 @@
 
 //////////////////////////////////////////////////////////////////////////
 // interface for canceling image operation
-class IImageOperateCancel {
+class IImageOperateCallback {
 public:
-	virtual bool shouldCancel () = 0;
+	virtual bool onProgress (int curr, int total) = 0;
 };
 
 
@@ -23,14 +23,14 @@ public:
 	virtual xl::tstring getPluginName () = 0;
 	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool checkHeader (const std::string &header) = 0;
-	virtual CImagePtr load (const std::string &data, IImageOperateCancel *pCancel = NULL) = 0;
+	virtual CImagePtr load (const std::string &data, IImageOperateCallback *pCancel = NULL) = 0;
 	virtual CImagePtr loadThumbnail (
 	                                 const std::string &data,
 	                                 int tw,
 	                                 int th,
 					 int &imageWidth,
 					 int &imageHeight,
-	                                 IImageOperateCancel *pCancel = NULL
+	                                 IImageOperateCallback *pCancel = NULL
 	                                ) {
 		return CImagePtr();
 	}
@@ -52,14 +52,14 @@ public:
 
 	void registerPlugin (ImageLoaderPluginRawPtr);
 	bool isFileSupported (const xl::tstring &fileName);
-	CImagePtr load (const xl::tstring &fileName, IImageOperateCancel *pCancel = NULL);
+	CImagePtr load (const xl::tstring &fileName, IImageOperateCallback *pCancel = NULL);
 	CImagePtr loadThumbnail (
 	                         const xl::tstring &fileName,
 	                         int tw,
 	                         int th,
 	                         int &imageWidth,
 	                         int &imageHeight,
-	                         IImageOperateCancel *pCancel = NULL
+	                         IImageOperateCallback *pCancel = NULL
 	                        );
 };
 

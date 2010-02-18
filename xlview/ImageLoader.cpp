@@ -43,7 +43,7 @@ bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
 	return false;
 }
 
-CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageOperateCancel *pCancel) {
+CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageOperateCallback *pCancel) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
 		return CImagePtr();
@@ -69,7 +69,7 @@ CImagePtr CImageLoader::loadThumbnail (
                                        int th,
                                        int &imageWidth,
                                        int &imageHeight,
-                                       IImageOperateCancel *pCancel
+                                       IImageOperateCallback *pCallback
                                       ) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
@@ -83,11 +83,11 @@ CImagePtr CImageLoader::loadThumbnail (
 	std::string header = data.substr(0, IMAGE_HEADER_LENGTH);
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
-			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, imageWidth, imageHeight, pCancel);
+			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, imageWidth, imageHeight, pCallback);
 			if (thumbnail != NULL) {
 				return thumbnail;
-			} else if (!pCancel->shouldCancel()) {
-				CImagePtr image = (*it)->load(data, pCancel);
+			} else {
+				CImagePtr image = (*it)->load(data, pCallback);
 				if (image) {
 					CSize szArea(tw, th);
 					CSize szImage = image->getImageSize();
@@ -169,7 +169,7 @@ public:
 		}
 	}
 
-	virtual CImagePtr load (const std::string &data, IImageOperateCancel *pCancel = NULL) {
+	virtual CImagePtr load (const std::string &data, IImageOperateCallback *pCallback = NULL) {
 		xl::ui::CDIBSectionPtr dib;
 
 		// load JPEG
@@ -210,7 +210,7 @@ public:
 			unsigned char *p2 = buffer[0];
 			int lines = 0;
 			while (cinfo.output_scanline < cinfo.output_height) {
-				if (pCancel && (lines % 10) == 0 && pCancel->shouldCancel()) {
+				if (pCallback && (lines % 32) == 0 && !pCallback->onProgress(cinfo.output_scanline, cinfo.output_height)) {
 					canceled = true;
 					break;
 				}
@@ -254,6 +254,8 @@ public:
 			}
 		} else {
 			assert(false); // out of memory ?
+			// dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
+			// how to handle ????
 		}
 		jpeg_destroy_decompress(&cinfo);
 

@@ -20,8 +20,8 @@ public:
 	CCachedImage (const xl::tstring &fileName);
 	virtual ~CCachedImage ();
 
-	bool load (CSize szView, IImageOperateCancel *pCancel = NULL);
-	bool loadThumbnail (IImageOperateCancel *pCancel = NULL);
+	bool load (CSize szView, IImageOperateCallback *pCancel = NULL);
+	bool loadThumbnail (IImageOperateCallback *pCancel = NULL);
 	void clear (bool clearThumbnail = false);
 
 	xl::tstring getFileName () const;

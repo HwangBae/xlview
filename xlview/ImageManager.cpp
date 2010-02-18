@@ -33,8 +33,8 @@ void CImageManager::_SetIndexNoLock (int index) {
 
 		xl::uint lastIndex = m_currIndex;
 		m_currIndex = index;
-		for (int i = 0; i < COUNT_OF(m_cancels); ++i) {
-			m_cancels[i].m_indexChanged = true;
+		for (int i = 0; i < COUNT_OF(m_callbacks); ++i) {
+			m_callbacks[i].m_indexChanged = true;
 		}
 
 		// start prefetch first
@@ -117,12 +117,12 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 
 		xl::CScopeLock lock(pThis);
 		xl::tstring fileName = pThis->getCurrentFileName();
-		pThis->m_cancels[THREAD_LOAD].m_indexChanged = false;
+		pThis->m_callbacks[THREAD_LOAD].m_indexChanged = false;
 		lock.unlock();
 
-		CImagePtr image = pImageLoader->load(fileName, &pThis->m_cancels[THREAD_LOAD]);
+		CImagePtr image = pImageLoader->load(fileName, &pThis->m_callbacks[THREAD_LOAD]);
 		if (image == NULL) {
-			assert(pThis->m_cancels[THREAD_LOAD].shouldCancel());
+			assert(!pThis->m_callbacks[THREAD_LOAD].onProgress(0, 0));
 		} else {
 			lock.lock(pThis);
 			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
@@ -152,7 +152,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		int currIndex = pThis->getCurrIndex();
 		size_t count = pThis->getImageCount();
-		pThis->m_cancels[THREAD_PREFETCH].m_indexChanged = false;
+		pThis->m_callbacks[THREAD_PREFETCH].m_indexChanged = false;
 
 		// 1. prefetch
 		// 1.1 get the image Ptrs
@@ -186,11 +186,11 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		// 1.3 load the zoomed images
 		for (_CachedImages::iterator it = images.begin(); 
-			it != images.end() && !pThis->m_cancels[THREAD_PREFETCH].shouldCancel();
+			it != images.end() && pThis->m_callbacks[THREAD_PREFETCH].onProgress(0, 0);
 			++ it)
 		{
 			CCachedImagePtr image = *it;
-			image->load(szPrefetch, &pThis->m_cancels[THREAD_PREFETCH]);
+			image->load(szPrefetch, &pThis->m_callbacks[THREAD_PREFETCH]);
 		} 
 
 		// TODO: 1.4 load the thumbnail
@@ -218,7 +218,7 @@ CImageManager::CImageManager ()
 	, m_exiting(false)
 {
 	for (int i = 0; i < THREAD_COUNT; ++ i) {
-		m_cancels[i].m_pExiting = &m_exiting;
+		m_callbacks[i].m_pExiting = &m_exiting;
 	}
 	_CreateThreads();
 

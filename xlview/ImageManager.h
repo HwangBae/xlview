@@ -11,16 +11,16 @@
 #include "CachedImage.h"
 #include "ImageLoader.h"
 
-class CImageOperateCancel : public IImageOperateCancel {
+class CImageOperateCallback : public IImageOperateCallback {
 public:
 	bool *m_pExiting;
 	bool m_indexChanged;
-	CImageOperateCancel () : m_indexChanged(false) {
+	CImageOperateCallback () : m_indexChanged(false) {
 		m_pExiting = NULL;
 	}
-	virtual bool shouldCancel () {
+	virtual bool onProgress (int curr, int total) {
 		assert(m_pExiting != NULL);
-		return m_indexChanged || *m_pExiting;
+		return !m_indexChanged && !*m_pExiting;
 	}
 };
 
@@ -57,7 +57,7 @@ protected:
 		THREAD_COUNT
 	};
 	bool                                           m_exiting;
-	CImageOperateCancel                            m_cancels[THREAD_COUNT];
+	CImageOperateCallback                            m_callbacks[THREAD_COUNT];
 	static unsigned __stdcall _LoadThread (void *);
 	static unsigned __stdcall _PrefetchThread (void *);
 	void _BeginLoad ();
