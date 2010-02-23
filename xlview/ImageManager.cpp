@@ -34,7 +34,9 @@ void CImageManager::_SetIndexNoLock (int index) {
 		xl::uint lastIndex = m_currIndex;
 		m_currIndex = index;
 		for (int i = 0; i < COUNT_OF(m_callbacks); ++i) {
-			m_callbacks[i].m_indexChanged = true;
+			CImageLoadCallback *pCallback = (CImageLoadCallback *)m_callbacks[i];
+			assert(pCallback);
+			pCallback->m_indexChanged = true;
 		}
 
 		// start prefetch first
@@ -117,12 +119,15 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 
 		xl::CScopeLock lock(pThis);
 		xl::tstring fileName = pThis->getCurrentFileName();
-		pThis->m_callbacks[THREAD_LOAD].m_indexChanged = false;
+		CImageLoadCallback *pCallback = (CImageLoadCallback *)pThis->m_callbacks[THREAD_LOAD];
+		assert(pCallback != NULL);
+		pCallback->m_indexChanged = false;
+		pCallback->m_sizeChanged = false; // in fact, load thread doesn't use m_sizeChanged
 		lock.unlock();
 
-		CImagePtr image = pImageLoader->load(fileName, &pThis->m_callbacks[THREAD_LOAD]);
+		CImagePtr image = pImageLoader->load(fileName, pCallback);
 		if (image == NULL) {
-			assert(!pThis->m_callbacks[THREAD_LOAD].onProgress(0, 0));
+			assert(!pCallback->onProgress(0, 0));
 		} else {
 			lock.lock(pThis);
 			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
@@ -152,7 +157,10 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		int currIndex = pThis->getCurrIndex();
 		size_t count = pThis->getImageCount();
-		pThis->m_callbacks[THREAD_PREFETCH].m_indexChanged = false;
+		CImagePrefetchCallback *pCallback = (CImagePrefetchCallback *)pThis->m_callbacks[THREAD_PREFETCH];
+		assert(pCallback != NULL);
+		pCallback->m_indexChanged = false;
+		pCallback->m_sizeChanged = false;
 
 		// 1. prefetch
 		// 1.1 get the image Ptrs
@@ -186,11 +194,11 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		// 1.3 load the zoomed images
 		for (_CachedImages::iterator it = images.begin(); 
-			it != images.end() && pThis->m_callbacks[THREAD_PREFETCH].onProgress(0, 0);
+			it != images.end() && pCallback->onProgress(0, 0);
 			++ it)
 		{
 			CCachedImagePtr image = *it;
-			image->load(szPrefetch, &pThis->m_callbacks[THREAD_PREFETCH]);
+			image->load(szPrefetch, pCallback);
 		} 
 
 		// TODO: 1.4 load the thumbnail
@@ -214,11 +222,21 @@ void CImageManager::_BeginPrefetch () {
 CImageManager::CImageManager ()
 	: m_currIndex((xl::uint)-1)
 	, m_direction(CImageManager::FORWARD)
-	, m_szPrefetch(MIN_VIEW_WIDTH, MIN_VIEW_HEIGHT)
+	, m_szPrefetch(-1, -1)//MIN_VIEW_WIDTH, MIN_VIEW_HEIGHT)
 	, m_exiting(false)
 {
 	for (int i = 0; i < THREAD_COUNT; ++ i) {
-		m_callbacks[i].m_pExiting = &m_exiting;
+		switch (i) {
+		case THREAD_LOAD:
+			m_callbacks[i] = new CImageLoadCallback(&m_exiting);
+			break;
+		case THREAD_PREFETCH:
+			m_callbacks[i] = new CImagePrefetchCallback(&m_exiting);
+			break;
+		default:
+			assert(false);
+			break;
+		}
 	}
 	_CreateThreads();
 
@@ -228,6 +246,11 @@ CImageManager::CImageManager ()
 CImageManager::~CImageManager () {
 	m_exiting = true;
 	_TerminateThreads();
+
+	for (int i = 0; i < THREAD_COUNT; ++ i) {
+		delete m_callbacks[i];
+		m_callbacks[i] = NULL;
+	}
 }
 
 int CImageManager::getCurrIndex () const {
@@ -295,6 +318,13 @@ void CImageManager::setIndex (int index) {
 	_SetIndexNoLock(index);
 }
 
+void CImageManager::setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr) {
+	xl::CScopeLock lock(this);
+	if (m_currIndex == curr) {
+		m_cachedImages[curr]->setSuitableImage(image, szImage);
+	}
+}
+
 CCachedImagePtr CImageManager::getCurrentCachedImage () {
 	xl::CScopeLock lock(this);
 	assert(m_currIndex >= 0 && m_currIndex < getImageCount());
@@ -333,4 +363,8 @@ void CImageManager::onViewSizeChanged (CRect rc) {
 		return;
 	}
 	m_szPrefetch = sz;
+	CImagePrefetchCallback *pCallback = (CImagePrefetchCallback *)m_callbacks[THREAD_PREFETCH];
+	assert(pCallback != NULL);
+	pCallback->m_sizeChanged = true;
+	_BeginPrefetch();
 }

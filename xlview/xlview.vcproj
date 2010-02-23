@@ -217,6 +217,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ClassWithThreads.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Image.h"
 				>
 			</File>

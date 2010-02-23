@@ -17,6 +17,7 @@ class CImageView
 	, public xl::CUserLock
 	, public ClassWithThreadT<CImageView, 1>
 {
+	friend class ClassWithThreadT<CImageView, 1>;
 protected:
 	CImageManager     *m_pImageManager;
 
@@ -37,6 +38,16 @@ protected:
 	bool m_exiting;
 	static unsigned __stdcall _ZoomThread (void *);
 	void _BeginZoom ();
+
+	// used by ClassWithThreads
+	enum {
+		THREAD_ZOOM,
+		THREAD_COUNT
+	};
+	const xl::tchar* getThreadName();
+	void assignThreadProc();
+	void markThreadExit();	
+
 public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
@@ -59,10 +70,6 @@ public:
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
 
-	// used by ClassWithThreads
-	const xl::tchar* getThreadName();
-	void assignThreadProc();
-	void markThreadExit();	
 };
 
 #endif

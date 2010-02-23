@@ -11,24 +11,46 @@
 #include "CachedImage.h"
 #include "ImageLoader.h"
 
-class CImageOperateCallback : public IImageOperateCallback {
-public:
-	bool *m_pExiting;
-	bool m_indexChanged;
-	CImageOperateCallback () : m_indexChanged(false) {
-		m_pExiting = NULL;
-	}
-	virtual bool onProgress (int curr, int total) {
-		assert(m_pExiting != NULL);
-		return !m_indexChanged && !*m_pExiting;
-	}
-};
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
 	, public xl::CUserLock
 	, public ClassWithThreadT<CImageManager, 2>
 {
+	friend class ClassWithThreadT<CImageManager, 2>;
+
+	// callbacks
+	class CImageLoadCallback : public IImageOperateCallback {
+	public:
+		bool *m_pExiting;
+		bool m_indexChanged;
+		bool m_sizeChanged;
+		CImageLoadCallback (bool *pExiting) 
+			: m_pExiting(pExiting)
+			, m_indexChanged(false)
+			, m_sizeChanged(false)
+		{
+			assert(m_pExiting != NULL);
+		}
+
+		virtual bool onProgress (int curr, int total) {
+			assert(m_pExiting != NULL);
+			return !m_indexChanged && !*m_pExiting;
+		}
+	};
+
+	class CImagePrefetchCallback : public CImageManager::CImageLoadCallback {
+	public:
+		CImagePrefetchCallback (bool *pExiting) : CImageLoadCallback(pExiting) {
+
+		}
+
+		virtual bool onProgress (int curr, int total) {
+			assert(m_pExiting != NULL);
+			return !m_indexChanged && !m_sizeChanged && !*m_pExiting;
+		}
+	};
+
 protected:
 	enum DIRECTION {
 		FORWARD,
@@ -57,11 +79,17 @@ protected:
 		THREAD_COUNT
 	};
 	bool                                           m_exiting;
-	CImageOperateCallback                            m_callbacks[THREAD_COUNT];
+	IImageOperateCallback                         *m_callbacks[THREAD_COUNT];
 	static unsigned __stdcall _LoadThread (void *);
 	static unsigned __stdcall _PrefetchThread (void *);
 	void _BeginLoad ();
 	void _BeginPrefetch ();
+
+	//////////////////////////////////////////////////////////////////////////
+	// for ClassWithThreads
+	void markThreadExit ();
+	void assignThreadProc();
+	const xl::tchar* getThreadName(); 
 public:
 	// event
 	enum EVENT 
@@ -82,14 +110,10 @@ public:
 	bool setFile (const xl::tstring &file);
 	void setIndex (int index);
 
+	void setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr); // only called by CImageView::_ZoomThread
+
 	CCachedImagePtr getCurrentCachedImage ();
 	xl::tstring getCurrentFileName ();
-
-	//////////////////////////////////////////////////////////////////////////
-	// for ClassWithThreads
-	void markThreadExit ();
-	void assignThreadProc();
-	const xl::tchar* getThreadName(); 
 
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified

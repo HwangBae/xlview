@@ -7,7 +7,8 @@
  * usage:
  * class YourClass : public ClassWithThreadT<YourClass, N>
  * {
-   public:
+	friend class ClassWithThreadT<YourClass, N>;
+   private:
   	const xl::tchar* getThreadName();
   	void assignThreadProc();
 	void markThreadExit();	
@@ -17,7 +18,7 @@
 template <class T, int THREAD_COUNT>
 class ClassWithThreadT
 {
-	static const int dummy = sizeof(int[THREAD_COUNT]);
+	static const int dummy = sizeof(int[THREAD_COUNT]);// make sure the count > 0
 protected:
 	typedef unsigned (__stdcall *_ThreadProc) (void *);
 
@@ -35,6 +36,7 @@ protected:
 	}
 
 	void _CreateThreads () {
+		int dummy = sizeof(int[(THREAD_COUNT == T::THREAD_COUNT) ? 1 : 0]);
 		xl::tchar name[MAX_PATH];
 		
 		T *p = (T *)this;

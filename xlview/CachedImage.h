@@ -12,7 +12,7 @@ class CCachedImage
 	: public xl::CUserLock
 {
 	xl::tstring        m_fileName;
-	CSize              m_imageSize;
+	CSize              m_szImage;
 	CImagePtr          m_suitableImage;
 	CImagePtr          m_thumbnailImage;
 
@@ -20,8 +20,9 @@ public:
 	CCachedImage (const xl::tstring &fileName);
 	virtual ~CCachedImage ();
 
-	bool load (CSize szView, IImageOperateCallback *pCancel = NULL);
-	bool loadThumbnail (IImageOperateCallback *pCancel = NULL);
+	bool load (CSize szView, IImageOperateCallback *pCallback = NULL);
+	bool loadThumbnail (IImageOperateCallback *pCallback = NULL);
+	void setSuitableImage (CImagePtr image, CSize realSize);
 	void clear (bool clearThumbnail = false);
 
 	xl::tstring getFileName () const;

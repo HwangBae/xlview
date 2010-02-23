@@ -40,6 +40,8 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		if (index == pThis->m_pImageManager->getCurrIndex()) {
 			pThis->m_imageZoomed = imageZoomed;
 			pThis->invalidate();
+
+			pThis->m_pImageManager->setCurrentSuitableImage(imageZoomed, imageRS->getImageSize(), index);
 		}
 		lock.unlock();
 	}

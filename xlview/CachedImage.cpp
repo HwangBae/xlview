@@ -7,7 +7,7 @@
 
 CCachedImage::CCachedImage (const xl::tstring &fileName)
 	: m_fileName(fileName)
-	, m_imageSize(-1, -1)
+	, m_szImage(-1, -1)
 {
 	assert(xl::file_exists(m_fileName));
 }
@@ -52,7 +52,7 @@ bool CCachedImage::load (CSize szView, IImageOperateCallback *pCancel) {
 
 	// lock again
 	lock.lock(this);
-		m_imageSize = szImage;
+		m_szImage = szImage;
 		m_suitableImage = image;
 		m_thumbnailImage = thumbnailImage;
 
@@ -81,12 +81,38 @@ bool CCachedImage::loadThumbnail (IImageOperateCallback *pCancel) {
 
 	lock.lock(this);
 		m_thumbnailImage = image;
-		m_imageSize.cx = imageWidth;
-		m_imageSize.cy = imageHeight;
+		m_szImage.cx = imageWidth;
+		m_szImage.cy = imageHeight;
 
 		image.reset();
 	lock.unlock();
 	return true;
+}
+
+void CCachedImage::setSuitableImage (CImagePtr image, CSize realSize) {
+	assert(image != NULL);
+	xl::CScopeLock lock(this);
+	if (m_suitableImage == NULL || m_suitableImage->getImageSize() != image->getImageSize()) {
+		if (m_szImage != CSize(-1, -1)) {
+			assert(m_szImage == realSize);
+		}
+		CImagePtr thumbnail = m_thumbnailImage;
+		lock.unlock();
+
+		if (thumbnail == NULL) {
+			CSize szThumbnail(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
+			szThumbnail = CImage::getSuitableSize(szThumbnail, realSize, false);
+			thumbnail = image->resize(szThumbnail.cx, szThumbnail.cy, true);
+		}
+
+		lock.lock(this);
+			m_szImage = realSize;
+			m_suitableImage = image;
+			if (m_thumbnailImage == NULL) {
+				m_thumbnailImage = thumbnail;
+			}
+		lock.unlock();
+	}
 }
 
 void CCachedImage::clear (bool clearThumbnail) {
@@ -94,8 +120,8 @@ void CCachedImage::clear (bool clearThumbnail) {
 	m_suitableImage.reset();
 	if (clearThumbnail) {
 		m_thumbnailImage.reset();
-		m_imageSize.cx = -1;
-		m_imageSize.cy = -1;
+		m_szImage.cx = -1;
+		m_szImage.cy = -1;
 	}
 	unlock();
 }
@@ -109,7 +135,7 @@ xl::tstring CCachedImage::getFileName () const {
 
 CSize CCachedImage::getImageSize () const {
 	lock();
-	CSize sz = m_imageSize;
+	CSize sz = m_szImage;
 	unlock();
 
 	return sz;
