@@ -27,6 +27,8 @@ protected:
 	CSize              m_szDisplay;
 	CSize              m_szZoom;
 	CPoint             m_ptSrc; // in zoomed area
+	bool               m_suitable;
+	bool               m_zooming;
 	CImagePtr          m_imageZoomed; // cloned
 	CImagePtr          m_imageRealSize;
 
@@ -52,6 +54,7 @@ public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
 
+	void showRealSize ();
 	void showLarger ();
 
 	//////////////////////////////////////////////////////////////////////////

@@ -31,6 +31,7 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("timeout");
 	}
 
+	CImageView *pView = (CImageView *)m_view.get();
 	// test gesture and prev & next
 	if (gesture == _T("R")) {
 		if (release) {
@@ -58,10 +59,16 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 
 	if (gesture == _T("U")) {
 		if (release) {
-			CImageView *pView = (CImageView *)m_view.get();
 			pView->showLarger();
 		}
 		return _T("Larger");
+	}
+
+	if (gesture == _T("RDR")) {
+		if (release) {
+			pView->showRealSize();
+		}
+		return _T("Show original size");
 	}
 
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
