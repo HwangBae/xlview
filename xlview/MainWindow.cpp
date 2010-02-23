@@ -71,6 +71,13 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("Show original size");
 	}
 
+	if (gesture == _T("LDL")) {
+		if (release) {
+			pView->showSuitable();
+		}
+		return _T("Show suitable size");
+	}
+
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
 }
 

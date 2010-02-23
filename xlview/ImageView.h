@@ -35,6 +35,13 @@ protected:
 	void _OnIndexChanged (int index);
 	void _OnImageLoaded (CImagePtr);
 
+	CPoint             m_ptCapture;
+	CPoint             m_ptCaptureSrc;
+	HCURSOR            m_hCurNormal;
+	HCURSOR            m_hCurMove;
+
+	void _CheckPtSrc (CPoint &ptSrc);
+
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
 	bool m_exiting;
@@ -54,6 +61,7 @@ public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
 
+	void showSuitable ();
 	void showRealSize ();
 	void showLarger ();
 

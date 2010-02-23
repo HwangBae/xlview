@@ -91,6 +91,8 @@ bool CCachedImage::loadThumbnail (IImageOperateCallback *pCancel) {
 
 void CCachedImage::setSuitableImage (CImagePtr image, CSize realSize) {
 	assert(image != NULL);
+	image = image->clone(); // clone it
+	assert(image != NULL);
 	xl::CScopeLock lock(this);
 	if (m_suitableImage == NULL || m_suitableImage->getImageSize() != image->getImageSize()) {
 		if (m_szImage != CSize(-1, -1)) {

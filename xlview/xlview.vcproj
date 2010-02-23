@@ -225,6 +225,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ImageConfig.h"
+				>
+			</File>
+			<File
 				RelativePath=".\ImageLoader.h"
 				>
 			</File>

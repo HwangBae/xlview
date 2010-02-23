@@ -32,6 +32,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		}
 		if (szZoomTo.cx * 2 >= szRS.cx || szZoomTo.cy * 2 >= szRS.cy) {
 			pThis->m_imageZoomed = pThis->m_imageRealSize;
+			pThis->invalidate();
 			continue; // zoomed too large, so we use the real size image instead
 		}
 
@@ -110,6 +111,32 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 	_BeginZoom();
 }
 
+void CImageView::_CheckPtSrc (CPoint &ptSrc) {
+	int x = ptSrc.x;
+	int y = ptSrc.y;
+
+	CRect rc = getClientRect();
+	int w = rc.Width();
+	int h = rc.Height();
+
+	if (x > m_szDisplay.cx - w) {
+		x = m_szDisplay.cx - w;
+	}
+	if (x < 0) {
+		x = 0;
+	}
+	if (y > m_szDisplay.cy - h) {
+		y = m_szDisplay.cy - h;
+	}
+	if (y < 0) {
+		y = 0;
+	}
+
+	if (ptSrc.x != x || ptSrc.y != y) {
+		ptSrc = CPoint(x, y);
+	}
+}
+
 
 void CImageView::_BeginZoom () {
 	_RunThread(0);
@@ -128,6 +155,9 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_ptSrc(0, 0)
 	, m_suitable(true)
 	, m_zooming(false)
+	, m_ptCapture(-1, -1)
+	, m_hCurNormal(::LoadCursor(NULL, IDC_ARROW))
+	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
 {
 	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
@@ -140,6 +170,30 @@ CImageView::CImageView (CImageManager *pImageManager)
 
 CImageView::~CImageView (void) {
 	_TerminateThreads();
+}
+
+void CImageView::showSuitable () {
+	xl::CScopeLock lock(this);
+	if (m_szRealSize == CSize(-1, -1) || m_suitable) {
+		return;
+	}
+
+	m_suitable = true;
+	m_ptSrc = CPoint(0, 0);
+	CRect rc = getClientRect();
+	CSize szArea(rc.Width(), rc.Height());
+	CSize szDisplay = CImage::getSuitableSize(szArea, m_szRealSize, true);
+	m_szDisplay = szDisplay;
+	m_szZoom = szDisplay;
+	CHECK_VIEW_SIZE(m_szZoom);
+	// create an image for fast display if ...
+	if (m_imageZoomed == m_imageRealSize) {
+		assert(m_imageZoomed != NULL);
+		m_imageZoomed = m_imageRealSize->resize(m_szZoom.cx + 1, m_szZoom.cy + 1, false);
+	}
+
+	_BeginZoom();
+	invalidate();
 }
 
 void CImageView::showRealSize () {
@@ -161,6 +215,10 @@ void CImageView::showRealSize () {
 	} else {
 		m_ptSrc.y = (m_szRealSize.cy - rc.Height()) / 2;
 	}
+// 	XLTRACE(_T("RS: pt(%d - %d); rc(%d - %d), RS(%d - %d)\n"), 
+// 		m_ptSrc.x, m_ptSrc.y,
+// 		rc.Width(), rc.Height(),
+// 		m_szRealSize.cx, m_szRealSize.cy);
 
 	_BeginZoom();
 	invalidate();
@@ -186,7 +244,7 @@ void CImageView::onSize () {
 			m_szZoom = m_szDisplay;
 			_BeginZoom();
 		} else {
-			// set ptSrc
+			_CheckPtSrc(m_ptSrc);
 		}
 	}
 	unlock();
@@ -212,7 +270,7 @@ void CImageView::drawMe (HDC hdc) {
 	CPoint ptSrc = m_ptSrc;
 	lock.unlock();
 
-	// XLTRACE(_T("imagesize (%d - %d)\n"), szImage.cx, szImage.cy);
+	// XLTRACE(_T("image size (%d - %d)\n"), szImage.cx, szImage.cy);
 	int dx = (rc.Width() - szDisplay.cx) / 2;
 	int dy = (rc.Height() - szDisplay.cy) / 2;
 	int dw = szDisplay.cx - ptSrc.x;
@@ -263,12 +321,38 @@ void CImageView::drawMe (HDC hdc) {
 }
 
 void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
+	CRect rc = getClientRect();
+	if (m_szDisplay.cx > rc.Width() || m_szDisplay.cy > rc.Height()) {
+		::SetCursor(m_hCurMove);
+		_Capture(true);
+		m_ptCapture = pt;
+		m_ptCaptureSrc = m_ptSrc;
+	}
 }
 
 void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
+	if (m_ptCapture != CPoint(-1, -1)) {
+		::SetCursor(m_hCurNormal);
+		_Capture(false);
+		m_ptCapture = CPoint(-1, -1);
+	}
 }
 
 void CImageView::onMouseMove (CPoint pt, xl::uint key) {
+	if (m_ptCapture != CPoint(-1, -1)) {
+		::SetCursor(m_hCurMove);
+		int x = m_ptCaptureSrc.x - (pt.x - m_ptCapture.x);
+		int y = m_ptCaptureSrc.y - (pt.y - m_ptCapture.y);
+		CPoint ptSrc = CPoint(x, y);
+		_CheckPtSrc(ptSrc);
+
+		if (m_ptSrc != ptSrc) {
+			m_ptSrc = ptSrc;
+			invalidate();
+		}
+	} else {
+		::SetCursor(m_hCurNormal);
+	}
 }
 
 void CImageView::onTimer (xl::uint id) {
@@ -276,6 +360,7 @@ void CImageView::onTimer (xl::uint id) {
 }
 
 void CImageView::onLostCapture () {
+	m_ptCapture = CPoint(-1, -1);
 }
 
 
