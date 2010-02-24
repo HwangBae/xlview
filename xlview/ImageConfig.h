@@ -3,15 +3,15 @@
 #include <atltypes.h>
 
 // when zooming, we don't generate image that is smaller than that
-static const int MIN_VIEW_WIDTH = 160;
-static const int MIN_VIEW_HEIGHT = 120;
+static const int MIN_ZOOM_WIDTH = 160;
+static const int MIN_ZOOM_HEIGHT = 120;
 
-inline void CHECK_VIEW_SIZE (CSize &sz) {
-	if (sz.cx < MIN_VIEW_WIDTH) {
-		sz.cx = MIN_VIEW_WIDTH;
+inline void CHECK_ZOOM_SIZE (CSize &sz) {
+	if (sz.cx < MIN_ZOOM_WIDTH) {
+		sz.cx = MIN_ZOOM_WIDTH;
 	}
-	if (sz.cy < MIN_VIEW_HEIGHT) {
-		sz.cy = MIN_VIEW_HEIGHT;
+	if (sz.cy < MIN_ZOOM_HEIGHT) {
+		sz.cy = MIN_ZOOM_HEIGHT;
 	}
 }
 

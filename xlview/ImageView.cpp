@@ -28,6 +28,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		bool suitable = pThis->m_suitable;
 		CSize szRS = pThis->m_imageRealSize->getImageSize();
 		CSize szZoomTo = pThis->m_szZoom;
+		CHECK_ZOOM_SIZE(szZoomTo);
 		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
 			continue; // zoom not needed
 		}
@@ -79,9 +80,9 @@ void CImageView::_OnIndexChanged (int index) {
 		m_imageZoomed = cachedImage->getCachedImage();
 		if (m_imageZoomed != NULL) {
 			assert(cachedImage->getImageSize() != CSize(-1, -1));
-			m_szRealSize = cachedImage->getImageSize();
+			m_szReal = cachedImage->getImageSize();
 			CRect rc = getClientRect();
-			m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szRealSize);
+			m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szReal);
 			_NotifyDisplayChanged();
 		}
 	}
@@ -94,7 +95,7 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 
 	m_imageRealSize = image;
 	if (m_szDisplay == CSize(-1, -1)) {
-		m_szRealSize = image->getImageSize();
+		m_szReal = image->getImageSize();
 		CRect rc = getClientRect();
 		if (rc.Width() <= 0 || rc.Height() <= 0) {
 			invalidate();
@@ -102,7 +103,7 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 		}
 
 		assert(m_suitable);
-		m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szRealSize);
+		m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szReal);
 		_NotifyDisplayChanged();
 		invalidate();
 	}
@@ -133,7 +134,7 @@ CRect CImageView::_CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc)
 	return CRect(dx, dy, dx + dw, dy + dh);
 }
 
-void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCur) {
+void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 	assert(getLockLevel() > 0);
 	CRect rcDisplayAreaBefore = _CalcDisplayArea(rcView, m_szDisplay, m_ptSrc);
 	if (!rcDisplayAreaBefore.PtInRect(ptCur)) {
@@ -141,7 +142,7 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCu
 	}
 	CSize szDisplayBefore = m_szDisplay;
 	assert(szDisplayBefore.cx > 0 && szDisplayBefore.cy > 0);
-	m_szDisplay = szDisplaySize;
+	m_szDisplay = szDisplay;
 
 	// adjust m_ptSrc
 	if (rcView.Width() >= m_szDisplay.cx) {
@@ -164,12 +165,15 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCu
 void CImageView::_ResetDisplayInfo () {
 	assert(getLockLevel() > 0); // must be locked
 	m_szDisplay = CSize(-1, -1);
-	m_szRealSize = CSize(-1, -1);
+	m_szReal = CSize(-1, -1);
 	m_szZoom = CSize(-1, -1);
 	m_suitable = true;
 	m_ptSrc = CPoint(0, 0);
 	m_imageRealSize.reset();
 	m_imageZoomed.reset();
+#ifdef PROGRESS_ZOOMING
+	m_ptCurSaved = CPoint(-1, -1);
+#endif
 
 	_NotifyDisplayChanged();
 }
@@ -211,38 +215,84 @@ void CImageView::_NotifyDisplayChanged () {
 	// and other info can be calculated by the three parameters
 }
 
+void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZoomin, double factor) {
+	double x, y;
+	if (szReal.cx > szReal.cy) {
+		double cx = szReal.cx / 100.0;
+		if (cx < (double)szDisplay.cx * factor) {
+			cx = (double)szDisplay.cx * factor;
+		}
+		
+		if (isZoomin) {
+			x = szDisplay.cx + (int)cx;
+		} else {
+			x = szDisplay.cx - (int)cx;
+			if (x < 1) {
+				x = 1;
+			}
+		}
+		double ratio = x / szReal.cx;
+		if (ratio > 0.95 && ratio < 1.05) {
+			x = szReal.cx;
+			y = szReal.cy;
+		} else {
+			y = (int)(x * szReal.cy / szReal.cx);
+			if (y < 1) {
+				y = 1;
+			}
+		}
+	} else {
+		double cy = szReal.cy / 100.0;
+		if (cy < (double)szDisplay.cy * factor) {
+			cy = (double)szDisplay.cy * factor;
+		}
+
+		if (isZoomin) {
+			y = szDisplay.cy + cy;
+		} else {
+			y = szDisplay.cy - cy;
+			if (y < 1) {
+				y = 1;
+			}
+		}
+		double ratio = y / szReal.cy;
+		if (ratio > 0.95 && ratio < 1.05) {
+			x = szReal.cx;
+			y = szReal.cy;
+		} else {
+			x = (int)(y * szReal.cx / szReal.cy);
+			if (x < 1) {
+				x = 1;
+			}
+		}
+	}
+	szDisplay = CSize((int)x, (int)y);
+}
+
+#ifdef PROGRESS_ZOOMING
 bool CImageView::_CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom) {
+	assert(getLockLevel() > 0);
 	if (szDisplay == szZoom) {
 		return false; // not needed
 	}
 
-	double r1 = (double)szDisplay.cx;
-	double r2 = (double)szZoom.cx;
-	if (szDisplay.cx < szDisplay.cy) {
-		r1 = (double)szDisplay.cy;
-		r2 = (double)szZoom.cy;
-	}
-	double ratio = r1 / r2;
+	double deltaX = (double)szZoom.cx - m_szDisplayBegin.cx;
+	double deltaY = (double)szZoom.cy - m_szDisplayBegin.cy;
+	m_step ++;
+	deltaX = deltaX * m_step / 20;
+	deltaY = deltaY * m_step / 20;
+	szDisplay.cx += deltaX;
+	szDisplay.cy += deltaY;
+
+	assert(szZoom.cx > 0);
+	double ratio = (double)szDisplay.cx / (double)szZoom.cx;
 	if (ratio >= 0.95 && ratio <= 1.05) {
 		szDisplay = szZoom;
-	} else {
-		CSize szDisplayOld = szDisplay;
-		double distanceX = szZoom.cx - szDisplay.cx;
-		double distanceY = szZoom.cy - szDisplay.cy;
-		distanceX /= 3;
-		distanceY /= 3;
-
-		szDisplay.cx += distanceX;
-		szDisplay.cy += distanceY;
-
-		if (szDisplay == szDisplayOld) {
-			szDisplay = szZoom; // distance is too small, but the size itself is small, so ratio can't avoid
-		}
 	}
 
 	return true;
 }
-
+#endif
 
 void CImageView::_BeginZoom () {
 	_RunThread(0);
@@ -255,14 +305,16 @@ void CImageView::_BeginZoom () {
 CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, m_pImageManager(pImageManager)
-	, m_szRealSize(-1, -1)
+	, m_szReal(-1, -1)
 	, m_szDisplay(-1, -1)
 	, m_szZoom(-1, -1)
 	, m_ptSrc(0, 0)
 	, m_suitable(true)
 	, m_zooming(false)
 	, m_ptCapture(-1, -1)
-	, m_ptTimer(-1, -1)
+#ifdef PROGRESS_ZOOMING
+	, m_ptCurSaved(-1, -1)
+#endif
 	, m_hCurNormal(::LoadCursor(NULL, IDC_ARROW))
 	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
@@ -282,7 +334,7 @@ CImageView::~CImageView (void) {
 
 void CImageView::showSuitable (CPoint ptCur) {
 	xl::CScopeLock lock(this);
-	if (m_szRealSize == CSize(-1, -1) || m_suitable) {
+	if (m_szReal == CSize(-1, -1) || m_suitable) {
 		return;
 	}
 
@@ -290,10 +342,10 @@ void CImageView::showSuitable (CPoint ptCur) {
 
 	CRect rc = getClientRect();
 	CSize szArea(rc.Width(), rc.Height());
-	CSize szDisplay = CImage::getSuitableSize(szArea, m_szRealSize, true);
+	CSize szDisplay = CImage::getSuitableSize(szArea, m_szReal, true);
 	_SetDisplaySize(rc, szDisplay);
 	m_szZoom = szDisplay;
-	CHECK_VIEW_SIZE(m_szZoom);
+	CHECK_ZOOM_SIZE(m_szZoom);
 	// create an image for fast display if ...
 	if (m_imageZoomed == m_imageRealSize) {
 		assert(m_imageZoomed != NULL);
@@ -306,30 +358,62 @@ void CImageView::showSuitable (CPoint ptCur) {
 
 void CImageView::showRealSize (CPoint ptCur) {
 	xl::CScopeLock lock(this);
-	if (m_szRealSize == CSize(-1, -1) || m_szDisplay == m_szRealSize) {
+	if (m_szReal == CSize(-1, -1) || m_szDisplay == m_szReal) {
 		return;
 	}
 	m_suitable = false;
 
 	CRect rc = getClientRect();
-	m_szZoom = m_szRealSize;
+	m_szZoom = m_szReal;
 	_BeginZoom();
 
-
+#ifdef PROGRESS_ZOOMING
+	m_szDisplayBegin = m_szDisplay;
+	m_step = 0;
 	CSize szDisplay = m_szDisplay;
 	CSize szZoom = m_szZoom;
 	
 	_CalcStepedDisplaySize(szDisplay, szZoom);
 	_SetDisplaySize(rc, szDisplay, ptCur);
-	m_ptTimer = ptCur;
+	m_ptCurSaved = ptCur;
 	_SetTimer(100, ID_VIEW);
+#else
+	_SetDisplaySize(rc, m_szReal, ptCur);
+#endif
 	invalidate();
 }
 
 void CImageView::showLarger (CPoint ptCur) {
 	xl::CScopeLock lock(this);
+	if (m_szReal == CSize(-1, -1)) {
+		return;
+	}
+	m_suitable = false;
 
+	CSize szDisplay = m_szDisplay;
+	_CalculateZoomedSize(szDisplay, m_szReal, true, 0.15);
+	m_szZoom = szDisplay;
 	_BeginZoom();
+
+	CRect rc = getClientRect();
+	_SetDisplaySize(rc, szDisplay, ptCur);
+	invalidate();
+}
+
+void CImageView::showSmaller (CPoint ptCur) {
+	xl::CScopeLock lock(this);
+	if (m_szReal == CSize(-1, -1)) {
+		return;
+	}
+	m_suitable = false;
+
+	CSize szDisplay = m_szDisplay;
+	_CalculateZoomedSize(szDisplay, m_szReal, false, 0.15);
+	m_szZoom = szDisplay;
+	_BeginZoom();
+
+	CRect rc = getClientRect();
+	_SetDisplaySize(rc, szDisplay, ptCur);
 	invalidate();
 }
 
@@ -342,9 +426,9 @@ void CImageView::onSize () {
 	lock();
 	if (m_imageRealSize != NULL) {
 		if (m_suitable) {
-			assert(m_szRealSize != CSize(-1, -1));
+			assert(m_szReal != CSize(-1, -1));
 			CSize szArea(rc.Width(), rc.Height());
-			m_szDisplay = CImage::getSuitableSize(szArea, m_szRealSize, true);
+			m_szDisplay = CImage::getSuitableSize(szArea, m_szReal, true);
 			m_szZoom = m_szDisplay;
 
 			_NotifyDisplayChanged();
@@ -367,7 +451,7 @@ void CImageView::drawMe (HDC hdc) {
 	xl::CScopeLock lock(this);
 	CRect rc = getClientRect();
 	CSize szDisplay = m_szDisplay;
-	if (rc.Width() <= 0 || rc.Height() <= 0 || m_szRealSize == CSize(-1, -1) || szDisplay.cx <= 0 || szDisplay.cy <= 0) {
+	if (rc.Width() <= 0 || rc.Height() <= 0 || m_szReal == CSize(-1, -1) || szDisplay.cx <= 0 || szDisplay.cy <= 0) {
 		return;
 	}
 	CImagePtr image = m_imageZoomed;
@@ -454,8 +538,9 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 
 void CImageView::onTimer (xl::uint id) {
 	xl::CScopeLock lock(this);
-	if (m_szDisplay == m_szZoom) {
-		m_ptTimer = CSize(-1, -1);
+#ifdef PROGRESS_ZOOMING
+	if (m_ptCurSaved == CPoint(-1, -1) || m_szDisplay == m_szZoom) {
+		m_ptCurSaved = CSize(-1, -1);
 		return;
 	}
 
@@ -464,10 +549,10 @@ void CImageView::onTimer (xl::uint id) {
 	if (_CalcStepedDisplaySize(szDisplay, szZoom)) {
 		_SetTimer(100, ID_VIEW);
 	}
-	_SetDisplaySize(getClientRect(), szDisplay, m_ptTimer);
-	m_ptTimer = CSize(-1, -1);
+	_SetDisplaySize(getClientRect(), szDisplay, m_ptCurSaved);
 
 	invalidate();
+#endif
 }
 
 void CImageView::onLostCapture () {

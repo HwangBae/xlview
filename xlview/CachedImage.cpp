@@ -17,8 +17,8 @@ CCachedImage::~CCachedImage () {
 }
 
 bool CCachedImage::load (CSize szView, IImageOperateCallback *pCancel) {
-	assert(szView.cx >= MIN_VIEW_WIDTH);
-	assert(szView.cy >= MIN_VIEW_HEIGHT);
+	assert(szView.cx >= MIN_ZOOM_WIDTH);
+	assert(szView.cy >= MIN_ZOOM_HEIGHT);
 
 	xl::CScopeLock lock(this);
 		if (m_suitableImage != NULL) {

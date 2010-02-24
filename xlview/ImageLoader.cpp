@@ -182,6 +182,11 @@ public:
 		em.pub.error_exit = safe_jpeg_error_exit;
 		if (setjmp(em.setjmp_buffer)) {
 			jpeg_destroy_decompress(&cinfo);
+			if (dib != NULL) {
+				CImagePtr image(new CImage());
+				image->insertImage(dib, CImage::DELAY_INFINITE);
+				return image;
+			}
 			return CImagePtr();
 		}
 

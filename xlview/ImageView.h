@@ -23,7 +23,7 @@ protected:
 
 	// for display
 	// 
-	CSize              m_szRealSize;
+	CSize              m_szReal;
 	CSize              m_szDisplay;
 	CSize              m_szZoom;
 	CPoint             m_ptSrc; // in zoomed area
@@ -37,7 +37,11 @@ protected:
 
 	CPoint             m_ptCapture;
 	CPoint             m_ptCaptureSrc;
-	CPoint             m_ptTimer;
+#ifdef PROGRESS_ZOOMING
+	CPoint             m_ptCurSaved;
+	CSize              m_szDisplayBegin;
+	int                m_step;
+#endif
 	HCURSOR            m_hCurNormal;
 	HCURSOR            m_hCurMove;
 
@@ -46,13 +50,20 @@ protected:
 	 * Plz note that it is not the Display Size.
 	 */
 	CRect _CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc);
-	void _SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCur = CPoint(-1, -1));
+	/**
+	 * Use this function to set m_szDisplay, it will then set m_ptSrc, and so on
+	 * DO NOT set m_szDisplay directly!!
+	 */
+	void _SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur = CPoint(-1, -1));
 	void _ResetDisplayInfo ();
 	void _CheckPtSrc (CPoint &ptSrc);
 	void _NotifyDisplayChanged ();
 
-	bool _CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom);
+	void _CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZoomin, double factor);
 
+#ifdef PROGRESS_ZOOMING
+	bool _CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom);
+#endif
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
 	bool m_exiting;
@@ -75,6 +86,9 @@ public:
 	void showSuitable (CPoint ptCur);
 	void showRealSize (CPoint ptCur);
 	void showLarger (CPoint ptCur);
+	void showSmaller (CPoint ptCur);
+	void showTop (CPoint ptCur);
+	void showBottom (CPoint ptCur);
 
 	//////////////////////////////////////////////////////////////////////////
 	// virtual

@@ -64,6 +64,13 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("Larger");
 	}
 
+	if (gesture == _T("D")) {
+		if (release) {
+			pView->showSmaller(ptDown);
+		}
+		return _T("Smaller");
+	}
+
 	if (gesture == _T("RDR")) {
 		if (release) {
 			pView->showRealSize(ptDown);
