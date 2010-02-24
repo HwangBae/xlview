@@ -211,6 +211,38 @@ void CImageView::_NotifyDisplayChanged () {
 	// and other info can be calculated by the three parameters
 }
 
+bool CImageView::_CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom) {
+	if (szDisplay == szZoom) {
+		return false; // not needed
+	}
+
+	double r1 = (double)szDisplay.cx;
+	double r2 = (double)szZoom.cx;
+	if (szDisplay.cx < szDisplay.cy) {
+		r1 = (double)szDisplay.cy;
+		r2 = (double)szZoom.cy;
+	}
+	double ratio = r1 / r2;
+	if (ratio >= 0.95 || ratio <= 1.05) {
+		szDisplay = szZoom;
+	} else {
+		CSize szDisplayOld = szDisplay;
+		double distanceX = szZoom.cx - szDisplay.cx;
+		double distanceY = szZoom.cy - szDisplay.cy;
+		distanceX /= 3;
+		distanceY /= 3;
+
+		szDisplay.cx += distanceX;
+		szDisplay.cy += distanceY;
+
+		if (szDisplay == szDisplayOld) {
+			szDisplay = szZoom; // distance is too small, but the size itself is small, so ratio can't avoid
+		}
+	}
+
+	return true;
+}
+
 
 void CImageView::_BeginZoom () {
 	_RunThread(0);
@@ -235,7 +267,8 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_exiting(false)
 {
 	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2 2 16 2;"));
-	setStyle(_T("background-color:#808080;"));
+	// setStyle(_T("background-color:#808080;"));
+	setStyle(_T("background-color:#202020;"));
 
 	m_pImageManager->subscribe(this);
 
@@ -253,11 +286,11 @@ void CImageView::showSuitable (CPoint ptCur) {
 	}
 
 	m_suitable = true;
-	m_ptSrc = CPoint(0, 0);
+
 	CRect rc = getClientRect();
 	CSize szArea(rc.Width(), rc.Height());
 	CSize szDisplay = CImage::getSuitableSize(szArea, m_szRealSize, true);
-	m_szDisplay = szDisplay;
+	_SetDisplaySize(rc, szDisplay);
 	m_szZoom = szDisplay;
 	CHECK_VIEW_SIZE(m_szZoom);
 	// create an image for fast display if ...
@@ -265,8 +298,6 @@ void CImageView::showSuitable (CPoint ptCur) {
 		assert(m_imageZoomed != NULL);
 		m_imageZoomed = m_pImageManager->getCurrentCachedImage()->getCachedImage();
 	}
-
-	_NotifyDisplayChanged();
 
 	_BeginZoom();
 	invalidate();
@@ -289,8 +320,7 @@ void CImageView::showRealSize (CPoint ptCur) {
 }
 
 void CImageView::showLarger (CPoint ptCur) {
-
-	_NotifyDisplayChanged();
+	xl::CScopeLock lock(this);
 
 	_BeginZoom();
 	invalidate();

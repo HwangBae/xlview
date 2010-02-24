@@ -50,6 +50,8 @@ protected:
 	void _CheckPtSrc (CPoint &ptSrc);
 	void _NotifyDisplayChanged ();
 
+	bool _CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom);
+
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
 	bool m_exiting;
