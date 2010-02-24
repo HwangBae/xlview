@@ -25,6 +25,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		if (pThis->m_imageRealSize == NULL) {
 			continue; // no source
 		}
+		bool suitable = pThis->m_suitable;
 		CSize szRS = pThis->m_imageRealSize->getImageSize();
 		CSize szZoomTo = pThis->m_szZoom;
 		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
@@ -50,7 +51,9 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 			pThis->invalidate();
 			lock.unlock();
 
-			pThis->m_pImageManager->setCurrentSuitableImage(imageZoomed, szRS, index);
+			if (suitable) {
+				pThis->m_pImageManager->setCurrentSuitableImage(imageZoomed, szRS, index);
+			}
 
 			lock.lock(pThis);
 			imageZoomed.reset(); // avoid race condition 
@@ -69,13 +72,7 @@ void CImageView::_OnIndexChanged (int index) {
 	assert(getLockLevel() > 0); // must be called in lock
 	assert(m_pImageManager != NULL);
 
-	m_szDisplay = CSize(-1, -1);
-	m_szRealSize = CSize(-1, -1);
-	m_szZoom = CSize(-1, -1);
-	m_suitable = true;
-	m_ptSrc = CPoint(0, 0);
-	m_imageRealSize.reset();
-	m_imageZoomed.reset();
+	_ResetDisplayInfo();
 
 	if (index == m_pImageManager->getCurrIndex()) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
@@ -85,6 +82,7 @@ void CImageView::_OnIndexChanged (int index) {
 			m_szRealSize = cachedImage->getImageSize();
 			CRect rc = getClientRect();
 			m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szRealSize);
+			_NotifyDisplayChanged();
 		}
 	}
 	invalidate();
@@ -105,10 +103,75 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 
 		assert(m_suitable);
 		m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szRealSize);
+		_NotifyDisplayChanged();
 		invalidate();
 	}
 	m_szZoom = m_szDisplay;
 	_BeginZoom();
+}
+
+CRect CImageView::_CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc) {
+	int dx = (rcView.Width() - szDisplay.cx) / 2;
+	int dy = (rcView.Height() - szDisplay.cy) / 2;
+	int dw = szDisplay.cx - ptSrc.x;
+	int dh = szDisplay.cy - ptSrc.y;
+	if (dx < 0) {
+		dx = 0;
+		dw = rcView.Width();
+	} else {
+		assert(ptSrc.x == 0);
+	}
+	if (dy < 0) {
+		dy = 0;
+		dh = rcView.Height();
+	} else {
+		assert(ptSrc.y == 0);
+	}
+	dx += rcView.left;
+	dy += rcView.top;
+
+	return CRect(dx, dy, dx + dw, dy + dh);
+}
+
+void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCur) {
+	assert(getLockLevel() > 0);
+	CRect rcDisplayAreaBefore = _CalcDisplayArea(rcView, m_szDisplay, m_ptSrc);
+	if (!rcDisplayAreaBefore.PtInRect(ptCur)) {
+		ptCur = CPoint(rcView.left + rcView.Width() / 2, rcView.top + rcView.Height() / 2);
+	}
+	CSize szDisplayBefore = m_szDisplay;
+	assert(szDisplayBefore.cx > 0 && szDisplayBefore.cy > 0);
+	m_szDisplay = szDisplaySize;
+
+	// adjust m_ptSrc
+	if (rcView.Width() >= m_szDisplay.cx) {
+		m_ptSrc.x = 0;
+	} else {
+		int x = m_szDisplay.cx * (ptCur.x - rcDisplayAreaBefore.left + m_ptSrc.x) / szDisplayBefore.cx;
+		m_ptSrc.x = x + rcView.left - ptCur.x;
+	}
+	if (rcView.Height() >= m_szDisplay.cy) {
+		m_ptSrc.y = 0;
+	} else {
+		int y = m_szDisplay.cy * (ptCur.y - rcDisplayAreaBefore.top + m_ptSrc.y) / szDisplayBefore.cy;
+		m_ptSrc.y = y + rcView.top - ptCur.y;
+	}
+	_CheckPtSrc(m_ptSrc);
+
+	_NotifyDisplayChanged();
+}
+
+void CImageView::_ResetDisplayInfo () {
+	assert(getLockLevel() > 0); // must be locked
+	m_szDisplay = CSize(-1, -1);
+	m_szRealSize = CSize(-1, -1);
+	m_szZoom = CSize(-1, -1);
+	m_suitable = true;
+	m_ptSrc = CPoint(0, 0);
+	m_imageRealSize.reset();
+	m_imageZoomed.reset();
+
+	_NotifyDisplayChanged();
 }
 
 void CImageView::_CheckPtSrc (CPoint &ptSrc) {
@@ -137,6 +200,17 @@ void CImageView::_CheckPtSrc (CPoint &ptSrc) {
 	}
 }
 
+void CImageView::_NotifyDisplayChanged () {
+	CRect rc = getClientRect();
+	CSize szDisplay = m_szDisplay;
+	CSize szView(rc.Width(), rc.Height());
+	CPoint ptSrc = m_ptSrc;
+
+	// TODO:
+	// notify others with: 1. szDisplay; 2. szView; 3. ptSrc
+	// and other info can be calculated by the three parameters
+}
+
 
 void CImageView::_BeginZoom () {
 	_RunThread(0);
@@ -160,7 +234,7 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
 {
-	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:10;"));
+	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2 2 16 2;"));
 	setStyle(_T("background-color:#808080;"));
 
 	m_pImageManager->subscribe(this);
@@ -172,7 +246,7 @@ CImageView::~CImageView (void) {
 	_TerminateThreads();
 }
 
-void CImageView::showSuitable () {
+void CImageView::showSuitable (CPoint ptCur) {
 	xl::CScopeLock lock(this);
 	if (m_szRealSize == CSize(-1, -1) || m_suitable) {
 		return;
@@ -189,42 +263,35 @@ void CImageView::showSuitable () {
 	// create an image for fast display if ...
 	if (m_imageZoomed == m_imageRealSize) {
 		assert(m_imageZoomed != NULL);
-		m_imageZoomed = m_imageRealSize->resize(m_szZoom.cx + 1, m_szZoom.cy + 1, false);
+		m_imageZoomed = m_pImageManager->getCurrentCachedImage()->getCachedImage();
 	}
+
+	_NotifyDisplayChanged();
 
 	_BeginZoom();
 	invalidate();
 }
 
-void CImageView::showRealSize () {
+void CImageView::showRealSize (CPoint ptCur) {
 	xl::CScopeLock lock(this);
 	if (m_szRealSize == CSize(-1, -1) || m_szDisplay == m_szRealSize) {
 		return;
 	}
-
 	m_suitable = false;
-	m_szDisplay = m_szZoom = m_szRealSize;
+
 	CRect rc = getClientRect();
-	if (rc.Width() >= m_szRealSize.cx) {
-		m_ptSrc.x = 0;
-	} else {
-		m_ptSrc.x = (m_szRealSize.cx - rc.Width()) / 2;
-	}
-	if (rc.Height() >= m_szRealSize.cy) {
-		m_ptSrc.y = 0;
-	} else {
-		m_ptSrc.y = (m_szRealSize.cy - rc.Height()) / 2;
-	}
-// 	XLTRACE(_T("RS: pt(%d - %d); rc(%d - %d), RS(%d - %d)\n"), 
-// 		m_ptSrc.x, m_ptSrc.y,
-// 		rc.Width(), rc.Height(),
-// 		m_szRealSize.cx, m_szRealSize.cy);
+	CSize szDisplay = m_szRealSize;
+	m_szZoom = szDisplay;
+	_SetDisplaySize(rc, m_szRealSize, ptCur);
 
 	_BeginZoom();
 	invalidate();
 }
 
-void CImageView::showLarger () {
+void CImageView::showLarger (CPoint ptCur) {
+
+	_NotifyDisplayChanged();
+
 	_BeginZoom();
 	invalidate();
 }
@@ -242,9 +309,13 @@ void CImageView::onSize () {
 			CSize szArea(rc.Width(), rc.Height());
 			m_szDisplay = CImage::getSuitableSize(szArea, m_szRealSize, true);
 			m_szZoom = m_szDisplay;
+
+			_NotifyDisplayChanged();
+
 			_BeginZoom();
 		} else {
 			_CheckPtSrc(m_ptSrc);
+			_NotifyDisplayChanged();
 		}
 	}
 	unlock();
@@ -271,24 +342,8 @@ void CImageView::drawMe (HDC hdc) {
 	lock.unlock();
 
 	// XLTRACE(_T("image size (%d - %d)\n"), szImage.cx, szImage.cy);
-	int dx = (rc.Width() - szDisplay.cx) / 2;
-	int dy = (rc.Height() - szDisplay.cy) / 2;
-	int dw = szDisplay.cx - ptSrc.x;
-	int dh = szDisplay.cy - ptSrc.y;
-	if (dx < 0) {
-		dx = 0;
-		dw = rc.Width();
-	} else {
-		assert(ptSrc.x == 0);
-	}
-	if (dy < 0) {
-		dy = 0;
-		dh = rc.Height();
-	} else {
-		assert(ptSrc.y == 0);
-	}
-	dx += rc.left;
-	dy += rc.top;
+	CRect rcDisplayArea = _CalcDisplayArea(rc, szDisplay, ptSrc);
+
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
@@ -297,17 +352,19 @@ void CImageView::drawMe (HDC hdc) {
 
 	if (szImage == szDisplay) {
 		// use BitBlt
-		dc.BitBlt(dx, dy, dw, dh, mdc, ptSrc.x, ptSrc.y, SRCCOPY);
+		dc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
+			mdc, ptSrc.x, ptSrc.y, SRCCOPY);
 		XLTRACE(_T("Use BitBlt()\n"));
 	} else {
 		// use StretchBlt
 		int sx = szImage.cx * ptSrc.x / szDisplay.cx;
 		int sy = szImage.cy * ptSrc.y / szDisplay.cy;
-		int sw = szImage.cx * dw / szDisplay.cx;
-		int sh = szImage.cy * dh / szDisplay.cy;
+		int sw = szImage.cx * rcDisplayArea.Width() / szDisplay.cx;
+		int sh = szImage.cy * rcDisplayArea.Height() / szDisplay.cy;
 		lock.lock(this);
 		int oldMode = dc.SetStretchBltMode(m_zooming ? COLORONCOLOR : HALFTONE);
-		dc.StretchBlt(dx, dy, dw, dh, mdc, sx, sy, sw, sh, SRCCOPY);
+		dc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
+			mdc, sx, sy, sw, sh, SRCCOPY);
 		dc.SetStretchBltMode(oldMode);
 		lock.unlock();
 	}
@@ -348,6 +405,9 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 
 		if (m_ptSrc != ptSrc) {
 			m_ptSrc = ptSrc;
+
+			_NotifyDisplayChanged();
+			
 			invalidate();
 		}
 	} else {
@@ -394,7 +454,7 @@ const xl::tchar* CImageView::getThreadName() {
 }
 
 void CImageView::assignThreadProc() {
-	m_procThreads[0] = &_ZoomThread;
+	m_procThreads[THREAD_ZOOM] = &_ZoomThread;
 }
 
 void CImageView::markThreadExit() {

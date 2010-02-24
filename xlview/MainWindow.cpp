@@ -59,21 +59,21 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 
 	if (gesture == _T("U")) {
 		if (release) {
-			pView->showLarger();
+			pView->showLarger(ptDown);
 		}
 		return _T("Larger");
 	}
 
 	if (gesture == _T("RDR")) {
 		if (release) {
-			pView->showRealSize();
+			pView->showRealSize(ptDown);
 		}
 		return _T("Show original size");
 	}
 
 	if (gesture == _T("LDL")) {
 		if (release) {
-			pView->showSuitable();
+			pView->showSuitable(ptDown);
 		}
 		return _T("Show suitable size");
 	}

@@ -40,7 +40,15 @@ protected:
 	HCURSOR            m_hCurNormal;
 	HCURSOR            m_hCurMove;
 
+	/**
+	 * Display Area is the area which the image will **FILL**, the max size is the view size.
+	 * Plz note that it is not the Display Size.
+	 */
+	CRect _CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc);
+	void _SetDisplaySize (CRect rcView, CSize szDisplaySize, CPoint ptCur = CPoint(-1, -1));
+	void _ResetDisplayInfo ();
 	void _CheckPtSrc (CPoint &ptSrc);
+	void _NotifyDisplayChanged ();
 
 	//////////////////////////////////////////////////////////////////////////
 	// thread related
@@ -61,9 +69,9 @@ public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
 
-	void showSuitable ();
-	void showRealSize ();
-	void showLarger ();
+	void showSuitable (CPoint ptCur);
+	void showRealSize (CPoint ptCur);
+	void showLarger (CPoint ptCur);
 
 	//////////////////////////////////////////////////////////////////////////
 	// virtual
