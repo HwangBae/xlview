@@ -223,7 +223,7 @@ bool CImageView::_CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom) {
 		r2 = (double)szZoom.cy;
 	}
 	double ratio = r1 / r2;
-	if (ratio >= 0.95 || ratio <= 1.05) {
+	if (ratio >= 0.95 && ratio <= 1.05) {
 		szDisplay = szZoom;
 	} else {
 		CSize szDisplayOld = szDisplay;
@@ -262,6 +262,7 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_suitable(true)
 	, m_zooming(false)
 	, m_ptCapture(-1, -1)
+	, m_ptTimer(-1, -1)
 	, m_hCurNormal(::LoadCursor(NULL, IDC_ARROW))
 	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
@@ -311,11 +312,17 @@ void CImageView::showRealSize (CPoint ptCur) {
 	m_suitable = false;
 
 	CRect rc = getClientRect();
-	CSize szDisplay = m_szRealSize;
-	m_szZoom = szDisplay;
-	_SetDisplaySize(rc, m_szRealSize, ptCur);
-
+	m_szZoom = m_szRealSize;
 	_BeginZoom();
+
+
+	CSize szDisplay = m_szDisplay;
+	CSize szZoom = m_szZoom;
+	
+	_CalcStepedDisplaySize(szDisplay, szZoom);
+	_SetDisplaySize(rc, szDisplay, ptCur);
+	m_ptTimer = ptCur;
+	_SetTimer(100, ID_VIEW);
 	invalidate();
 }
 
@@ -446,6 +453,20 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 }
 
 void CImageView::onTimer (xl::uint id) {
+	xl::CScopeLock lock(this);
+	if (m_szDisplay == m_szZoom) {
+		m_ptTimer = CSize(-1, -1);
+		return;
+	}
+
+	CSize szDisplay = m_szDisplay;
+	CSize szZoom = m_szZoom;
+	if (_CalcStepedDisplaySize(szDisplay, szZoom)) {
+		_SetTimer(100, ID_VIEW);
+	}
+	_SetDisplaySize(getClientRect(), szDisplay, m_ptTimer);
+	m_ptTimer = CSize(-1, -1);
+
 	invalidate();
 }
 

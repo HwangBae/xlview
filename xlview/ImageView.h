@@ -37,6 +37,7 @@ protected:
 
 	CPoint             m_ptCapture;
 	CPoint             m_ptCaptureSrc;
+	CPoint             m_ptTimer;
 	HCURSOR            m_hCurNormal;
 	HCURSOR            m_hCurMove;
 
