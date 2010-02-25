@@ -85,6 +85,34 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("Show suitable size");
 	}
 
+	if (gesture == _T("ULR")) {
+		if (release) {
+			pView->showTop(ptDown);
+		}
+		return _T("Scroll to top");
+	}
+
+	if (gesture == _T("DRL")) {
+		if (release) {
+			pView->showBottom(ptDown);
+		}
+		return _T("Scroll to bottom");
+	}
+
+	if (gesture == _T("LUD")) {
+		if (release) {
+			pView->showLeft(ptDown);
+		}
+		return _T("Scroll to left");
+	}
+
+	if (gesture == _T("RUD")) {
+		if (release) {
+			pView->showRight(ptDown);
+		}
+		return _T("Scroll to right");
+	}
+
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
 }
 

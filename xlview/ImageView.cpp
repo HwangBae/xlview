@@ -148,13 +148,13 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 	if (rcView.Width() >= m_szDisplay.cx) {
 		m_ptSrc.x = 0;
 	} else {
-		int x = m_szDisplay.cx * (ptCur.x - rcDisplayAreaBefore.left + m_ptSrc.x) / szDisplayBefore.cx;
+		int x = (int)(m_szDisplay.cx * ((double)ptCur.x - rcDisplayAreaBefore.left + m_ptSrc.x) / szDisplayBefore.cx);
 		m_ptSrc.x = x + rcView.left - ptCur.x;
 	}
 	if (rcView.Height() >= m_szDisplay.cy) {
 		m_ptSrc.y = 0;
 	} else {
-		int y = m_szDisplay.cy * (ptCur.y - rcDisplayAreaBefore.top + m_ptSrc.y) / szDisplayBefore.cy;
+		int y = (int)(m_szDisplay.cy * ((double)ptCur.y - rcDisplayAreaBefore.top + m_ptSrc.y) / szDisplayBefore.cy);
 		m_ptSrc.y = y + rcView.top - ptCur.y;
 	}
 	_CheckPtSrc(m_ptSrc);
@@ -417,6 +417,62 @@ void CImageView::showSmaller (CPoint ptCur) {
 	invalidate();
 }
 
+void CImageView::showTop (CPoint ptCur) {
+	XL_PARAMETER_NOT_USED(ptCur);
+	xl::CScopeLock lock(this);
+	if (m_szReal == CSize(-1, -1) || m_ptSrc.y == 0) {
+		return;
+	}
+
+	m_ptSrc.y = 0;
+	invalidate();
+}
+
+void CImageView::showBottom (CPoint ptCur) {
+	XL_PARAMETER_NOT_USED(ptCur);
+	xl::CScopeLock lock(this);
+	CRect rc = getClientRect();
+	if (m_szReal == CSize(-1, -1) || m_szDisplay.cy <= rc.Height()) {
+		return;
+	}
+
+	CPoint ptSrc = m_ptSrc;
+	ptSrc.y = m_szDisplay.cy;
+	_CheckPtSrc(ptSrc);
+	if (ptSrc != m_ptSrc) {
+		m_ptSrc = ptSrc;
+		invalidate();
+	}
+}
+
+void CImageView::showLeft (CPoint ptCur) {
+	XL_PARAMETER_NOT_USED(ptCur);
+	xl::CScopeLock lock(this);
+	if (m_szReal == CSize(-1, -1) || m_ptSrc.x == 0) {
+		return;
+	}
+
+	m_ptSrc.x = 0;
+	invalidate();
+}
+
+void CImageView::showRight (CPoint ptCur) {
+	XL_PARAMETER_NOT_USED(ptCur);
+	xl::CScopeLock lock(this);
+	CRect rc = getClientRect();
+	if (m_szReal == CSize(-1, -1) || m_szDisplay.cx <= rc.Width()) {
+		return;
+	}
+
+	CPoint ptSrc = m_ptSrc;
+	ptSrc.x = m_szDisplay.cx;
+	_CheckPtSrc(ptSrc);
+	if (ptSrc != m_ptSrc) {
+		m_ptSrc = ptSrc;
+		invalidate();
+	}
+}
+
 void CImageView::onSize () {
 	xl::CTimerLogger logger(_T("onSize "));
 	assert(m_pImageManager != NULL);
@@ -533,6 +589,14 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 		}
 	} else {
 		::SetCursor(m_hCurNormal);
+	}
+}
+
+void CImageView::onMouseWheel (CPoint pt, int delta, xl::uint key) {
+	if (delta > 0) {
+		showLarger(pt);
+	} else {
+		showSmaller(pt);
 	}
 }
 

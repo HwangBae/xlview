@@ -89,6 +89,8 @@ public:
 	void showSmaller (CPoint ptCur);
 	void showTop (CPoint ptCur);
 	void showBottom (CPoint ptCur);
+	void showLeft (CPoint ptCur);
+	void showRight (CPoint ptCur);
 
 	//////////////////////////////////////////////////////////////////////////
 	// virtual
@@ -100,6 +102,7 @@ public:
 	virtual void onLButtonDown (CPoint pt, xl::uint key);
 	virtual void onLButtonUp (CPoint pt, xl::uint key);
 	virtual void onMouseMove (CPoint pt, xl::uint key);
+	virtual void onMouseWheel (CPoint pt, int delta, xl::uint key);
 	virtual void onTimer (xl::uint id);
 	virtual void onLostCapture ();
 
