@@ -42,7 +42,10 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		pThis->m_zooming = true;
 		lock.unlock();
 
-		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true);
+		xl::CTimerLogger logger(false, _T("** Resize image (%d-%d) to (%d-%d) cost"), 
+			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
+		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, false);//true);
+		logger.log();
 
 		lock.lock(pThis);
 		pThis->m_zooming = false;
@@ -475,7 +478,7 @@ void CImageView::showRight (CPoint ptCur) {
 }
 
 void CImageView::onSize () {
-	xl::CTimerLogger logger(_T("onSize "));
+	// xl::CTimerLogger logger(_T("onSize "));
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
 	m_pImageManager->onViewSizeChanged(rc);
@@ -501,7 +504,7 @@ void CImageView::onSize () {
 
 void CImageView::drawMe (HDC hdc) {
 	assert(m_pImageManager != NULL);
-	xl::CTimerLogger logger(_T("drawMe "));
+	// xl::CTimerLogger logger(_T("drawMe "));
 	DWORD tick = ::GetTickCount();
 
 	xl::CScopeLock lock(this);
@@ -531,7 +534,7 @@ void CImageView::drawMe (HDC hdc) {
 		// use BitBlt
 		dc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
 			mdc, ptSrc.x, ptSrc.y, SRCCOPY);
-		XLTRACE(_T("Use BitBlt()\n"));
+		// XLTRACE(_T("Use BitBlt()\n"));
 	} else {
 		// use StretchBlt
 		int sx = szImage.cx * ptSrc.x / szDisplay.cx;
