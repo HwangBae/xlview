@@ -191,6 +191,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ImageLoaderJpeg.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\ImageManager.cpp"
 				>
 			</File>

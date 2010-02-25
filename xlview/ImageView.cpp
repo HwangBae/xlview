@@ -28,14 +28,13 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		bool suitable = pThis->m_suitable;
 		CSize szRS = pThis->m_imageRealSize->getImageSize();
 		CSize szZoomTo = pThis->m_szZoom;
-		CHECK_ZOOM_SIZE(szZoomTo);
 		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
 			continue; // zoom not needed
 		}
 		if (szZoomTo.cx * 2 >= szRS.cx || szZoomTo.cy * 2 >= szRS.cy) {
 			pThis->m_imageZoomed = pThis->m_imageRealSize;
 			pThis->invalidate();
-			continue; // zoomed too large, so we use the real size image instead
+			continue; // zoom to a too large size, so we use the real size image instead
 		}
 
 		int index = pThis->m_pImageManager->getCurrIndex();
@@ -295,6 +294,8 @@ bool CImageView::_CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom) {
 #endif
 
 void CImageView::_BeginZoom () {
+	assert(getLockLevel() > 0);
+	CHECK_ZOOM_SIZE(m_szZoom);
 	_RunThread(0);
 }
 
@@ -486,10 +487,9 @@ void CImageView::onSize () {
 			CSize szArea(rc.Width(), rc.Height());
 			m_szDisplay = CImage::getSuitableSize(szArea, m_szReal, true);
 			m_szZoom = m_szDisplay;
+			_BeginZoom();
 
 			_NotifyDisplayChanged();
-
-			_BeginZoom();
 		} else {
 			_CheckPtSrc(m_ptSrc);
 			_NotifyDisplayChanged();
@@ -539,7 +539,8 @@ void CImageView::drawMe (HDC hdc) {
 		int sw = szImage.cx * rcDisplayArea.Width() / szDisplay.cx;
 		int sh = szImage.cy * rcDisplayArea.Height() / szDisplay.cy;
 		lock.lock(this);
-		int oldMode = dc.SetStretchBltMode(m_zooming ? COLORONCOLOR : HALFTONE);
+		// int oldMode = dc.SetStretchBltMode(m_zooming ? COLORONCOLOR : HALFTONE);
+		int oldMode = dc.SetStretchBltMode(HALFTONE);
 		dc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
 			mdc, sx, sy, sw, sh, SRCCOPY);
 		dc.SetStretchBltMode(oldMode);
