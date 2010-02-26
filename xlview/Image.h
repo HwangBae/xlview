@@ -57,7 +57,7 @@ public:
 	xl::ui::CDIBSectionPtr getImage (xl::uint index);
 
 	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
-	CImagePtr resize (int width, int height, bool usehalftone = true);
+	CImagePtr resize (int width, int height, bool highQuality = true);
 
 	static CSize getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge = true);
 };

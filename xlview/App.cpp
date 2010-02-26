@@ -23,7 +23,9 @@ public:
 			}
 			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
 			// p = _T("D:\\test_images\\1\\1.jpg");
-			if (!m_wndMain.setFile(p)) {
+			xl::tstring name(p);
+			name.trim(_T("\""));
+			if (!m_wndMain.setFile(name)) {
 				m_wndMain.DestroyWindow();
 			}
 		}

@@ -40,11 +40,14 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		int index = pThis->m_pImageManager->getCurrIndex();
 		CImagePtr imageRS = pThis->m_imageRealSize;
 		pThis->m_zooming = true;
+		if (imageRS == pThis->m_imageZoomed) { // when resizing, the real sized image is locked
+			pThis->m_imageZoomed = pThis->m_pImageManager->getCurrentCachedImage()->getCachedImage();
+		}
 		lock.unlock();
 
 		xl::CTimerLogger logger(false, _T("** Resize image (%d-%d) to (%d-%d) cost"), 
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
-		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, false);//true);
+		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true);
 		logger.log();
 
 		lock.lock(pThis);
@@ -150,13 +153,13 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 	if (rcView.Width() >= m_szDisplay.cx) {
 		m_ptSrc.x = 0;
 	} else {
-		int x = (int)(m_szDisplay.cx * ((double)ptCur.x - rcDisplayAreaBefore.left + m_ptSrc.x) / szDisplayBefore.cx);
+		int x = (int)(0.5 + m_szDisplay.cx * ((double)ptCur.x - rcDisplayAreaBefore.left + m_ptSrc.x) / szDisplayBefore.cx);
 		m_ptSrc.x = x + rcView.left - ptCur.x;
 	}
 	if (rcView.Height() >= m_szDisplay.cy) {
 		m_ptSrc.y = 0;
 	} else {
-		int y = (int)(m_szDisplay.cy * ((double)ptCur.y - rcDisplayAreaBefore.top + m_ptSrc.y) / szDisplayBefore.cy);
+		int y = (int)(0.5 + m_szDisplay.cy * ((double)ptCur.y - rcDisplayAreaBefore.top + m_ptSrc.y) / szDisplayBefore.cy);
 		m_ptSrc.y = y + rcView.top - ptCur.y;
 	}
 	_CheckPtSrc(m_ptSrc);
@@ -234,9 +237,11 @@ void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZo
 			}
 		}
 		double ratio = x / szReal.cx;
-		if (ratio > 0.95 && ratio < 1.05) {
-			x = szReal.cx;
-			y = szReal.cy;
+		// if (ratio > 0.95 && ratio < 1.05) {
+		int ratio_i = (int)(ratio + 0.5);
+		if ((abs(ratio - (double)ratio_i) <= factor / 2) && ratio_i != 0) {
+			x = szReal.cx * ratio_i;
+			y = szReal.cy * ratio_i;
 		} else {
 			y = (int)(x * szReal.cy / szReal.cx);
 			if (y < 1) {
@@ -258,9 +263,10 @@ void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZo
 			}
 		}
 		double ratio = y / szReal.cy;
-		if (ratio > 0.95 && ratio < 1.05) {
-			x = szReal.cx;
-			y = szReal.cy;
+		int ratio_i = (int)(ratio + 0.5);
+		if ((abs(ratio - (double)ratio_i) <= factor / 2) && ratio_i != 0) {
+			x = szReal.cx * ratio_i;
+			y = szReal.cy * ratio_i;
 		} else {
 			x = (int)(y * szReal.cx / szReal.cy);
 			if (x < 1) {
@@ -551,6 +557,16 @@ void CImageView::drawMe (HDC hdc) {
 	}
 
 	dibHelper.detach();
+
+	// draw debug infomation
+	{
+		xl::tchar buf[256];
+		double ratio = (double)m_szDisplay.cx / (double)m_szReal.cx;
+		_stprintf_s(buf, 256, _T("Z: %.4fx"), ratio);
+		CRect rcInfo = rc;
+		rcInfo.top = rcInfo.bottom - 16;
+		dc.DrawText(buf, -1, rcInfo, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+	}
 
 	// free the image
 	lock.lock(m_pImageManager);

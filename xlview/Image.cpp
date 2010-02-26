@@ -89,7 +89,7 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	m_frames.push_back(bad);
 }
 
-CImagePtr CImage::resize (int width, int height, bool usehalftone) {
+CImagePtr CImage::resize (int width, int height, bool highQuality) {
 	if (width == m_width && height == m_height) {
 		return clone();
 	} else {
@@ -100,9 +100,15 @@ CImagePtr CImage::resize (int width, int height, bool usehalftone) {
 		pImage->m_width = width;
 		pImage->m_height = height;
 
+		// xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? xl::ui::CDIBSection::RT_BICUBIC : xl::ui::CDIBSection::RT_FAST;
+		xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? xl::ui::CDIBSection::RT_BOX : xl::ui::CDIBSection::RT_FAST;
 		for (size_t i = 0; i < m_frames.size(); ++ i) {
 			xl::ui::CDIBSectionPtr src = m_frames[i]->bitmap;
-			xl::ui::CDIBSectionPtr dib = src->resize(width, height, usehalftone, src->getBitCounts());
+			xl::ui::CDIBSectionPtr dib = xl::ui::CDIBSection::createDIBSection(width, height, src->getBitCounts(), false);
+			if (!dib) {
+				return CImagePtr();
+			}
+			src->resize(dib.get(), rt);
 			pImage->insertImage(dib, m_frames[i]->delay);
 		}
 
