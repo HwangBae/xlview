@@ -523,6 +523,8 @@ void CImageView::drawMe (HDC hdc) {
 	if (image == NULL) {
 		return;
 	}
+	xl::ui::CDIBSectionPtr dib = image->getImage(0);
+	assert(dib != NULL);
 	CSize szImage = image->getImageSize();
 	CPoint ptSrc = m_ptSrc;
 	lock.unlock();
@@ -534,7 +536,7 @@ void CImageView::drawMe (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
-	xl::ui::CDIBSectionHelper dibHelper(image->getImage(0), mdc);
+	xl::ui::CDIBSectionHelper dibHelper(dib, mdc);
 
 	if (szImage == szDisplay) {
 		// use BitBlt
@@ -543,26 +545,31 @@ void CImageView::drawMe (HDC hdc) {
 		// XLTRACE(_T("Use BitBlt()\n"));
 	} else {
 		// use StretchBlt
-		int sx = szImage.cx * ptSrc.x / szDisplay.cx;
-		int sy = szImage.cy * ptSrc.y / szDisplay.cy;
-		int sw = szImage.cx * rcDisplayArea.Width() / szDisplay.cx;
-		int sh = szImage.cy * rcDisplayArea.Height() / szDisplay.cy;
+		int sx = (int)(0.5 + (double)szImage.cx * (double)ptSrc.x / (double)szDisplay.cx);
+		int sy = (int)(0.5 + (double)szImage.cy * (double)ptSrc.y / (double)szDisplay.cy);
+		int sw = (int)(0.5 + (double)szImage.cx * (double)rcDisplayArea.Width() / (double)szDisplay.cx);
+		int sh = (int)(0.5 + (double)szImage.cy * (double)rcDisplayArea.Height() / (double)szDisplay.cy);
+#if 0
+		dib->stretchBlt(hdc, rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
+			sx, sy, sw, sh, SRCCOPY, false);//true);
+#else
 		lock.lock(this);
-		// int oldMode = dc.SetStretchBltMode(m_zooming ? COLORONCOLOR : HALFTONE);
 		int oldMode = dc.SetStretchBltMode(HALFTONE);
 		dc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
 			mdc, sx, sy, sw, sh, SRCCOPY);
 		dc.SetStretchBltMode(oldMode);
 		lock.unlock();
+#endif
 	}
-
 	dibHelper.detach();
 
-	// draw debug infomation
+
+	// draw debug information
 	{
 		xl::tchar buf[256];
 		double ratio = (double)m_szDisplay.cx / (double)m_szReal.cx;
-		_stprintf_s(buf, 256, _T("Z: %.4fx"), ratio);
+		_stprintf_s(buf, 256, _T("%.4fx (%d - %d) => (%d - %d)"), ratio, 
+			m_szReal.cx, m_szReal.cy, m_szDisplay.cx, m_szDisplay.cy);
 		CRect rcInfo = rc;
 		rcInfo.top = rcInfo.bottom - 16;
 		dc.DrawText(buf, -1, rcInfo, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
@@ -570,6 +577,7 @@ void CImageView::drawMe (HDC hdc) {
 
 	// free the image
 	lock.lock(m_pImageManager);
+	dib.reset();
 	image.reset();
 	lock.unlock();
 }
