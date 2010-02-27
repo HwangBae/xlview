@@ -68,25 +68,15 @@ public:
 		}
 	}
 
-	virtual CImagePtr load (const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) {
-		xl::ui::CDIBSectionPtr dib;
-
-		// load JPEG
+	virtual bool readHeader (const std::string &data, ImageHeaderInfo &info) {
 		struct jpeg_decompress_struct cinfo;
 		safe_jpeg_error_mgr em;
-		JSAMPARRAY buffer;
-		int row_stride;
 
 		cinfo.err = jpeg_std_error(&em.pub);
 		em.pub.error_exit = safe_jpeg_error_exit;
 		if (setjmp(em.setjmp_buffer)) {
 			jpeg_destroy_decompress(&cinfo);
-			if (dib != NULL) {
-				CImagePtr image(new CImage());
-				image->insertImage(dib, CImage::DELAY_INFINITE);
-				return image;
-			}
-			return CImagePtr();
+			return false;
 		}
 
 		jpeg_create_decompress(&cinfo);
@@ -94,82 +84,139 @@ public:
 		if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
 			(void) jpeg_finish_decompress(&cinfo);
 			jpeg_destroy_decompress(&cinfo);
-			return CImagePtr();
+			return false;
+		}
+
+		info.width = cinfo.image_width;
+		info.height = cinfo.image_height;
+		info.bitcount = 24;
+		info.frame_count = 1;
+		assert(info.width > 0 && info.height > 0);
+		return true;
+	}
+
+
+	virtual bool load (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) {
+		// load JPEG
+		const int LINE_BLOCK = 32;
+		struct jpeg_decompress_struct cinfo;
+		safe_jpeg_error_mgr em;
+		JSAMPARRAY buffer;
+		int row_stride;
+
+		assert(image->getImageCount() == 1);
+		xl::ui::CDIBSectionPtr dib = image->getImage(0);
+		xl::ui::CDIBSectionPtr dibTmp;
+
+		cinfo.err = jpeg_std_error(&em.pub);
+		em.pub.error_exit = safe_jpeg_error_exit;
+		if (setjmp(em.setjmp_buffer)) {
+			jpeg_destroy_decompress(&cinfo);
+			dib.reset();
+			dibTmp.reset();
+			return false;
+		}
+
+		jpeg_create_decompress(&cinfo);
+		jpeg_mem_src(&cinfo, (unsigned char *)data.c_str(), data.length());
+		if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+			(void) jpeg_finish_decompress(&cinfo);
+			jpeg_destroy_decompress(&cinfo);
+			return false;
 		}
 
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
-		assert(w > 0 && h > 0);
-		// int bit_counts = cinfo.out_color_space == JCS_GRAYSCALE ? 8 : 24;
-		dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
+		assert((w == image->getImageWidth() && h == image->getImageHeight()) || pResizer != NULL);
+		if (image->getImageWidth() < w) {
+			dib = xl::ui::CDIBSection::createDIBSection(w, LINE_BLOCK, 24);
+			dibTmp = xl::ui::CDIBSection::createDIBSection(image->getImageWidth(), h, 24);
+			if (dib == NULL || dibTmp == NULL) {
+				return false; // out of memory
+			}
+		}
 
 		bool canceled = false;
-		if (dib) {
-			(void) jpeg_start_decompress(&cinfo);
-			row_stride = cinfo.output_width * cinfo.output_components;
-			int win_row_stride = dib->getStride();
-			buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+		int process_line = 0;
+		(void) jpeg_start_decompress(&cinfo);
+		row_stride = cinfo.output_width * cinfo.output_components;
+		int win_row_stride = dib->getStride();
+		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
 
-			unsigned char *p1 = (unsigned char *)dib->getData();
-			unsigned char *p2 = buffer[0];
-			int lines = 0;
-			while (cinfo.output_scanline < cinfo.output_height) {
-				if (pCallback && (lines % 32) == 0 && pCallback->shouldStop()) {
+		unsigned char *p1 = (unsigned char *)dib->getData();
+		unsigned char *p2 = buffer[0];
+		int lines = 0;
+		while (cinfo.output_scanline < cinfo.output_height) {
+			if (lines % LINE_BLOCK == 0 && lines > 0) {
+				if (pCallback && pCallback->shouldStop()) {
 					canceled = true;
 					break;
 				}
-				jpeg_read_scanlines(&cinfo, buffer, 1);
-				if (cinfo.out_color_space == JCS_GRAYSCALE) {
-					unsigned char *dst = p1;
-					unsigned char *src = p2;
-					for (int i = 0; i < w; ++ i) {
-						unsigned char c = *src ++;
-						*dst ++ = c;
-						*dst ++ = c;
-						*dst ++ = c;
+				if (image->getImageWidth() < w) {
+					if (!pResizer->horizontalFilter(dib.get(), LINE_BLOCK, dibTmp.get(), process_line, LINE_BLOCK, pCallback)) {
+						canceled = true;
+						break;
 					}
-				} else if (cinfo.out_color_space == JCS_RGB) {
-					memcpy (p1, p2, row_stride);
-				} else if (cinfo.out_color_space == JCS_CMYK) {
-					assert(cinfo.out_color_components == 4);
-					unsigned char *dst = p1;
-					unsigned char *src = p2;
-					for (int i = 0; i < w; ++ i) {
-						unsigned int K = (unsigned int)src[3];
-						dst[2]   = (unsigned char)((K * src[0]) / 255);
-						dst[1] = (unsigned char)((K * src[1]) / 255);
-						dst[0]  = (unsigned char)((K * src[2]) / 255);
-						src += 4;
-						dst += 3;
-					}
-				} else {
-					assert(false); // not supported
-					canceled = true;
-					break;
+					p1 = (unsigned char *)dib->getData();
+					process_line += LINE_BLOCK;
 				}
-				p1 += win_row_stride;
-				++ lines;
 			}
-
-			if (canceled) {
-				jpeg_abort_decompress(&cinfo);
+			jpeg_read_scanlines(&cinfo, buffer, 1);
+			if (cinfo.out_color_space == JCS_GRAYSCALE) {
+				unsigned char *dst = p1;
+				unsigned char *src = p2;
+				for (int i = 0; i < w; ++ i) {
+					unsigned char c = *src ++;
+					*dst ++ = c;
+					*dst ++ = c;
+					*dst ++ = c;
+				}
+			} else if (cinfo.out_color_space == JCS_RGB) {
+				memcpy (p1, p2, row_stride);
+			} else if (cinfo.out_color_space == JCS_CMYK) {
+				assert(cinfo.out_color_components == 4);
+				unsigned char *dst = p1;
+				unsigned char *src = p2;
+				for (int i = 0; i < w; ++ i) {
+					unsigned int K = (unsigned int)src[3];
+					dst[2]   = (unsigned char)((K * src[0]) / 255);
+					dst[1] = (unsigned char)((K * src[1]) / 255);
+					dst[0]  = (unsigned char)((K * src[2]) / 255);
+					src += 4;
+					dst += 3;
+				}
 			} else {
-				jpeg_finish_decompress(&cinfo);
+				assert(false); // not supported
+				canceled = true;
+				break;
 			}
+			p1 += win_row_stride;
+			++ lines;
+		}
+
+		if (canceled) {
+			jpeg_abort_decompress(&cinfo);
 		} else {
-			assert(false); // out of memory ?
-			// dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
-			// how to handle ????
+			jpeg_finish_decompress(&cinfo);
 		}
 		jpeg_destroy_decompress(&cinfo);
 
-		if (dib && !canceled) {
-			CImagePtr image(new CImage());
-			image->insertImage(dib, CImage::DELAY_INFINITE);
-			return image;
+		if (image->getImageWidth() < w) {
+			if (process_line < (int)cinfo.output_height) {
+				if (!pResizer->horizontalFilter(dib.get(), LINE_BLOCK, dibTmp.get(), process_line, cinfo.output_height - process_line, pCallback)) {
+					return false;
+				}
+			}
+			dib = image->getImage(0);
+			if (!pResizer->verticalFilter(dibTmp.get(), dibTmp->getWidth(), dibTmp->getHeight(), 
+				dib.get(), dib->getWidth(), dib->getHeight(), pCallback))
+			{
+				return false;
+			}
 		}
 
-		return CImagePtr();
+
+		return !canceled;
 	}
 };
 

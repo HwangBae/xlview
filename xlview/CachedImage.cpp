@@ -28,25 +28,17 @@ bool CCachedImage::loadSuitable (CSize szView, xl::ILongTimeRunCallback *pCallba
 	lock.unlock();
 
 	// below is lock free
+	CSize szImage;
 	CImageLoader *pLoader = CImageLoader::getInstance();
-	CImagePtr image = pLoader->load(m_fileName, pCallback);
+	CImagePtr image = pLoader->loadSuitable(m_fileName, &szImage, szView, pCallback);
 	if (!image) {
 		return false;
 	}
-	CSize szImage = image->getImageSize();
-	CSize szSuitable = CImage::getSuitableSize(szView, szImage);
 
 	if (thumbnailImage == NULL) {
 		CSize szThumbnail(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
 		szThumbnail = CImage::getSuitableSize(szThumbnail, szImage, false);
 		thumbnailImage = image->resize(szThumbnail.cx, szThumbnail.cy, true, pCallback);
-	}
-
-	if (szSuitable != szImage) {
-		image = image->resize(szSuitable.cx, szSuitable.cy, true, pCallback);
-		if (image == NULL) {
-			return false;
-		}
 	}
 
 	// lock again
