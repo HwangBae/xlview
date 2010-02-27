@@ -114,7 +114,7 @@ public:
 			unsigned char *p2 = buffer[0];
 			int lines = 0;
 			while (cinfo.output_scanline < cinfo.output_height) {
-				if (pCallback && (lines % 32) == 0 && !pCallback->shouldStop()) {
+				if (pCallback && (lines % 32) == 0 && pCallback->shouldStop()) {
 					canceled = true;
 					break;
 				}

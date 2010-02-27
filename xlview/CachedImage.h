@@ -21,7 +21,7 @@ public:
 	CCachedImage (const xl::tstring &fileName);
 	virtual ~CCachedImage ();
 
-	bool load (CSize szView, xl::ILongTimeRunCallback *pCallback = NULL);
+	bool loadSuitable (CSize szView, xl::ILongTimeRunCallback *pCallback = NULL);
 	bool loadThumbnail (xl::ILongTimeRunCallback *pCallback = NULL);
 	void setSuitableImage (CImagePtr image, CSize realSize);
 	void clear (bool clearThumbnail = false);

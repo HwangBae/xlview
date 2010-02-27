@@ -16,7 +16,7 @@ CCachedImage::~CCachedImage () {
 
 }
 
-bool CCachedImage::load (CSize szView, xl::ILongTimeRunCallback *pCancel) {
+bool CCachedImage::loadSuitable (CSize szView, xl::ILongTimeRunCallback *pCallback) {
 	assert(szView.cx >= MIN_ZOOM_WIDTH);
 	assert(szView.cy >= MIN_ZOOM_HEIGHT);
 
@@ -29,22 +29,21 @@ bool CCachedImage::load (CSize szView, xl::ILongTimeRunCallback *pCancel) {
 
 	// below is lock free
 	CImageLoader *pLoader = CImageLoader::getInstance();
-	CImagePtr image = pLoader->load(m_fileName, pCancel);
+	CImagePtr image = pLoader->load(m_fileName, pCallback);
 	if (!image) {
 		return false;
 	}
 	CSize szImage = image->getImageSize();
 	CSize szSuitable = CImage::getSuitableSize(szView, szImage);
-	assert(szSuitable.cx < 10000);
 
 	if (thumbnailImage == NULL) {
 		CSize szThumbnail(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT);
 		szThumbnail = CImage::getSuitableSize(szThumbnail, szImage, false);
-		thumbnailImage = image->resize(szThumbnail.cx, szThumbnail.cy, true);
+		thumbnailImage = image->resize(szThumbnail.cx, szThumbnail.cy, true, pCallback);
 	}
 
 	if (szSuitable != szImage) {
-		image = image->resize(szSuitable.cx, szSuitable.cy, true);
+		image = image->resize(szSuitable.cx, szSuitable.cy, true, pCallback);
 		if (image == NULL) {
 			return false;
 		}

@@ -19,37 +19,6 @@ class CImageManager
 {
 	friend class ClassWithThreadT<CImageManager, 2>;
 
-	// callbacks
-	class CImageLoadCallback : public xl::ILongTimeRunCallback {
-	public:
-		bool *m_pExiting;
-		bool m_indexChanged;
-		bool m_sizeChanged;
-		CImageLoadCallback (bool *pExiting) 
-			: m_pExiting(pExiting)
-			, m_indexChanged(false)
-			, m_sizeChanged(false)
-		{
-			assert(m_pExiting != NULL);
-		}
-
-		virtual bool shouldStop () const {
-			assert(m_pExiting != NULL);
-			return !m_indexChanged && !*m_pExiting;
-		}
-	};
-
-	class CImagePrefetchCallback : public CImageManager::CImageLoadCallback {
-	public:
-		CImagePrefetchCallback (bool *pExiting) : CImageLoadCallback(pExiting) {
-		}
-
-		virtual bool shouldStop () const {
-			assert(m_pExiting != NULL);
-			return !m_indexChanged && !m_sizeChanged && !*m_pExiting;
-		}
-	};
-
 protected:
 	enum DIRECTION {
 		FORWARD,
@@ -78,7 +47,6 @@ protected:
 		THREAD_COUNT
 	};
 	bool                                           m_exiting;
-	xl::ILongTimeRunCallback                      *m_callbacks[THREAD_COUNT];
 	static unsigned __stdcall _LoadThread (void *);
 	static unsigned __stdcall _PrefetchThread (void *);
 	void _BeginLoad ();
@@ -117,6 +85,10 @@ public:
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
+
+	// used for zoom callback test
+	bool isExiting () const { return m_exiting; }
+	CSize getPrefetchSize () const { return m_szPrefetch; }
 };
 
 #endif

@@ -9,26 +9,27 @@
 
 //////////////////////////////////////////////////////////////////////////
 // callback when zooming
-class CZoomingCallback : public xl::ILongTimeRunCallback {
-	CSize m_szZoom;
-	int m_index;
-	CImageView *m_pView;
-	CImageManager *m_pManager;
-public:
-	CZoomingCallback (CSize szZoom, int index, CImageView *pView, CImageManager *pManager) 
-		: m_szZoom(szZoom), m_index(index)
-		, m_pView(pView), m_pManager(pManager) 
-	{
-		assert(m_pView != NULL && m_pManager != NULL);
-	}
+namespace {
+	class CZoomingCallback : public xl::ILongTimeRunCallback {
+		CSize m_szZoom;
+		int m_index;
+		CImageView *m_pView;
+		CImageManager *m_pManager;
+	public:
+		CZoomingCallback (CSize szZoom, int index, CImageView *pView, CImageManager *pManager) 
+			: m_szZoom(szZoom), m_index(index)
+			, m_pView(pView), m_pManager(pManager) 
+		{
+			assert(m_pView != NULL && m_pManager != NULL);
+		}
 
-	virtual bool shouldStop () const {
-		return m_szZoom != m_pView->getZoomSize()
-			|| m_index != m_pManager->getCurrIndex()
-			|| m_pView->isExiting();
-	}
-};
-
+		virtual bool shouldStop () const {
+			return m_szZoom != m_pView->getZoomSize()
+				|| m_index != m_pManager->getCurrIndex()
+				|| m_pView->isExiting();
+		}
+	};
+}
 
 //////////////////////////////////////////////////////////////////////////
 // static
