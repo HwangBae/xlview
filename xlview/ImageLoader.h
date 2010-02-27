@@ -3,17 +3,9 @@
 #include <vector>
 #include <memory>
 #include "libxl/include/common.h"
+#include "libxl/include/interfaces.h"
 #include "libxl/include/string.h"
 #include "Image.h"
-
-
-//////////////////////////////////////////////////////////////////////////
-// interface for canceling image operation
-class IImageOperateCallback {
-public:
-	virtual bool onProgress (int curr, int total) = 0;
-};
-
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -23,14 +15,14 @@ public:
 	virtual xl::tstring getPluginName () = 0;
 	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool checkHeader (const std::string &header) = 0;
-	virtual CImagePtr load (const std::string &data, IImageOperateCallback *pCancel = NULL) = 0;
+	virtual CImagePtr load (const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual CImagePtr loadThumbnail (
 	                                 const std::string &data,
 	                                 int tw,
 	                                 int th,
 					 int &imageWidth,
 					 int &imageHeight,
-	                                 IImageOperateCallback *pCancel = NULL
+					 xl::ILongTimeRunCallback *pCallback = NULL
 	                                ) {
 		return CImagePtr();
 	}
@@ -52,14 +44,14 @@ public:
 
 	void registerPlugin (ImageLoaderPluginRawPtr);
 	bool isFileSupported (const xl::tstring &fileName);
-	CImagePtr load (const xl::tstring &fileName, IImageOperateCallback *pCancel = NULL);
+	CImagePtr load (const xl::tstring &fileName, xl::ILongTimeRunCallback *pCallback = NULL);
 	CImagePtr loadThumbnail (
 	                         const xl::tstring &fileName,
 	                         int tw,
 	                         int th,
 	                         int &imageWidth,
 	                         int &imageHeight,
-	                         IImageOperateCallback *pCancel = NULL
+	                         xl::ILongTimeRunCallback *pCallback = NULL
 	                        );
 };
 

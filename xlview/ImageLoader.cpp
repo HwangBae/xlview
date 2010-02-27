@@ -40,7 +40,7 @@ bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
 	return false;
 }
 
-CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageOperateCallback *pCancel) {
+CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallback *pCallback) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
 		return CImagePtr();
@@ -53,7 +53,7 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageOperateCallback
 	std::string header = data.substr(0, IMAGE_HEADER_LENGTH);
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
-			return (*it)->load(data, pCancel);
+			return (*it)->load(data, pCallback);
 		}
 	}
 
@@ -66,7 +66,7 @@ CImagePtr CImageLoader::loadThumbnail (
                                        int th,
                                        int &imageWidth,
                                        int &imageHeight,
-                                       IImageOperateCallback *pCallback
+                                       xl::ILongTimeRunCallback *pCallback
                                       ) {
 	std::string data;
 	if (!file_get_contents(fileName, data)) {

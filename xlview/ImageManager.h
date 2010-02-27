@@ -20,7 +20,7 @@ class CImageManager
 	friend class ClassWithThreadT<CImageManager, 2>;
 
 	// callbacks
-	class CImageLoadCallback : public IImageOperateCallback {
+	class CImageLoadCallback : public xl::ILongTimeRunCallback {
 	public:
 		bool *m_pExiting;
 		bool m_indexChanged;
@@ -33,7 +33,7 @@ class CImageManager
 			assert(m_pExiting != NULL);
 		}
 
-		virtual bool onProgress (int curr, int total) {
+		virtual bool shouldStop () const {
 			assert(m_pExiting != NULL);
 			return !m_indexChanged && !*m_pExiting;
 		}
@@ -42,10 +42,9 @@ class CImageManager
 	class CImagePrefetchCallback : public CImageManager::CImageLoadCallback {
 	public:
 		CImagePrefetchCallback (bool *pExiting) : CImageLoadCallback(pExiting) {
-
 		}
 
-		virtual bool onProgress (int curr, int total) {
+		virtual bool shouldStop () const {
 			assert(m_pExiting != NULL);
 			return !m_indexChanged && !m_sizeChanged && !*m_pExiting;
 		}
@@ -79,7 +78,7 @@ protected:
 		THREAD_COUNT
 	};
 	bool                                           m_exiting;
-	IImageOperateCallback                         *m_callbacks[THREAD_COUNT];
+	xl::ILongTimeRunCallback                      *m_callbacks[THREAD_COUNT];
 	static unsigned __stdcall _LoadThread (void *);
 	static unsigned __stdcall _PrefetchThread (void *);
 	void _BeginLoad ();

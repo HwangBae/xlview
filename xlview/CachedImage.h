@@ -2,6 +2,7 @@
 #define XL_VIEW_CACHED_IMAGE_H
 #include <memory>
 #include "libxl/include/lockable.h"
+#include "libxl/include/interfaces.h"
 #include "Image.h"
 #include "ImageLoader.h"
 
@@ -20,8 +21,8 @@ public:
 	CCachedImage (const xl::tstring &fileName);
 	virtual ~CCachedImage ();
 
-	bool load (CSize szView, IImageOperateCallback *pCallback = NULL);
-	bool loadThumbnail (IImageOperateCallback *pCallback = NULL);
+	bool load (CSize szView, xl::ILongTimeRunCallback *pCallback = NULL);
+	bool loadThumbnail (xl::ILongTimeRunCallback *pCallback = NULL);
 	void setSuitableImage (CImagePtr image, CSize realSize);
 	void clear (bool clearThumbnail = false);
 

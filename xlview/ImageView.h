@@ -109,6 +109,9 @@ public:
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
 
+	// used for zoom callback test
+	bool isExiting () const { return m_exiting; }
+	CSize getZoomSize () const { return m_szZoom; }
 };
 
 #endif

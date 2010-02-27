@@ -89,7 +89,7 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	m_frames.push_back(bad);
 }
 
-CImagePtr CImage::resize (int width, int height, bool highQuality) {
+CImagePtr CImage::resize (int width, int height, bool highQuality, xl::ILongTimeRunCallback *pCallback) {
 	if (width == m_width && height == m_height) {
 		return clone();
 	} else {
@@ -108,7 +108,10 @@ CImagePtr CImage::resize (int width, int height, bool highQuality) {
 			if (!dib) {
 				return CImagePtr();
 			}
-			src->resize(dib.get(), rt);
+			if (!src->resize(dib.get(), rt, pCallback)) {
+				assert(pCallback && pCallback->shouldStop());
+				return CImagePtr();
+			}
 			pImage->insertImage(dib, m_frames[i]->delay);
 		}
 

@@ -60,7 +60,6 @@ public:
 	}
 
 	virtual bool checkHeader (const std::string &header) {
-		// return header.find("JFIF") == 6 || header.find("Exif") == 6;
 		if (header.length() < 3) {
 			return false;
 		} else {
@@ -69,7 +68,7 @@ public:
 		}
 	}
 
-	virtual CImagePtr load (const std::string &data, IImageOperateCallback *pCallback = NULL) {
+	virtual CImagePtr load (const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) {
 		xl::ui::CDIBSectionPtr dib;
 
 		// load JPEG
@@ -115,7 +114,7 @@ public:
 			unsigned char *p2 = buffer[0];
 			int lines = 0;
 			while (cinfo.output_scanline < cinfo.output_height) {
-				if (pCallback && (lines % 32) == 0 && !pCallback->onProgress(cinfo.output_scanline, cinfo.output_height)) {
+				if (pCallback && (lines % 32) == 0 && !pCallback->shouldStop()) {
 					canceled = true;
 					break;
 				}

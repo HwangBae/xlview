@@ -194,7 +194,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		// 1.3 load the zoomed images
 		for (_CachedImages::iterator it = images.begin(); 
-			it != images.end() && pCallback->onProgress(0, 0);
+			it != images.end() && pCallback->shouldStop();
 			++ it)
 		{
 			CCachedImagePtr image = *it;

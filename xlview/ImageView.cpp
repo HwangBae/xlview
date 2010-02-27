@@ -7,6 +7,28 @@
 #include "ImageView.h"
 #include "MainWindow.h"
 
+//////////////////////////////////////////////////////////////////////////
+// callback when zooming
+class CZoomingCallback : public xl::ILongTimeRunCallback {
+	CSize m_szZoom;
+	int m_index;
+	CImageView *m_pView;
+	CImageManager *m_pManager;
+public:
+	CZoomingCallback (CSize szZoom, int index, CImageView *pView, CImageManager *pManager) 
+		: m_szZoom(szZoom), m_index(index)
+		, m_pView(pView), m_pManager(pManager) 
+	{
+		assert(m_pView != NULL && m_pManager != NULL);
+	}
+
+	virtual bool shouldStop () const {
+		return m_szZoom != m_pView->getZoomSize()
+			|| m_index != m_pManager->getCurrIndex()
+			|| m_pView->isExiting();
+	}
+};
+
 
 //////////////////////////////////////////////////////////////////////////
 // static
@@ -47,12 +69,13 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 
 		xl::CTimerLogger logger(false, _T("** Resize image (%d-%d) to (%d-%d) cost"), 
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
-		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true);
+		CZoomingCallback callback(szZoomTo, index, pThis, pThis->m_pImageManager);
+		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true, &callback);
 		logger.log();
 
 		lock.lock(pThis);
 		pThis->m_zooming = false;
-		if (index == pThis->m_pImageManager->getCurrIndex()) {
+		if (imageZoomed != NULL && index == pThis->m_pImageManager->getCurrIndex()) {
 			pThis->m_imageZoomed = imageZoomed;
 			pThis->invalidate();
 			lock.unlock();

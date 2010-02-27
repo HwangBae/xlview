@@ -16,7 +16,7 @@ CCachedImage::~CCachedImage () {
 
 }
 
-bool CCachedImage::load (CSize szView, IImageOperateCallback *pCancel) {
+bool CCachedImage::load (CSize szView, xl::ILongTimeRunCallback *pCancel) {
 	assert(szView.cx >= MIN_ZOOM_WIDTH);
 	assert(szView.cy >= MIN_ZOOM_HEIGHT);
 
@@ -62,7 +62,7 @@ bool CCachedImage::load (CSize szView, IImageOperateCallback *pCancel) {
 	return true;
 }
 
-bool CCachedImage::loadThumbnail (IImageOperateCallback *pCancel) {
+bool CCachedImage::loadThumbnail (xl::ILongTimeRunCallback *pCancel) {
 	xl::CScopeLock lock(this);
 		if (m_thumbnailImage != NULL) {
 			return true;
