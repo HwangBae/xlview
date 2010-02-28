@@ -123,7 +123,7 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallb
 			CImagePtr image = _CreateImageFromHeaderInfo(info);
 
 			if (image != NULL) {
-				if ((*it)->load(image, data, NULL, pCallback)) {
+				if ((*it)->load(image, data, pCallback)) {
 					return image;
 				}
 			}
@@ -134,8 +134,8 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallb
 	return CImagePtr();
 }
 
-CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImage, CSize szArea, xl::ILongTimeRunCallback *pCallback) {
-	assert(szImage != NULL);
+CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImageRS, CSize szArea, xl::ILongTimeRunCallback *pCallback) {
+	assert(szImageRS != NULL);
 	std::string data;
 	if (!file_get_contents(fileName, data)) {
 		return CImagePtr();
@@ -144,17 +144,21 @@ CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImag
 	ImageHeaderInfo info;
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->readHeader(data, info)) {
+			szImageRS->cx = info.width;
+			szImageRS->cy = info.height;
 			CImagePtr image = _CreateSuitableImageFromHeaderInfo(szArea, info, true);
 
 			if (image != NULL) {
-				xl::ui::CBoxFilter filter;
-				xl::ui::CResizeEngine resizer(&filter);
-				if ((*it)->load(image, data, &resizer, pCallback)) {
-				// xl::ui::CResizeEngine r(NULL);
-				// if ((*it)->load(image, data, &r, pCallback)) {
-					szImage->cx = info.width;
-					szImage->cy = info.height;
-					return image;
+				if (image->getImageSize() == CSize(info.width, info.height)) {
+					if ((*it)->load(image, data, pCallback)) {
+						return image;
+					}
+				} else {
+					xl::ui::CBoxFilter filter;
+					xl::ui::CResizeEngine resizer(&filter);
+					if ((*it)->loadResize(image, data, &resizer, pCallback)) {
+						return image;
+					}
 				}
 			}
 			break;
@@ -186,9 +190,10 @@ CImagePtr CImageLoader::loadThumbnail (
 				return thumbnail;
 			} else {
 				CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szThumbnail, info, false);
-				xl::ui::CBoxFilter filter;
-				xl::ui::CResizeEngine resizer(&filter);
-				if (thumbnail && (*it)->load(thumbnail, data, &resizer, pCallback)) {
+				// xl::ui::CBoxFilter filter;
+				// xl::ui::CResizeEngine resizer(&filter);
+				xl::ui::CResizeEngine resizer(NULL);
+				if (thumbnail && (*it)->loadResize(thumbnail, data, &resizer, pCallback)) {
 					return thumbnail;
 				}
 			}
