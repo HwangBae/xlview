@@ -73,6 +73,8 @@ protected:
 			::SetEvent(m_hEvents[i]);
 		}
 
+		p->unlock(); // the thread maybe want the lock, so we unlock it
+
 		if (::WaitForMultipleObjects(THREAD_COUNT, m_hThreads, TRUE, 3000) == WAIT_TIMEOUT) {
 			for (int i = 0; i < THREAD_COUNT; ++ i) {
 				if (::WaitForSingleObject(m_hThreads[i], 0) == WAIT_TIMEOUT) {
@@ -88,7 +90,6 @@ protected:
 			CloseHandle(m_hThreads[i]);
 			m_hThreads[i] = INVALID_HANDLE_VALUE;
 		}
-		p->unlock();
 	}
 
 	void _RunThread (size_t i) {

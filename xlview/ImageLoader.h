@@ -8,6 +8,8 @@
 #include "libxl/include/ui/DIBResizer.h"
 #include "Image.h"
 
+typedef std::vector<xl::tchar *>                       ImageExts;
+
 //////////////////////////////////////////////////////////////////////////
 // header information
 struct ImageHeaderInfo {
@@ -26,15 +28,14 @@ struct ImageHeaderInfo {
 class IImageLoaderPlugin {
 public:
 	virtual xl::tstring getPluginName () = 0;
-	virtual bool checkFileName (const xl::tstring &fileName) = 0;
+	virtual void registerExt (ImageExts &exts) = 0;
 	virtual bool readHeader (const std::string &data, ImageHeaderInfo &info) = 0;
-	// virtual bool load (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
-	// virtual bool loadResize (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
+// 	virtual bool load (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
+// 	virtual bool loadResize (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual bool load (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual CImagePtr loadThumbnail (
 	                                 const std::string &data,
-	                                 int tw,
-	                                 int th,
+					 CSize szThumbnail,
 					 int &imageWidth,
 					 int &imageHeight,
 					 xl::ILongTimeRunCallback *pCallback = NULL
@@ -51,6 +52,7 @@ class CImageLoader
 {
 	typedef std::vector<ImageLoaderPluginRawPtr>   _Plugins;
 	_Plugins           m_plugins;
+	ImageExts          m_exts;
 
 	CImageLoader ();
 	~CImageLoader ();
@@ -67,8 +69,7 @@ public:
 	CImagePtr loadSuitable (const xl::tstring &fileName, CSize *szImage, CSize szArea, xl::ILongTimeRunCallback *pCallback = NULL);
 	CImagePtr loadThumbnail (
 	                         const xl::tstring &fileName,
-	                         int tw,
-	                         int th,
+				 CSize szThumbnail,
 	                         int &imageWidth,
 	                         int &imageHeight,
 	                         xl::ILongTimeRunCallback *pCallback = NULL

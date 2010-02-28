@@ -65,7 +65,7 @@ bool CCachedImage::loadThumbnail (xl::ILongTimeRunCallback *pCancel) {
 	assert(xl::file_exists(fileName)); // TODO
 	CImageLoader *pLoader = CImageLoader::getInstance();
 	int imageWidth = 0, imageHeight = 0;
-	CImagePtr image = pLoader->loadThumbnail(fileName, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, imageWidth, imageHeight, pCancel);
+	CImagePtr image = pLoader->loadThumbnail(fileName, CSize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), imageWidth, imageHeight, pCancel);
 	if (image == NULL) {
 		return false;
 	}

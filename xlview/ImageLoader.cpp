@@ -90,14 +90,23 @@ void CImageLoader::registerPlugin (ImageLoaderPluginRawPtr plugin) {
 	}
 
 	m_plugins.push_back(plugin);
+	plugin->registerExt(m_exts);
 }
 
 bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
-	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
-		if ((*it)->checkFileName(fileName)) {
+	size_t offset = fileName.rfind(_T("."));
+	if (offset == fileName.npos) { // no extension
+		return false;
+	}
+
+	const xl::tchar *ext = &fileName.c_str()[offset + 1];
+	for (size_t i = 0; i < m_exts.size(); ++ i) {
+		if (_tcsicmp(ext, m_exts[i]) == 0) {
 			return true;
 		}
 	}
+
+	return false;
 
 	return false;
 }
@@ -157,8 +166,7 @@ CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImag
 
 CImagePtr CImageLoader::loadThumbnail (
                                        const xl::tstring &fileName,
-                                       int tw, 
-                                       int th,
+                                       CSize szThumbnail,
                                        int &imageWidth,
                                        int &imageHeight,
                                        xl::ILongTimeRunCallback *pCallback
@@ -173,12 +181,11 @@ CImagePtr CImageLoader::loadThumbnail (
 		if ((*it)->readHeader(data, info)) {
 			imageWidth = info.width;
 			imageHeight = info.height;
-			CImagePtr thumbnail = (*it)->loadThumbnail(data, tw, th, imageWidth, imageHeight, pCallback);
+			CImagePtr thumbnail = (*it)->loadThumbnail(data, szThumbnail, imageWidth, imageHeight, pCallback);
 			if (thumbnail != NULL) {
 				return thumbnail;
 			} else {
-				CSize szArea(tw, th);
-				CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szArea, info, false);
+				CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szThumbnail, info, false);
 				xl::ui::CBoxFilter filter;
 				xl::ui::CResizeEngine resizer(&filter);
 				if (thumbnail && (*it)->load(thumbnail, data, &resizer, pCallback)) {

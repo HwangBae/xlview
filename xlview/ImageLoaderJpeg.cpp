@@ -37,26 +37,17 @@ public:
 		return _T("JPEG Loader");
 	}
 
-	virtual bool checkFileName (const xl::tstring &fileName) {
+	virtual void registerExt (ImageExts &exts) {
 		static xl::tchar *extensions[] = {
 			_T("jpg"),
 			_T("jpeg"),
 			_T("jif"),
+			_T("jfif"),
 		};
-
-		size_t offset = fileName.rfind(_T("."));
-		if (offset == fileName.npos) { // no extension
-			return false;
-		}
-
-		const xl::tchar *ext = &fileName.c_str()[offset + 1];
+		exts.reserve(exts.size() + COUNT_OF(extensions));
 		for (int i = 0; i < COUNT_OF(extensions); ++ i) {
-			if (_tcsicmp(ext, extensions[i]) == 0) {
-				return true;
-			}
+			exts.push_back(extensions[i]);
 		}
-
-		return false;
 	}
 
 	virtual bool checkHeader (const std::string &header) {
