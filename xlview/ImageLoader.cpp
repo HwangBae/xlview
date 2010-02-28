@@ -140,7 +140,9 @@ CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImag
 			if (image != NULL) {
 				xl::ui::CBoxFilter filter;
 				xl::ui::CResizeEngine resizer(&filter);
-				if ((*it)->load(image, data, &resizer, pCallback)) {
+				// if ((*it)->load(image, data, &resizer, pCallback)) {
+				xl::ui::CResizeEngine r(NULL);
+				if ((*it)->load(image, data, &r, pCallback)) {
 					szImage->cx = info.width;
 					szImage->cy = info.height;
 					return image;

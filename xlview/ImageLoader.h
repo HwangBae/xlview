@@ -28,6 +28,8 @@ public:
 	virtual xl::tstring getPluginName () = 0;
 	virtual bool checkFileName (const xl::tstring &fileName) = 0;
 	virtual bool readHeader (const std::string &data, ImageHeaderInfo &info) = 0;
+	// virtual bool load (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
+	// virtual bool loadResize (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual bool load (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual CImagePtr loadThumbnail (
 	                                 const std::string &data,

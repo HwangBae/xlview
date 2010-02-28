@@ -103,6 +103,7 @@ public:
 		safe_jpeg_error_mgr em;
 		JSAMPARRAY buffer;
 		int row_stride;
+		int lines = 0;
 
 		assert(image->getImageCount() == 1);
 		xl::ui::CDIBSectionPtr dib = image->getImage(0);
@@ -114,7 +115,7 @@ public:
 			jpeg_destroy_decompress(&cinfo);
 			dib.reset();
 			dibTmp.reset();
-			return false;
+			return lines > 0;
 		}
 
 		jpeg_create_decompress(&cinfo);
@@ -127,7 +128,7 @@ public:
 
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
-		assert((w == image->getImageWidth() && h == image->getImageHeight()) || pResizer != NULL);
+		// assert((w == image->getImageWidth() && h == image->getImageHeight()) || pResizer != NULL);
 		if (image->getImageWidth() < w) {
 			dib = xl::ui::CDIBSection::createDIBSection(w, LINE_BLOCK, 24);
 			dibTmp = xl::ui::CDIBSection::createDIBSection(image->getImageWidth(), h, 24);
@@ -145,7 +146,6 @@ public:
 
 		unsigned char *p1 = (unsigned char *)dib->getData();
 		unsigned char *p2 = buffer[0];
-		int lines = 0;
 		while (cinfo.output_scanline < cinfo.output_height) {
 			if (lines % LINE_BLOCK == 0 && lines > 0) {
 				if (pCallback && pCallback->shouldStop()) {
@@ -201,15 +201,14 @@ public:
 		}
 		jpeg_destroy_decompress(&cinfo);
 
-		if (image->getImageWidth() < w) {
+		if (!canceled && image->getImageWidth() < w) {
 			if (process_line < (int)cinfo.output_height) {
 				if (!pResizer->horizontalFilter(dib.get(), LINE_BLOCK, dibTmp.get(), process_line, cinfo.output_height - process_line, pCallback)) {
 					return false;
 				}
 			}
 			dib = image->getImage(0);
-			if (!pResizer->verticalFilter(dibTmp.get(), dibTmp->getWidth(), dibTmp->getHeight(), 
-				dib.get(), dib->getWidth(), dib->getHeight(), pCallback))
+			if (!pResizer->verticalFilter(dibTmp.get(), dib.get(), pCallback))
 			{
 				return false;
 			}
