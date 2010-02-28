@@ -92,6 +92,8 @@ public:
 		info.bitcount = 24;
 		info.frame_count = 1;
 		assert(info.width > 0 && info.height > 0);
+
+		jpeg_destroy_decompress(&cinfo);
 		return true;
 	}
 
@@ -128,7 +130,7 @@ public:
 
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
-		// assert((w == image->getImageWidth() && h == image->getImageHeight()) || pResizer != NULL);
+		assert((w == image->getImageWidth() && h == image->getImageHeight()) || pResizer != NULL);
 		if (image->getImageWidth() < w) {
 			dib = xl::ui::CDIBSection::createDIBSection(w, LINE_BLOCK, 24);
 			dibTmp = xl::ui::CDIBSection::createDIBSection(image->getImageWidth(), h, 24);
