@@ -26,7 +26,7 @@ class CImageLoaderPluginJpeg : public IImageLoaderPlugin
 {
 	bool _ProcessLine (struct jpeg_decompress_struct &cinfo, 
 	                   unsigned char *dst, unsigned char *src) {
-		int w = cinfo.image_width;
+		int w = cinfo.output_width;
 		if (cinfo.out_color_space == JCS_GRAYSCALE) {
 			for (int i = 0; i < w; ++ i) {
 				unsigned char c = *src ++;
@@ -136,6 +136,8 @@ public:
 			return false;
 		}
 
+		// cinfo.dct_method = JDCT_ISLOW;
+		// cinfo.scale_num = 1;
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
 		assert(w == image->getImageWidth() && h == image->getImageHeight());

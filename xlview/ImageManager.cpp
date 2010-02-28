@@ -153,6 +153,7 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 		CLoadingCallback callback(pThis->getCurrIndex(), pThis);
 		lock.unlock();
 
+		xl::CTimerLogger logger(false, _T("Load  %s cost"), fileName.c_str());
 		CImagePtr image = pImageLoader->load(fileName, &callback);
 		if (image == NULL) {
 			assert(callback.shouldStop());
