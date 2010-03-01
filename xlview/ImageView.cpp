@@ -68,7 +68,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		}
 		lock.unlock();
 
-		xl::CTimerLogger logger(false, _T("** Resize image (%d-%d) to (%d-%d) cost"), 
+		xl::CTimerLogger logger(_T("** Resize image (%d-%d) to (%d-%d) cost"), 
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
 		CZoomingCallback callback(szZoomTo, index, pThis, pThis->m_pImageManager);
 		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true, &callback);

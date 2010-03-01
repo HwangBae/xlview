@@ -162,7 +162,7 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 		lock.unlock();
 
 		if (preloadThumbnail) {
-			xl::CTimerLogger logger(false, _T("Load thumbnail %s cost"), fileName.c_str());
+			xl::CTimerLogger logger(_T("Load thumbnail %s cost"), fileName.c_str());
 			if (cachedImage->loadThumbnail(true, &callback)) {
 				lock.lock(pThis);
 				if (!callback.shouldStop()) {
@@ -172,7 +172,7 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 			}
 		}
 
-		xl::CTimerLogger logger(false, _T("Load %s cost"), fileName.c_str());
+		xl::CTimerLogger logger(_T("Load %s cost"), fileName.c_str());
 		CImagePtr image = pImageLoader->load(fileName, &callback);
 		if (image == NULL) {
 			assert(callback.shouldStop());
@@ -255,7 +255,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		size_t processed_count = 1;
 		int offset = 1;
-		xl::CTimerLogger logger(false, _T("** process %d thumbnails cost"), count);
+		xl::CTimerLogger logger(_T("** process %d thumbnails cost"), count);
 		while (processed_count < count && !callback.shouldStop()) {
 			// forward
 			int index = currIndex + offset;
@@ -291,7 +291,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 				if (!callback.shouldStop()) {
 					pThis->_TriggerEvent(EVT_THUMBNAIL_LOADED, &index);
 				}
-				pThis->unlock();
+				lock.unlock();
 			}
 			++ processed_count;
 
