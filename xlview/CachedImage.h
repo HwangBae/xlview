@@ -29,6 +29,7 @@ public:
 	xl::tstring getFileName () const;
 	CSize getImageSize () const;
 	CImagePtr getCachedImage () const;
+	CImagePtr getSuitableImage () const;
 };
 
 

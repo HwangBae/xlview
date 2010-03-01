@@ -16,8 +16,8 @@ inline void CHECK_ZOOM_SIZE (CSize &sz) {
 }
 
 // the thumbnail size
-static const int THUMBNAIL_WIDTH = 80;
-static const int THUMBNAIL_HEIGHT = 60;
+static const int THUMBNAIL_WIDTH = 120;
+static const int THUMBNAIL_HEIGHT = 160;
 
 
 #endif

@@ -146,3 +146,10 @@ CImagePtr CCachedImage::getCachedImage () const {
 
 	return image;
 }
+
+CImagePtr CCachedImage::getSuitableImage () const {
+	lock();
+	CImagePtr image = m_suitableImage;
+	unlock();
+	return image;
+}

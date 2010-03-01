@@ -56,6 +56,7 @@ protected:
 	 * DO NOT set m_szDisplay directly!!
 	 */
 	void _SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur = CPoint(-1, -1));
+	void _SetZoomSize (CSize szZoom);
 	void _ResetDisplayInfo ();
 	void _CheckPtSrc (CPoint &ptSrc);
 	void _NotifyDisplayChanged ();

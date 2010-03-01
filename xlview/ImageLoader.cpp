@@ -42,7 +42,7 @@ CImagePtr CImageLoader::_CreateImageFromHeaderInfo (ImageHeaderInfo &info) {
 
 CImagePtr CImageLoader::_CreateSuitableImageFromHeaderInfo (CSize szArea, ImageHeaderInfo &info, bool dontEnlarge) {
 	assert((szArea.cx >= MIN_ZOOM_WIDTH && szArea.cy >= MIN_ZOOM_HEIGHT) 
-		|| (szArea.cx == MIN_ZOOM_WIDTH / 2 && szArea.cy == MIN_ZOOM_HEIGHT / 2));
+		|| (szArea.cx == THUMBNAIL_WIDTH  && szArea.cy == THUMBNAIL_HEIGHT));
 	assert(info.width > 0 && info.height > 0 && info.bitcount > 16 && info.frame_count > 0);
 
 	int w = info.width;
