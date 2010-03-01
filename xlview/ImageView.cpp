@@ -63,9 +63,9 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		int index = pThis->m_pImageManager->getCurrIndex();
 		CImagePtr imageRS = pThis->m_imageRealSize;
 		pThis->m_zooming = true;
-		if (imageRS == pThis->m_imageZoomed) { // when resizing, the real sized image is locked
-			pThis->m_imageZoomed = pThis->m_pImageManager->getCurrentCachedImage()->getCachedImage();
-		}
+// 		if (imageRS == pThis->m_imageZoomed) { // when resizing, the real sized image is locked
+// 			pThis->m_imageZoomed = pThis->m_pImageManager->getCurrentCachedImage()->getCachedImage();
+// 		}
 		lock.unlock();
 
 		xl::CTimerLogger logger(_T("** Resize image (%d-%d) to (%d-%d) cost"), 
@@ -573,7 +573,10 @@ void CImageView::drawMe (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
-	xl::ui::CDIBSectionHelper dibHelper(dib, mdc);
+	// xl::ui::CDIBSectionHelper dibHelper(dib, mdc);
+	// I don't use ::StretchBlt() in the back thread for zooming, 
+	// so BitBlt or StretchBlt without lock is safe.
+	dib->attachToDCNoLock(mdc);
 
 	if (szImage == szDisplay) {
 		// use BitBlt
@@ -598,7 +601,8 @@ void CImageView::drawMe (HDC hdc) {
 		lock.unlock();
 #endif
 	}
-	dibHelper.detach();
+	// dibHelper.detach();
+	dib->detachFromDCNoLock(mdc);
 
 
 	// draw debug information
