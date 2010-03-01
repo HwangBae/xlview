@@ -34,6 +34,7 @@ protected:
 
 	void _OnIndexChanged (int index);
 	void _OnImageLoaded (CImagePtr);
+	void _OnThumbnailLoaded (int index);
 
 	CPoint             m_ptCapture;
 	CPoint             m_ptCaptureSrc;

@@ -53,7 +53,7 @@ bool CCachedImage::loadSuitable (CSize szView, xl::ILongTimeRunCallback *pCallba
 	return true;
 }
 
-bool CCachedImage::loadThumbnail (xl::ILongTimeRunCallback *pCancel) {
+bool CCachedImage::loadThumbnail (bool fastOnly, xl::ILongTimeRunCallback *pCancel) {
 	xl::CScopeLock lock(this);
 		if (m_thumbnailImage != NULL) {
 			return true;
@@ -64,16 +64,15 @@ bool CCachedImage::loadThumbnail (xl::ILongTimeRunCallback *pCancel) {
 	// below is lock free
 	assert(xl::file_exists(fileName)); // TODO
 	CImageLoader *pLoader = CImageLoader::getInstance();
-	int imageWidth = 0, imageHeight = 0;
-	CImagePtr image = pLoader->loadThumbnail(fileName, CSize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), imageWidth, imageHeight, pCancel);
+	CSize szImageRS;
+	CImagePtr image = pLoader->loadThumbnail(fileName, szImageRS, CSize(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT), fastOnly, pCancel);
 	if (image == NULL) {
 		return false;
 	}
 
 	lock.lock(this);
 		m_thumbnailImage = image;
-		m_szImage.cx = imageWidth;
-		m_szImage.cy = imageHeight;
+		m_szImage = szImageRS;
 
 		image.reset();
 	lock.unlock();

@@ -181,6 +181,8 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_IMAGE_LOADED:
 		break;
+	case CImageManager::EVT_THUMBNAIL_LOADED:
+		break;
 	default:
 		assert(false);
 		break;

@@ -140,6 +140,19 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 	_BeginZoom();
 }
 
+void CImageView::_OnThumbnailLoaded (int index) {
+	assert(getLockLevel() > 0); // must be called in lock
+	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
+
+	if (index != m_pImageManager->getCurrIndex()) {
+		return;
+	} else {
+		if (m_imageRealSize == NULL && m_imageZoomed == NULL) {
+			_OnIndexChanged(index);
+		}
+	}
+}
+
 CRect CImageView::_CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc) {
 	int dx = (rcView.Width() - szDisplay.cx) / 2;
 	int dy = (rcView.Height() - szDisplay.cy) / 2;
@@ -689,6 +702,10 @@ void CImageView::onEvent (EVT evt, void *param) {
 	case CImageManager::EVT_IMAGE_LOADED:
 		assert(param);
 		_OnImageLoaded(*(CImagePtr *)param);
+		break;
+	case CImageManager::EVT_THUMBNAIL_LOADED:
+		assert(param);
+		_OnThumbnailLoaded(*(int *)param);
 		break;
 	case CImageManager::EVT_FILELIST_READY:
 		break;

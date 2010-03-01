@@ -8,7 +8,7 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-static const int PREFETCH_RANGE = 5;
+static const int PREFETCH_RANGE = 1;
 
 void CImageManager::_SetIndexNoLock (int index) {
 	assert(getLockLevel() > 0);
@@ -150,10 +150,29 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 
 		xl::CScopeLock lock(pThis);
 		xl::tstring fileName = pThis->getCurrentFileName();
-		CLoadingCallback callback(pThis->getCurrIndex(), pThis);
+		int currIndex = pThis->getCurrIndex();
+		CLoadingCallback callback(currIndex, pThis);
+		CCachedImagePtr cachedImage = pThis->getCurrentCachedImage();
+		CImagePtr zoomedImage = cachedImage->getCachedImage();
+		bool preloadThumbnail = zoomedImage == NULL;
+		zoomedImage.reset();
+		if (!preloadThumbnail) {
+			cachedImage.reset();
+		}
 		lock.unlock();
 
-		xl::CTimerLogger logger(false, _T("Load  %s cost"), fileName.c_str());
+		if (preloadThumbnail) {
+			xl::CTimerLogger logger(false, _T("Load thumbnail %s cost"), fileName.c_str());
+			if (cachedImage->loadThumbnail(true, &callback)) {
+				lock.lock(pThis);
+				if (!callback.shouldStop()) {
+					pThis->_TriggerEvent(EVT_THUMBNAIL_LOADED, &currIndex);
+				}
+				lock.unlock();
+			}
+		}
+
+		xl::CTimerLogger logger(false, _T("Load %s cost"), fileName.c_str());
 		CImagePtr image = pImageLoader->load(fileName, &callback);
 		if (image == NULL) {
 			assert(callback.shouldStop());
@@ -232,6 +251,55 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		// TODO: 1.4 load the thumbnail
 		if (callback.shouldStop()) {
 			continue;
+		}
+
+		size_t processed_count = 1;
+		int offset = 1;
+		xl::CTimerLogger logger(false, _T("** process %d thumbnails cost"), count);
+		while (processed_count < count && !callback.shouldStop()) {
+			// forward
+			int index = currIndex + offset;
+			xl::CScopeLock lock(pThis);
+			count = pThis->m_cachedImages.size();
+			if (index >= (int)count) {
+				index %= count;
+			}
+			CCachedImagePtr cachedImage = pThis->m_cachedImages.at(index);
+			lock.unlock();
+
+			if (cachedImage->loadThumbnail(false, &callback)) {
+				lock.lock(pThis);
+				if (!callback.shouldStop()) {
+					pThis->_TriggerEvent(EVT_THUMBNAIL_LOADED, &index);
+				}
+				lock.unlock();
+			}
+			++ processed_count;
+
+			// backward
+			index = currIndex - offset;
+			lock.lock(pThis);
+			count = pThis->m_cachedImages.size();
+			while (index < 0) {
+				index += count;
+			}
+			cachedImage = pThis->m_cachedImages.at(index);
+			lock.unlock();
+
+			if (cachedImage->loadThumbnail(false, &callback)) {
+				lock.lock(pThis);
+				if (!callback.shouldStop()) {
+					pThis->_TriggerEvent(EVT_THUMBNAIL_LOADED, &index);
+				}
+				pThis->unlock();
+			}
+			++ processed_count;
+
+			lock.lock(pThis);
+			cachedImage.reset();
+			lock.unlock();
+
+			++ offset;
 		}
 	}
 

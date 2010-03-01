@@ -65,6 +65,7 @@ public:
 		EVT_FILELIST_READY,                    // param (pointer to total count)
 		EVT_INDEX_CHANGED,                     // param (pointer to the current index)
 		EVT_IMAGE_LOADED,                      // param (pointer to the CImagePtr)
+		EVT_THUMBNAIL_LOADED,                  // param (pointer to the current index)
 		EVT_NUM
 	};
 

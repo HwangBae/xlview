@@ -283,6 +283,112 @@ public:
 
 		return !canceled;
 	}
+
+	virtual bool loadThumbnail (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback) {
+		assert(image != NULL);
+		assert(image->getImageCount() == 1);
+
+		const int LINE_BLOCK = 32;
+		struct jpeg_decompress_struct cinfo;
+		safe_jpeg_error_mgr em;
+		JSAMPARRAY buffer;
+		int decoded_line_count = 0;
+		xl::ui::CDIBSectionPtr dib;
+		double ratio;
+		int dst_width = image->getImageWidth();
+		int dst_height = image->getImageHeight();
+
+		cinfo.err = jpeg_std_error(&em.pub);
+		em.pub.error_exit = safe_jpeg_error_exit;
+		if (setjmp(em.setjmp_buffer)) {
+			jpeg_destroy_decompress(&cinfo);
+			return decoded_line_count > 0;
+		}
+
+		jpeg_create_decompress(&cinfo);
+		jpeg_mem_src(&cinfo, (unsigned char *)data.c_str(), data.length());
+		if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
+			(void) jpeg_finish_decompress(&cinfo);
+			jpeg_destroy_decompress(&cinfo);
+			return false;
+		}
+
+		// cinfo.dct_method = JDCT_ISLOW;
+		// cinfo.scale_num = 1;
+		int w = cinfo.image_width;
+		int h = cinfo.image_height;
+		assert(w > 0 && h > 0);
+		ratio = (double)dst_width / (double)w;
+		xl::uint scale_num = (xl::uint)(8 * ratio + 0.5);
+		if (scale_num < 1) {
+			scale_num = 1;
+		}
+		cinfo.scale_num = scale_num;
+
+		(void) jpeg_start_decompress(&cinfo);
+		dib = xl::ui::CDIBSection::createDIBSection(cinfo.output_width, cinfo.output_height, 24, false);
+		if (dib == NULL) {
+			jpeg_abort_decompress(&cinfo);
+			jpeg_destroy_decompress(&cinfo);
+			return false;
+		}
+		int src_row_stride = cinfo.output_width * cinfo.output_components;
+		int dst_row_stride = dib->getStride();
+
+		buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, src_row_stride, 1);
+		bool canceled = false;
+		unsigned char *dst_data = (unsigned char *)dib->getData();
+		unsigned char *src_data = buffer[0];
+		while (cinfo.output_scanline < cinfo.output_height) {
+			if (decoded_line_count % LINE_BLOCK == 1) {
+				if (pCallback && pCallback->shouldStop()) {
+					canceled = true;
+					break;
+				}
+			}
+
+			jpeg_read_scanlines(&cinfo, buffer, 1);
+			if (!_ProcessLine(cinfo, dst_data, src_data)) {
+				canceled = true;
+				break;
+			}
+			dst_data += dst_row_stride;
+			++ decoded_line_count;
+		}
+
+		if (canceled) {
+			jpeg_abort_decompress(&cinfo);
+		} else {
+			jpeg_finish_decompress(&cinfo);
+		}
+		jpeg_destroy_decompress(&cinfo);
+
+		if (!canceled) {
+			CSize szSrc(dib->getWidth(), dib->getHeight());
+			xl::ui::CDIBSectionPtr dst = image->getImage(0);
+			CSize szDst(dst->getWidth(), dst->getHeight());
+			if (szSrc != szDst) {
+				if (dib->resize(dst.get(), xl::ui::CDIBSection::RT_BOX, pCallback)) {
+					return true;
+				} else {
+					return false;
+				}
+			} else {
+				int width = szSrc.cx;
+				int height = szSrc.cy;
+				int stride = dib->getStride();
+				assert(stride == dst->getStride());
+				for (int y = 0; y < height; ++ y) {
+					xl::uint *src_line = (xl::uint *)dib->getLine(y);
+					xl::uint *dst_line = (xl::uint *)dst->getLine(y);
+					memcpy(dst_line, src_line, stride);
+				}
+				return true;
+			}
+		}
+
+		return false;
+	}
 };
 
 // register

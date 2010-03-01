@@ -41,7 +41,8 @@ CImagePtr CImageLoader::_CreateImageFromHeaderInfo (ImageHeaderInfo &info) {
 }
 
 CImagePtr CImageLoader::_CreateSuitableImageFromHeaderInfo (CSize szArea, ImageHeaderInfo &info, bool dontEnlarge) {
-	assert(szArea.cx >= MIN_ZOOM_WIDTH && szArea.cy >= MIN_ZOOM_HEIGHT);
+	assert((szArea.cx >= MIN_ZOOM_WIDTH && szArea.cy >= MIN_ZOOM_HEIGHT) 
+		|| (szArea.cx == MIN_ZOOM_WIDTH / 2 && szArea.cy == MIN_ZOOM_HEIGHT / 2));
 	assert(info.width > 0 && info.height > 0 && info.bitcount > 16 && info.frame_count > 0);
 
 	int w = info.width;
@@ -170,9 +171,9 @@ CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImag
 
 CImagePtr CImageLoader::loadThumbnail (
                                        const xl::tstring &fileName,
+                                       CSize &szImageRS,
                                        CSize szThumbnail,
-                                       int &imageWidth,
-                                       int &imageHeight,
+                                       bool fastOnly,
                                        xl::ILongTimeRunCallback *pCallback
                                       ) {
 	std::string data;
@@ -183,13 +184,12 @@ CImagePtr CImageLoader::loadThumbnail (
 	ImageHeaderInfo info;
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->readHeader(data, info)) {
-			imageWidth = info.width;
-			imageHeight = info.height;
-			CImagePtr thumbnail = (*it)->loadThumbnail(data, szThumbnail, imageWidth, imageHeight, pCallback);
-			if (thumbnail != NULL) {
+			szImageRS.cx = info.width;
+			szImageRS.cy = info.height;
+			CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szThumbnail, info, false);
+			if ((*it)->loadThumbnail(thumbnail, data, pCallback)) {
 				return thumbnail;
-			} else {
-				CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szThumbnail, info, false);
+			} else if (!fastOnly) {
 				// xl::ui::CBoxFilter filter;
 				// xl::ui::CResizeEngine resizer(&filter);
 				xl::ui::CResizeEngine resizer(NULL);

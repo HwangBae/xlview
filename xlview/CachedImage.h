@@ -22,7 +22,7 @@ public:
 	virtual ~CCachedImage ();
 
 	bool loadSuitable (CSize szView, xl::ILongTimeRunCallback *pCallback = NULL);
-	bool loadThumbnail (xl::ILongTimeRunCallback *pCallback = NULL);
+	bool loadThumbnail (bool fastOnly, xl::ILongTimeRunCallback *pCallback = NULL);
 	void setSuitableImage (CImagePtr image, CSize realSize);
 	void clear (bool clearThumbnail = false);
 

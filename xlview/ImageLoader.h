@@ -33,14 +33,12 @@ public:
 	virtual bool load (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual bool loadResize (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	// virtual bool load (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
-	virtual CImagePtr loadThumbnail (
-	                                 const std::string &data,
-					 CSize szThumbnail,
-					 int &imageWidth,
-					 int &imageHeight,
-					 xl::ILongTimeRunCallback *pCallback = NULL
-	                                ) {
-		return CImagePtr();
+	virtual bool loadThumbnail (
+	                            CImagePtr image,
+	                            const std::string &data,
+                                    xl::ILongTimeRunCallback *pCallback = NULL
+                                   ) {
+		return false;
 	}
 };
 typedef IImageLoaderPlugin                            *ImageLoaderPluginRawPtr;
@@ -69,9 +67,9 @@ public:
 	CImagePtr loadSuitable (const xl::tstring &fileName, CSize *szImageReal, CSize szArea, xl::ILongTimeRunCallback *pCallback = NULL);
 	CImagePtr loadThumbnail (
 	                         const xl::tstring &fileName,
-				 CSize szThumbnail,
-	                         int &imageWidth,
-	                         int &imageHeight,
+                                 CSize &szImageRS,
+	                         CSize szThumbnail,
+	                         bool fastOnly,
 	                         xl::ILongTimeRunCallback *pCallback = NULL
 	                        );
 };
