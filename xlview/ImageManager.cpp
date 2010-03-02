@@ -118,16 +118,16 @@ namespace {
 	};
 
 	class CZoomingCallback : public CLoadingCallback {
-		CSize m_szZoom;
+		CSize m_szPrefetch;
 	public:
-		CZoomingCallback (CSize szZoom, int index, CImageManager *pManager)
-			: m_szZoom(szZoom)
+		CZoomingCallback (CSize szPrefetch, int index, CImageManager *pManager)
+			: m_szPrefetch(szPrefetch)
 			, CLoadingCallback(index, pManager)
 		{
 		}
 
 		virtual bool shouldStop () const {
-			return m_szZoom != m_pManager->getPrefetchSize() 
+			return m_szPrefetch != m_pManager->getPrefetchSize() 
 				|| CLoadingCallback::shouldStop();
 		}
 	};

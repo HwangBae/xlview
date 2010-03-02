@@ -51,13 +51,13 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		bool suitable = pThis->m_suitable;
 		CSize szRS = pThis->m_imageRealSize->getImageSize();
 		CSize szZoomTo = pThis->m_szZoom;
-		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
-			continue; // zoom not needed
-		}
 		if (szZoomTo.cx * 2 >= szRS.cx || szZoomTo.cy * 2 >= szRS.cy) {
 			pThis->m_imageZoomed = pThis->m_imageRealSize;
 			pThis->invalidate();
 			continue; // zoom to a too large size, so we use the real size image instead
+		}
+		if (pThis->m_imageZoomed && pThis->m_imageZoomed->getImageSize() == szZoomTo) {
+			continue; // zoom not needed
 		}
 
 		int index = pThis->m_pImageManager->getCurrIndex();
@@ -109,7 +109,10 @@ void CImageView::_OnIndexChanged (int index) {
 			assert(cachedImage->getImageSize() != CSize(-1, -1));
 			m_szReal = cachedImage->getImageSize();
 			CRect rc = getClientRect();
-			m_szDisplay = CImage::getSuitableSize(CSize(rc.Width(), rc.Height()), m_szReal);
+			CSize szArea(rc.Width(), rc.Height());
+			CSize szDisplay = CImage::getSuitableSize(szArea, m_szReal);
+			// _SetDisplaySize(rc, szDisplay);
+			m_szDisplay = szDisplay; // _SetDisplaySize need m_szDisplay not (-1, -1)
 			_NotifyDisplayChanged();
 		}
 	}
@@ -199,21 +202,16 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 	_CheckPtSrc(m_ptSrc);
 
 	// use real size image or zoomed image as source?
-	// Here maybe a problem, if imagemanager delete the cachedImage could cause **race condition**
+	// Here maybe a problem, if image manager delete the cachedImage could cause **race condition**
 	assert(m_imageRealSize != NULL);
 	if (m_imageRealSize != NULL) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
 		CImagePtr image = cachedImage->getCachedImage();
 		assert(image != NULL);
+		CSize szCached = image->getImageSize();
 		if (m_imageZoomed == m_imageRealSize) {
-			CSize szCached = cachedImage->getImageSize();
 			if (szCached.cx >= szDisplay.cx && szCached.cy >= szDisplay.cy) {
 				m_imageZoomed = image;
-			}
-		} else {
-			CSize szCached = cachedImage->getImageSize();
-			if (szCached.cx < szDisplay.cx && szCached.cy < szDisplay.cy) {
-				m_imageZoomed = m_imageRealSize;
 			}
 		}
 		image.reset();
@@ -544,7 +542,7 @@ void CImageView::onSize () {
 	m_pImageManager->onViewSizeChanged(rc);
 
 	lock();
-	if (m_imageRealSize != NULL) {
+	if (m_imageZoomed != NULL) {
 		if (m_suitable) {
 			assert(m_szReal != CSize(-1, -1));
 			CSize szArea(rc.Width(), rc.Height());

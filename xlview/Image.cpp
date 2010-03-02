@@ -100,8 +100,12 @@ CImagePtr CImage::resize (int width, int height, bool highQuality, xl::ILongTime
 		pImage->m_width = width;
 		pImage->m_height = height;
 
-		// xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? xl::ui::CDIBSection::RT_BICUBIC : xl::ui::CDIBSection::RT_FAST;
-		xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? xl::ui::CDIBSection::RT_BOX : xl::ui::CDIBSection::RT_FAST;
+		xl::ui::CDIBSection::RESIZE_TYPE rt_hq = xl::ui::CDIBSection::RT_BOX;
+		double ratio = (double)width / (double)m_width;
+		if (ratio > 0.33) {
+			rt_hq = xl::ui::CDIBSection::RT_BICUBIC;
+		} 
+		xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? rt_hq : xl::ui::CDIBSection::RT_FAST;
 		for (size_t i = 0; i < m_frames.size(); ++ i) {
 			xl::ui::CDIBSectionPtr src = m_frames[i]->bitmap;
 			xl::ui::CDIBSectionPtr dib = xl::ui::CDIBSection::createDIBSection(width, height, src->getBitCounts(), false);

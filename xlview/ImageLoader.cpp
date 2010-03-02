@@ -155,12 +155,21 @@ CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImag
 						return image;
 					}
 				} else {
-					xl::ui::CBoxFilter filter;
-					xl::ui::CResizeEngine resizer(&filter);
-					if ((*it)->loadResize(image, data, &resizer, pCallback)) {
-						return image;
+					double ratio = (double)image->getImageWidth() / (double)info.width;
+					if (ratio > 0.5) {
+						xl::ui::CBicubicFilter filter;
+						xl::ui::CResizeEngine resizer(&filter);
+						if ((*it)->loadResize(image, data, &resizer, pCallback)) {
+							return image;
+						}
+					} else { // box filter doesn't works well when ratio is big
+						xl::ui::CBoxFilter filter;
+						xl::ui::CResizeEngine resizer(&filter);
+						if ((*it)->loadResize(image, data, &resizer, pCallback)) {
+							return image;
+						}
 					}
-				}
+				} 
 			}
 			break;
 		}
