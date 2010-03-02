@@ -114,7 +114,7 @@ bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
 
 CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallback *pCallback) {
 	std::string data;
-	if (!file_get_contents(fileName, data)) {
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
 		return CImagePtr();
 	}
 
@@ -138,7 +138,7 @@ CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallb
 CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImageRS, CSize szArea, xl::ILongTimeRunCallback *pCallback) {
 	assert(szImageRS != NULL);
 	std::string data;
-	if (!file_get_contents(fileName, data)) {
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
 		return CImagePtr();
 	}
 
@@ -177,7 +177,7 @@ CImagePtr CImageLoader::loadThumbnail (
                                        xl::ILongTimeRunCallback *pCallback
                                       ) {
 	std::string data;
-	if (!file_get_contents(fileName, data)) {
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
 		return CImagePtr();
 	}
 
