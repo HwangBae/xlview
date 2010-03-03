@@ -628,7 +628,7 @@ void CImageView::drawMe (HDC hdc) {
 		_stprintf_s(buf, 256, _T("%.4fx (%d - %d) => (%d - %d)"), ratio, 
 			m_szReal.cx, m_szReal.cy, m_szDisplay.cx, m_szDisplay.cy);
 		CRect rcInfo = rc;
-		rcInfo.top = rcInfo.bottom - 16;
+		rcInfo.bottom = rcInfo.top + 16;
 		dc.DrawText(buf, -1, rcInfo, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 	}
 

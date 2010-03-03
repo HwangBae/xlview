@@ -137,7 +137,7 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	
 	xl::ui::CControlPtr slider(new CSlider());
 	m_slider = slider;
-	slider->setStyle(_T("margin:0 50; py:bottom; width:fill; float:true; disable:true"));
+	slider->setStyle(_T("margin:0 0; py:bottom; width:fill; float:true; disable:true"));
 	slider->setStyle(_T("slider:0 0 0;"));
 	m_ctrlMain->insertChild(slider);
 
