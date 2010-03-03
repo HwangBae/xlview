@@ -4,7 +4,7 @@
 CSlider::CSlider ()
 	: xl::ui::CCtrlSlider(0, 50, 0)
 {
-	setStyle(_T("padding:0 16; height:32; opacity:0; background-color:#c0c0c0;"));
+	setStyle(_T("padding:0 16; height:40; thumbnail-min-width: 24; opacity:0; background-color:#c0c0c0;"));
 }
 
 CSlider::~CSlider () {
