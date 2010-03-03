@@ -28,6 +28,7 @@ struct ImageHeaderInfo {
 class IImageLoaderPlugin {
 public:
 	virtual xl::tstring getPluginName () = 0;
+	virtual xl::tstring getFileTypeName () = 0;
 	virtual void registerExt (ImageExts &exts) = 0;
 	virtual bool readHeader (const std::string &data, ImageHeaderInfo &info) = 0;
 	virtual bool load (CImagePtr image, const std::string &data, xl::ILongTimeRunCallback *pCallback = NULL) = 0;

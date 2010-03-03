@@ -67,12 +67,17 @@ public:
 		return _T("JPEG Loader");
 	}
 
+	virtual xl::tstring getFileTypeName () {
+		return _T("JPEG");
+	}
+
 	virtual void registerExt (ImageExts &exts) {
 		static xl::tchar *extensions[] = {
 			_T("jpg"),
 			_T("jpeg"),
 			_T("jif"),
 			_T("jfif"),
+			_T("jpe"),
 		};
 		exts.reserve(exts.size() + COUNT_OF(extensions));
 		for (int i = 0; i < COUNT_OF(extensions); ++ i) {

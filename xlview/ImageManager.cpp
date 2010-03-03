@@ -8,7 +8,7 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-static const int PREFETCH_RANGE = 1;
+static const int PREFETCH_RANGE = 4;
 
 void CImageManager::_SetIndexNoLock (int index) {
 	assert(getLockLevel() > 0);
@@ -239,20 +239,19 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		CZoomingCallback callback(szPrefetch, currIndex, pThis);
 		lock.unlock();
 
-		// 1.3 load the zoomed images
+		// 1.3 load most 2 zoomed images
+		int prefetched_count = 0;
 		for (_CachedImages::iterator it = images.begin();
-			it != images.end() && !callback.shouldStop(); 
+			it != images.end() && prefetched_count < 2 && !callback.shouldStop(); 
 			++ it)
 		{
 			CCachedImagePtr image = *it;
-			image->loadSuitable(szPrefetch, &callback);
+			if (image->loadSuitable(szPrefetch, &callback)) {
+				++ prefetched_count;
+			}
 		}
 
-		// TODO: 1.4 load the thumbnail
-		if (callback.shouldStop()) {
-			continue;
-		}
-
+		// 1.4 load the thumbnail
 		size_t processed_count = 1;
 		int offset = 1;
 		xl::CTimerLogger logger(_T("** process %d thumbnails cost"), count);
@@ -300,6 +299,15 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 			lock.unlock();
 
 			++ offset;
+		}
+
+		// 1.5 load the remaining prefetch images
+		for (_CachedImages::iterator it = images.begin();
+			it != images.end() && !callback.shouldStop(); 
+			++ it)
+		{
+			CCachedImagePtr image = *it;
+			image->loadSuitable(szPrefetch, &callback);
 		}
 	}
 
