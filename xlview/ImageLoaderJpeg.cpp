@@ -5,6 +5,8 @@
 #include "libxl/include/utilities.h"
 #include "ImageLoader.h"
 
+#pragma warning (push)
+#pragma warning (disable:4611)
 
 // for safe error handle
 struct safe_jpeg_error_mgr {
@@ -145,6 +147,7 @@ public:
 		// cinfo.scale_num = 1;
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
+		w = w, h = h;
 		assert(w == image->getImageWidth() && h == image->getImageHeight());
 
 		(void) jpeg_start_decompress(&cinfo);
@@ -301,7 +304,6 @@ public:
 		xl::ui::CDIBSectionPtr dib;
 		double ratio;
 		int dst_width = image->getImageWidth();
-		int dst_height = image->getImageHeight();
 
 		cinfo.err = jpeg_std_error(&em.pub);
 		em.pub.error_exit = safe_jpeg_error_exit;
@@ -322,6 +324,7 @@ public:
 		// cinfo.scale_num = 1;
 		int w = cinfo.image_width;
 		int h = cinfo.image_height;
+		w = w, h = h;
 		assert(w > 0 && h > 0);
 		ratio = (double)dst_width / (double)w;
 		xl::uint scale_num = (xl::uint)(8 * ratio + 0.5);
@@ -379,7 +382,6 @@ public:
 					return false;
 				}
 			} else {
-				int width = szSrc.cx;
 				int height = szSrc.cy;
 				int stride = dib->getStride();
 				assert(stride == dst->getStride());
@@ -415,3 +417,4 @@ namespace {
 
 	static CJpegRegister jr;
 }
+#pragma warning (pop)

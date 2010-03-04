@@ -60,7 +60,6 @@ protected:
 public:
 	// event
 	enum EVENT 
-		: xl::dp::CObserableT<CImageManager>::EVT
 	{
 		EVT_FILELIST_READY,                    // param (pointer to total count)
 		EVT_INDEX_CHANGED,                     // param (pointer to the current index)

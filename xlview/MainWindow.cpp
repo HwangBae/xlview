@@ -15,11 +15,15 @@
 static const xl::tchar *MAIN_TITLE = _T("xl / view");
 
 
-void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr ctrl) {
+void CMainWindow::onCommand (xl::uint /*id*/, xl::ui::CControlPtr /*ctrl*/) {
 
 }
 
 void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tracking, xl::ui::CControlPtr ctrl) {
+	XL_PARAMETER_NOT_USED(id);
+	XL_PARAMETER_NOT_USED(_min);
+	XL_PARAMETER_NOT_USED(_max);
+	XL_PARAMETER_NOT_USED(tracking);
 	assert(id == m_slider->getID());
 
 	setIndex(_curr);
@@ -35,11 +39,11 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 	// test gesture and prev & next
 	if (gesture == _T("R")) {
 		if (release) {
-			int new_index = m_currIndex + 1;
+			xl::uint new_index = m_currIndex + 1;
 			if (new_index == m_cachedImages.size()) {
 				new_index = 0;
 			}
-			setIndex(new_index);
+			setIndex((int)new_index);
 		}
 		return _T("Next");
 	}
@@ -117,7 +121,7 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 }
 
 
-LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled) {
 	subscribe(this);
 
 	bHandled = false;
@@ -127,27 +131,29 @@ LRESULT CMainWindow::OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHa
 	if (m_ctrlMain == NULL) {
 		m_ctrlMain.reset(new xl::ui::CCtrlMain(this, this));
 	}
+
+	// gesture
 	m_ctrlMain->enableGesture(true);
 	m_ctrlMain->setStyle(_T("background:none"));
 	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
 	gestureCtrl->setStyle(_T("color:#ff0000"));
 
+	// the view
 	m_view = xl::ui::CControlPtr(new CImageView(this));
 	m_ctrlMain->insertChild(m_view);
 	
+	// slider
 	xl::ui::CControlPtr slider(new CSlider());
 	m_slider = slider;
 	slider->setStyle(_T("margin:0 0; py:bottom; width:fill; float:true; disable:true"));
 	slider->setStyle(_T("slider:0 0 0;"));
 	m_ctrlMain->insertChild(slider);
 
-	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
-
 	return TRUE;
 }
 
 
-LRESULT CMainWindow::OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+LRESULT CMainWindow::OnSize (UINT /*msg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL &/*bHandled*/) {
 	if (m_ctrlMain && wParam != SIZE_MINIMIZED) {
 		CRect rc;
 		GetClientRect(rc);

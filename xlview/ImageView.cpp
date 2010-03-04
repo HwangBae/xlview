@@ -404,7 +404,7 @@ CImageView::~CImageView (void) {
 	_TerminateThreads();
 }
 
-void CImageView::showSuitable (CPoint ptCur) {
+void CImageView::showSuitable (CPoint /*ptCur*/) {
 	xl::CScopeLock lock(this);
 	if (m_szReal == CSize(-1, -1) || m_suitable) {
 		return;
@@ -562,7 +562,7 @@ void CImageView::onSize () {
 void CImageView::drawMe (HDC hdc) {
 	assert(m_pImageManager != NULL);
 	// xl::CTimerLogger logger(_T("drawMe "));
-	DWORD tick = ::GetTickCount();
+// 	DWORD tick = ::GetTickCount();
 
 	xl::CScopeLock lock(this);
 	CRect rc = getClientRect();
@@ -639,7 +639,7 @@ void CImageView::drawMe (HDC hdc) {
 	lock.unlock();
 }
 
-void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
+void CImageView::onLButtonDown (CPoint pt, xl::uint /*key*/) {
 	CRect rc = getClientRect();
 	if (m_szDisplay.cx > rc.Width() || m_szDisplay.cy > rc.Height()) {
 		::SetCursor(m_hCurMove);
@@ -649,7 +649,7 @@ void CImageView::onLButtonDown (CPoint pt, xl::uint key) {
 	}
 }
 
-void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
+void CImageView::onLButtonUp (CPoint /*pt*/, xl::uint /*key*/) {
 	if (m_ptCapture != CPoint(-1, -1)) {
 		::SetCursor(m_hCurNormal);
 		_Capture(false);
@@ -657,7 +657,7 @@ void CImageView::onLButtonUp (CPoint pt, xl::uint key) {
 	}
 }
 
-void CImageView::onMouseMove (CPoint pt, xl::uint key) {
+void CImageView::onMouseMove (CPoint pt, xl::uint /*key*/) {
 	if (m_ptCapture != CPoint(-1, -1)) {
 		::SetCursor(m_hCurMove);
 		int x = m_ptCaptureSrc.x - (pt.x - m_ptCapture.x);
@@ -677,7 +677,7 @@ void CImageView::onMouseMove (CPoint pt, xl::uint key) {
 	}
 }
 
-void CImageView::onMouseWheel (CPoint pt, int delta, xl::uint key) {
+void CImageView::onMouseWheel (CPoint pt, int delta, xl::uint /*key*/) {
 	if (delta > 0) {
 		showLarger(pt);
 	} else {
@@ -685,7 +685,7 @@ void CImageView::onMouseWheel (CPoint pt, int delta, xl::uint key) {
 	}
 }
 
-void CImageView::onTimer (xl::uint id) {
+void CImageView::onTimer (xl::uint /*id*/) {
 	xl::CScopeLock lock(this);
 #ifdef PROGRESS_ZOOMING
 	if (m_ptCurSaved == CPoint(-1, -1) || m_szDisplay == m_szZoom) {

@@ -35,10 +35,11 @@ public:
 	virtual bool loadResize (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	// virtual bool load (CImagePtr image, const std::string &data, xl::ui::CResizeEngine *pResizer = NULL, xl::ILongTimeRunCallback *pCallback = NULL) = 0;
 	virtual bool loadThumbnail (
-	                            CImagePtr image,
-	                            const std::string &data,
+	                            CImagePtr /*image*/,
+	                            const std::string &/*data*/,
                                     xl::ILongTimeRunCallback *pCallback = NULL
                                    ) {
+		XL_PARAMETER_NOT_USED(pCallback);
 		return false;
 	}
 };

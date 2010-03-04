@@ -12,7 +12,7 @@ static const int PREFETCH_RANGE = 4;
 
 void CImageManager::_SetIndexNoLock (int index) {
 	assert(getLockLevel() > 0);
-	if (m_currIndex != index) {
+	if ((int)m_currIndex != index) {
 		XLTRACE(_T("--== change index from %d to %d ==--\n"), m_currIndex, index);
 		if ((int)m_currIndex < index) {
 			m_direction = FORWARD;
@@ -21,7 +21,7 @@ void CImageManager::_SetIndexNoLock (int index) {
 		}
 
 		// check marginal condition
-		if (m_currIndex == 0 && index == m_cachedImages.size() - 1) {
+		if (m_currIndex == 0 && index == (int)m_cachedImages.size() - 1) {
 			m_direction = BACKWARD;
 		} else if (m_currIndex == m_cachedImages.size() - 1 && index == 0) {
 			m_direction = FORWARD;
@@ -31,7 +31,6 @@ void CImageManager::_SetIndexNoLock (int index) {
 			m_direction = FORWARD;
 		}
 
-		xl::uint lastIndex = m_currIndex;
 		m_currIndex = index;
 
 		// start prefetch first
@@ -43,6 +42,8 @@ void CImageManager::_SetIndexNoLock (int index) {
 }
 
 
+#pragma warning (push)
+#pragma warning (disable:4127)
 /**
  * the order is (for current index is N):
  * forward: [N + 1, N - 1, N + 2, N + 3, ... N - 2, N - 3, ...]
@@ -95,6 +96,7 @@ void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int c
 }
 #undef IM_CHECK_INDEX
 #undef IM_INSERT_INDEX
+#pragma warning (pop)
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -221,7 +223,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		// note that 2.1 and 2.2 should be fast enough for a lock operation
 		for (xl::uint i = 0; i < pThis->m_cachedImages.size(); ++ i) {
 			bool removed = true;
-			if (i == currIndex) {
+			if ((int)i == currIndex) {
 				removed = false;
 			} else {
 				// TODO: use std::find instead
@@ -409,7 +411,7 @@ void CImageManager::setIndex (int index) {
 
 void CImageManager::setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr) {
 	xl::CScopeLock lock(this);
-	if (m_currIndex == curr) {
+	if ((int)m_currIndex == curr) {
 		m_cachedImages[curr]->setSuitableImage(image, szImage);
 	}
 }

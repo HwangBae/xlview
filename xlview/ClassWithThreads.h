@@ -37,6 +37,7 @@ protected:
 
 	void _CreateThreads () {
 		int dummy = sizeof(int[(THREAD_COUNT == T::THREAD_COUNT) ? 1 : 0]);
+		dummy = dummy;
 		xl::tchar name[MAX_PATH];
 		
 		T *p = (T *)this;
@@ -78,7 +79,7 @@ protected:
 		if (::WaitForMultipleObjects(THREAD_COUNT, m_hThreads, TRUE, 3000) == WAIT_TIMEOUT) {
 			for (int i = 0; i < THREAD_COUNT; ++ i) {
 				if (::WaitForSingleObject(m_hThreads[i], 0) == WAIT_TIMEOUT) {
-					::TerminateThread(m_hThreads[i], -1);
+					::TerminateThread(m_hThreads[i], (DWORD)-1);
 					XLTRACE(_T("%s [%d] does not exit normally\n"), p->getThreadName(), i);
 				}
 			}
