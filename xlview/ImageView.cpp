@@ -391,7 +391,7 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
 {
-	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2 2 16 2;"));
+	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2 2 2 2;"));
 	// setStyle(_T("background-color:#808080;"));
 	setStyle(_T("background-color:#202020;"));
 
