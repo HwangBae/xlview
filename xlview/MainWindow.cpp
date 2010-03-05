@@ -173,7 +173,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 		{
 			assert(param != NULL);
 			int _min = 0, _max = m_cachedImages.size() - 1, _curr = *(int *)param;
-			assert(_curr == m_currIndex);
+			assert(_curr == (int)m_currIndex);
 			TCHAR buf[128];
 			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
 			pSlider->setStyle(buf);

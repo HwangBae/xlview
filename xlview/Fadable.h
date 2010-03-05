@@ -51,12 +51,20 @@ public:
 		if (opacity == m_opacity) {
 			return;
 		} else if (opacity < m_opacity) {
-			opacity += m_stepLength;
+			if ((m_opacity - opacity) % m_stepLength > 0) {
+				opacity += ((m_opacity - opacity) % m_stepLength);
+			} else {
+				opacity += m_stepLength;
+			}
 			if (opacity > m_opacity) {
 				opacity = m_opacity;
 			}
 		} else {
-			opacity -= m_stepLength;
+			if ((opacity - m_opacity) % m_stepLength > 0) {
+				opacity -= ((opacity - m_opacity) % m_stepLength);
+			} else {
+				opacity -= m_stepLength;
+			}
 			if (opacity < m_opacity) {
 				opacity = m_opacity;
 			}

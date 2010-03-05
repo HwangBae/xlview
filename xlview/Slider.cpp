@@ -3,7 +3,7 @@
 
 CSlider::CSlider ()
 	: xl::ui::CCtrlSlider(0, 50, 0)
-	, CFadable(0, 50, 50)
+	, CFadable(0, 60, 30, 50)
 {
 	setStyle(_T("padding:0 16; height:40; thumbnail-min-width: 24; opacity:0; background-color:#c0c0c0;"));
 }
