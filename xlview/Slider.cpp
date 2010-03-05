@@ -13,15 +13,11 @@ CSlider::~CSlider () {
 }
 
 void CSlider::onMouseIn (CPoint /*pt*/) {
-	if (!disable) {
-		CFadable<CSlider>::onMouseIn();
-	}
+	CFadable<CSlider>::fadeIn();
 }
 
 void CSlider::onMouseOut (CPoint /*pt*/) {
-	if (!disable) {
-		CFadable<CSlider>::onMouseOut();
-	}
+	CFadable<CSlider>::fadeOut();
 }
 
 void CSlider::onTimer (xl::uint /*id*/) {

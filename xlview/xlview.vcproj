@@ -225,7 +225,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\FadableControl.h"
+				RelativePath=".\Fadable.h"
 				>
 			</File>
 			<File

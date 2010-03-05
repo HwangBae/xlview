@@ -24,7 +24,7 @@ public:
 		p->setOpacity(m_opacityFadeOut);
 	}
 
-	void onMouseIn () {
+	void fadeIn () {
 		T *p = (T *)this;
 		if (p->disable) {
 			return;
@@ -33,7 +33,7 @@ public:
 		process();
 	}
 
-	void onMouseOut () {
+	void fadeOut () {
 		T *p = (T *)this;
 		if (p->disable) {
 			return;
