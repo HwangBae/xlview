@@ -12,6 +12,7 @@ static const int PREFETCH_RANGE = 4;
 
 void CImageManager::_SetIndexNoLock (int index) {
 	assert(getLockLevel() > 0);
+	assert(index >= 0 && index < (int)m_cachedImages.size());
 	if ((int)m_currIndex != index) {
 		XLTRACE(_T("--== change index from %d to %d ==--\n"), m_currIndex, index);
 		if ((int)m_currIndex < index) {
@@ -260,7 +261,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		while (processed_count < count && !callback.shouldStop()) {
 			// forward
 			int index = currIndex + offset;
-			xl::CScopeLock lock(pThis);
+			lock.lock(pThis);
 			count = pThis->m_cachedImages.size();
 			if (index >= (int)count) {
 				index %= count;
@@ -309,8 +310,15 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 			++ it)
 		{
 			CCachedImagePtr image = *it;
-			image->loadSuitable(szPrefetch, &callback);
+			if (image->loadSuitable(szPrefetch, &callback)) {
+			}
 		}
+
+		lock.lock(pThis);
+		for (_CachedImages::iterator it = images.begin(); it != images.end(); ++ it) {
+			(*it).reset();
+		}
+		lock.unlock();
 	}
 
 	return 0;
@@ -426,11 +434,11 @@ CCachedImagePtr CImageManager::getCurrentCachedImage () {
 
 CImagePtr CImageManager::getThumbnail (int index) {
 	xl::CScopeLock lock(this);
-	assert(index > 0 && index < (int)m_cachedImages.size());
+	assert(index >= 0 && index < (int)m_cachedImages.size());
 	CCachedImagePtr cachedImage = m_cachedImages[index];
 	CImagePtr thumbnail = cachedImage->getThumbnailImage();
 	cachedImage.reset();
-	unlock();
+	lock.unlock();
 	return thumbnail;
 }
 

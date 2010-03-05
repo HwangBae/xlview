@@ -309,7 +309,11 @@ public:
 		em.pub.error_exit = safe_jpeg_error_exit;
 		if (setjmp(em.setjmp_buffer)) {
 			jpeg_destroy_decompress(&cinfo);
-			return decoded_line_count > 0;
+			if (decoded_line_count > 0) {
+				goto onjpegerror;
+			} else {
+				return false;
+			}
 		}
 
 		jpeg_create_decompress(&cinfo);
@@ -371,6 +375,7 @@ public:
 		}
 		jpeg_destroy_decompress(&cinfo);
 
+onjpegerror:
 		if (!canceled) {
 			CSize szSrc(dib->getWidth(), dib->getHeight());
 			xl::ui::CDIBSectionPtr dst = image->getImage(0);

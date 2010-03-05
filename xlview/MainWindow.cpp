@@ -145,14 +145,14 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	m_ctrlMain->insertChild(m_view);
 
 	// autobar
-	xl::ui::CControlPtr navbar(new CAutobar(0, 60, 30, 50));
+	xl::ui::CControlPtr navbar(new CAutobar(0, 75, 40, 50));
 	m_navbar = navbar;
-	navbar->setStyle(_T("margin:0 0; padding:0; py:bottom; width:fill; height:92; float:true; disable:true"));
+	navbar->setStyle(_T("margin:0 0; padding:0; py:bottom; width:fill; height:102; float:true; disable:true"));
 	m_ctrlMain->insertChild(navbar);
 
 	// thumbnail
 	xl::ui::CControlPtr thumbview(new CThumbnailView(this));
-	thumbview->setStyle(_T("margin:0; padding:0; width:fill; height:60;"));
+	thumbview->setStyle(_T("margin:0; padding:0; width:fill; height:70;"));
 	m_navbar->insertChild(thumbview);
 
 

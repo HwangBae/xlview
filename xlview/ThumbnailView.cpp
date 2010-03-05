@@ -4,6 +4,7 @@
 
 static const int TV_WIDTH = 60;
 static const int TV_HEIGHT = 80;
+static const int TV_PADDING = 10;
 
 //////////////////////////////////////////////////////////////////////////
 // 
@@ -17,12 +18,32 @@ CThumbnailView::_CThumbnail::~_CThumbnail () {
 
 }
 
+int CThumbnailView::_CThumbnail::getIndex () const {
+	return m_index;
+}
+
+CRect CThumbnailView::_CThumbnail::getRect () const {
+	return m_rect;
+}
+
+bool CThumbnailView::_CThumbnail::hasThumbnail () const {
+	return m_thumbnail != NULL;
+}
+
+void CThumbnailView::_CThumbnail::setThumbnail (CImagePtr thumbnail) {
+	m_thumbnail = thumbnail;
+}
+
 void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex) {
 	if (m_thumbnail == NULL) {
 		return;
 	}
 	xl::ui::CDIBSectionPtr thumbnail = m_thumbnail->getImage(0);
 	assert(thumbnail != NULL);
+	CRect rc = m_rect;
+	if (currIndex == m_index) {
+		rc.top -= 10;
+	}
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
@@ -30,7 +51,7 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex) {
 
 	xl::ui::CDIBSectionHelper helper(thumbnail, mdc);
 	int oldMode = dc.SetStretchBltMode(HALFTONE);
-	dc.StretchBlt(m_rect.left, m_rect.top, m_rect.Width(), m_rect.Height(),
+	dc.StretchBlt(rc.left, rc.top, rc.Width(), rc.Height(),
 		mdc, 0, 0, thumbnail->getWidth(), thumbnail->getHeight(), SRCCOPY);
 	dc.SetStretchBltMode(oldMode);
 	helper.detach();
@@ -54,7 +75,7 @@ void CThumbnailView::_CreateThumbnailList () {
 	}
 
 	int x1 = rc.left + rc.Width() / 2;
-	int y1 = rc.top;
+	int y1 = rc.top + 10;
 	int x2 = x1;
 	int y2 = rc.bottom;
 	int index = -1;
@@ -69,7 +90,7 @@ void CThumbnailView::_CreateThumbnailList () {
 
 	// 2. left
 	while (x2 > rc.left && index > 0) {
-		x2 = x1;
+		x2 = x1 - TV_PADDING;
 		x1 -= TV_WIDTH;
 		index --;
 		thumbnail = m_pImageManager->getThumbnail(index);
@@ -80,13 +101,30 @@ void CThumbnailView::_CreateThumbnailList () {
 	x1 = rc.left + rc.Width() / 2;
 	x1 -= TV_WIDTH / 2;
 	x2 = x1 + TV_WIDTH;
+	index = m_currIndex + 1;
 	int count = (int)m_pImageManager->getImageCount();
 	while (x2 < rc.right && index < count) {
-		x1 = x2;
+		x1 = x2 + TV_PADDING;
 		x2 = x1 + TV_WIDTH;
-		index ++;
 		thumbnail = m_pImageManager->getThumbnail(index);
 		m_thumbnails.push_back(_CThumbnailPtr(new _CThumbnail(index, CRect(x1, y1, x2, y2), thumbnail)));
+		index ++;
+	}
+}
+
+void CThumbnailView::_OnThumbnailLoaded (int index) {
+	assert(getLockLevel() > 0);
+	assert(m_pImageManager->getLockLevel() > 0);
+
+	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
+		if ((*it)->getIndex() == index) {
+			if (!(*it)->hasThumbnail()) {
+				CImagePtr thumbnail = m_pImageManager->getThumbnail(index);
+				(*it)->setThumbnail(thumbnail);
+				invalidate();
+			}
+			break;
+		}
 	}
 }
 
@@ -112,6 +150,31 @@ void CThumbnailView::drawMe (HDC hdc) {
 	}
 }
 
+void CThumbnailView::onSize () {
+	assert(m_pImageManager);
+	m_pImageManager->lock();
+	lock();
+	_CreateThumbnailList();
+	unlock();
+	m_pImageManager->unlock();
+}
+
+void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
+	int index = -1;
+	lock();
+	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
+		if ((*it)->getRect().PtInRect(pt)) {
+			index = (*it)->getIndex();
+			break;
+		}
+	}
+	unlock();
+
+	if (index != -1) {
+		m_pImageManager->setIndex(index);
+	}
+}
+
 void CThumbnailView::onEvent (EVT evt, void *param) {
 	assert(m_pImageManager->getLockLevel() > 0);
 
@@ -129,7 +192,7 @@ void CThumbnailView::onEvent (EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_THUMBNAIL_LOADED:
 		assert(param);
-		// _OnThumbnailLoaded(*(int *)param);
+		_OnThumbnailLoaded(*(int *)param);
 		break;
 	case CImageManager::EVT_FILELIST_READY:
 		break;

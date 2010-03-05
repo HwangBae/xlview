@@ -44,7 +44,8 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 			break;
 		}
 
-		xl::CScopeLock lock(pThis);
+		xl::CScopeLock lockManager(pThis->m_pImageManager);
+		xl::CScopeLock lockMe(pThis);
 		if (pThis->m_imageRealSize == NULL) {
 			continue; // no source
 		}
@@ -63,7 +64,8 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		int index = pThis->m_pImageManager->getCurrIndex();
 		CImagePtr imageRS = pThis->m_imageRealSize;
 		pThis->m_zooming = true;
-		lock.unlock();
+		lockMe.unlock();
+		lockManager.unlock();
 
 		xl::CTimerLogger logger(_T("** Resize image (%d-%d) to (%d-%d) cost"), 
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
@@ -71,23 +73,28 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true, &callback);
 		logger.log();
 
-		lock.lock(pThis);
+		lockManager.lock(pThis->m_pImageManager);
+		lockMe.lock(pThis);
 		imageRS.reset(); // no use now
 		pThis->m_zooming = false;
 		if (imageZoomed != NULL && index == pThis->m_pImageManager->getCurrIndex()) {
 			pThis->m_imageZoomed = imageZoomed;
 			pThis->invalidate();
-			lock.unlock();
+			lockMe.unlock();
+			lockManager.unlock();
 
 			if (suitable) {
 				pThis->m_pImageManager->setCurrentSuitableImage(imageZoomed, szRS, index);
 			}
 
-			lock.lock(pThis);
+			lockManager.lock(pThis->m_pImageManager);
+			lockMe.lock(pThis);
 			imageZoomed.reset(); // avoid race condition 
-			lock.unlock();
+			lockMe.unlock();
+			lockManager.unlock();
 		} else {
-			lock.unlock();
+			lockMe.unlock();
+			lockManager.unlock();
 		}
 	}
 
@@ -404,6 +411,7 @@ CImageView::~CImageView (void) {
 }
 
 void CImageView::showSuitable (CPoint /*ptCur*/) {
+	xl::CScopeLock lockManager(m_pImageManager);
 	xl::CScopeLock lock(this);
 	if (m_szReal == CSize(-1, -1) || m_suitable) {
 		return;
@@ -424,6 +432,7 @@ void CImageView::showSuitable (CPoint /*ptCur*/) {
 }
 
 void CImageView::showRealSize (CPoint ptCur) {
+	xl::CScopeLock lockManager(m_pImageManager);
 	xl::CScopeLock lock(this);
 	if (m_szReal == CSize(-1, -1) || m_szDisplay == m_szReal) {
 		return;
@@ -449,6 +458,7 @@ void CImageView::showRealSize (CPoint ptCur) {
 }
 
 void CImageView::showLarger (CPoint ptCur) {
+	xl::CScopeLock lockManager(m_pImageManager);
 	xl::CScopeLock lock(this);
 	if (m_szReal == CSize(-1, -1)) {
 		return;
@@ -464,6 +474,7 @@ void CImageView::showLarger (CPoint ptCur) {
 }
 
 void CImageView::showSmaller (CPoint ptCur) {
+	xl::CScopeLock lockManager(m_pImageManager);
 	xl::CScopeLock lock(this);
 	if (m_szReal == CSize(-1, -1)) {
 		return;

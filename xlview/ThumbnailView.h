@@ -20,6 +20,10 @@ class CThumbnailView
 	public:
 		_CThumbnail (int index, CRect rc, CImagePtr thumbnail);
 		~_CThumbnail ();
+		int getIndex () const;
+		CRect getRect () const;
+		bool hasThumbnail () const;
+		void setThumbnail (CImagePtr);
 
 		void draw (HDC hdc, int currIndex);
 	};
@@ -31,6 +35,7 @@ class CThumbnailView
 	_Thumbnails        m_thumbnails;
 
 	void _CreateThumbnailList ();
+	void _OnThumbnailLoaded (int);
 
 public:
 	CThumbnailView(CImageManager *pImageManager);
@@ -41,6 +46,8 @@ public:
 
 	// xl::ui::CControl
 	virtual void drawMe (HDC hdc);
+	virtual void onSize ();
+	virtual void onLButtonDown (CPoint , xl::uint);
 
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);
