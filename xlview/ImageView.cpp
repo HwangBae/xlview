@@ -203,7 +203,6 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 
 	// use real size image or zoomed image as source?
 	// Here maybe a problem, if image manager delete the cachedImage could cause **race condition**
-	assert(m_imageRealSize != NULL);
 	if (m_imageRealSize != NULL) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
 		CImagePtr image = cachedImage->getCachedImage();

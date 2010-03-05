@@ -150,6 +150,19 @@ CImagePtr CCachedImage::getCachedImage () const {
 CImagePtr CCachedImage::getSuitableImage () const {
 	lock();
 	CImagePtr image = m_suitableImage;
+	if (image != NULL) {
+		image = image->clone();
+	}
+	unlock();
+	return image;
+}
+
+CImagePtr CCachedImage::getThumbnailImage () const {
+	lock();
+	CImagePtr image = m_thumbnailImage;
+	if (image != NULL) {
+		image = image->clone();
+	}
 	unlock();
 	return image;
 }

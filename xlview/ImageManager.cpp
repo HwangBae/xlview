@@ -91,7 +91,7 @@ void CImageManager::_GetPrefetchIndexes (_Indexes &indexes, int currIndex, int c
 	}
 
 	if (count > 2 * range + 1) {
-		assert(indexes.size() == 2 * range);
+		assert((int)indexes.size() == 2 * range);
 	}
 }
 #undef IM_CHECK_INDEX
@@ -422,6 +422,16 @@ CCachedImagePtr CImageManager::getCurrentCachedImage () {
 	CCachedImagePtr cachedImage = m_cachedImages[m_currIndex];
 	lock.unlock();
 	return cachedImage;
+}
+
+CImagePtr CImageManager::getThumbnail (int index) {
+	xl::CScopeLock lock(this);
+	assert(index > 0 && index < (int)m_cachedImages.size());
+	CCachedImagePtr cachedImage = m_cachedImages[index];
+	CImagePtr thumbnail = cachedImage->getThumbnailImage();
+	cachedImage.reset();
+	unlock();
+	return thumbnail;
 }
 
 xl::tstring CImageManager::getCurrentFileName () {

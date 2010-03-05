@@ -2,14 +2,14 @@
 #define XL_VIEW_FADABLE_H
 
 template <class T>
-class CFadable {
+class CFadableT {
 	int m_opacityFadeOut;
 	int m_opacityFadeIn;
 	int m_stepLength;
 	int m_timeInterval;
 	int m_opacity;
 public:
-	CFadable (int fadeout = 0, int fadein = 50, int step = 20, int timeinterval = 150)
+	CFadableT (int fadeout = 0, int fadein = 50, int step = 20, int timeinterval = 150)
 		: m_opacityFadeOut(fadeout)
 		, m_opacityFadeIn(fadein)
 		, m_stepLength(step)

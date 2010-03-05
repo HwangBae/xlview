@@ -179,6 +179,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\Autobar.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\CachedImage.cpp"
 				>
 			</File>
@@ -210,12 +214,20 @@
 				RelativePath=".\Slider.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\ThumbnailView.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
+			<File
+				RelativePath=".\Autobar.h"
+				>
+			</File>
 			<File
 				RelativePath=".\CachedImage.h"
 				>
@@ -254,6 +266,10 @@
 			</File>
 			<File
 				RelativePath=".\Slider.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ThumbnailView.h"
 				>
 			</File>
 		</Filter>

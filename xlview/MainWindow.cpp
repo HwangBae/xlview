@@ -10,6 +10,8 @@
 
 #include "MainWindow.h"
 #include "ImageView.h"
+#include "Autobar.h"
+#include "ThumbnailView.h"
 #include "Slider.h"
 
 static const xl::tchar *MAIN_TITLE = _T("xl / view");
@@ -141,13 +143,25 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	// the view
 	m_view = xl::ui::CControlPtr(new CImageView(this));
 	m_ctrlMain->insertChild(m_view);
-	
+
+	// autobar
+	xl::ui::CControlPtr navbar(new CAutobar(0, 60, 30, 50));
+	m_navbar = navbar;
+	navbar->setStyle(_T("margin:0 0; padding:0; py:bottom; width:fill; height:92; float:true; disable:true"));
+	m_ctrlMain->insertChild(navbar);
+
+	// thumbnail
+	xl::ui::CControlPtr thumbview(new CThumbnailView(this));
+	thumbview->setStyle(_T("margin:0; padding:0; width:fill; height:60;"));
+	m_navbar->insertChild(thumbview);
+
+
 	// slider
 	xl::ui::CControlPtr slider(new CSlider());
 	m_slider = slider;
-	slider->setStyle(_T("margin:0 0; py:bottom; width:fill; float:true; disable:true"));
+	slider->setStyle(_T("margin:0 0; width:fill; height:32;"));
 	slider->setStyle(_T("slider:0 0 0;"));
-	m_ctrlMain->insertChild(slider);
+	m_navbar->insertChild(slider);
 
 	return TRUE;
 }
@@ -165,9 +179,10 @@ LRESULT CMainWindow::OnSize (UINT /*msg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	xl::ui::CCtrlSlider *pSlider = (xl::ui::CCtrlSlider *)m_slider.get();
 	assert(pSlider != NULL);
+	assert(m_navbar != NULL);
 	switch (evt) {
 	case CImageManager::EVT_FILELIST_READY:
-		pSlider->setStyle(_T("disable:false"));
+		m_navbar->setStyle(_T("disable:false"));
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
 		{
@@ -175,7 +190,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 			int _min = 0, _max = m_cachedImages.size() - 1, _curr = *(int *)param;
 			assert(_curr == (int)m_currIndex);
 			TCHAR buf[128];
-			_stprintf_s(buf, 128, _T("slider: %d %d %d"), _min, _max, _curr);
+			_stprintf_s(buf, 128, _T("slider: %d %d %d; disable:false;"), _min, _max, _curr);
 			pSlider->setStyle(buf);
 
 			xl::tstring title = MAIN_TITLE;

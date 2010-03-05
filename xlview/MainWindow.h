@@ -15,6 +15,7 @@ class CMainWindow
 	, public CImageManager::IObserver
 {
 
+	xl::ui::CControlPtr                            m_navbar;
 	xl::ui::CControlPtr                            m_slider;
 	xl::ui::CControlPtr                            m_view;
 

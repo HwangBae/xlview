@@ -30,6 +30,7 @@ public:
 	CSize getImageSize () const;
 	CImagePtr getCachedImage () const;
 	CImagePtr getSuitableImage () const;
+	CImagePtr getThumbnailImage () const;
 };
 
 
