@@ -1,11 +1,10 @@
 #include <assert.h>
-#include <stdio.h>
-#include <setjmp.h>
 #include <Windows.h>
-#include "../libs/jpeglib.h"
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
+#include "ImageConfig.h"
 #include "ImageLoader.h"
+
 
 CImageLoader::CImageLoader () {
 
@@ -15,11 +14,74 @@ CImageLoader::~CImageLoader () {
 
 }
 
+CImagePtr CImageLoader::_CreateImageFromHeaderInfo (ImageHeaderInfo &info) {
+	assert(info.width > 0 && info.height > 0 && info.bitcount > 16 && info.frame_count > 0);
+
+	int w = info.width;
+	int h = info.height;
+	int bitcount = info.bitcount;
+
+	CImagePtr image(new CImage());
+	if (image != NULL) {
+		for (int i = 0; i < info.frame_count; ++ i) {
+			xl::ui::CDIBSectionPtr dib = 
+				xl::ui::CDIBSection::createDIBSection(w, h, bitcount);
+			if (dib == NULL) {
+				return CImagePtr(); // TODO: out of memory
+			}
+
+			// the "delay" is left for the loader to modify
+			image->insertImage(dib, CImage::DELAY_INFINITE);
+		}
+
+		return image;
+	}
+
+	return CImagePtr();
+}
+
+CImagePtr CImageLoader::_CreateSuitableImageFromHeaderInfo (CSize szArea, ImageHeaderInfo &info, bool dontEnlarge) {
+	assert((szArea.cx >= MIN_ZOOM_WIDTH && szArea.cy >= MIN_ZOOM_HEIGHT) 
+		|| (szArea.cx == THUMBNAIL_WIDTH  && szArea.cy == THUMBNAIL_HEIGHT));
+	assert(info.width > 0 && info.height > 0 && info.bitcount > 16 && info.frame_count > 0);
+
+	int w = info.width;
+	int h = info.height;
+	int bitcount = info.bitcount;
+	CSize szImage(w, h);
+	CSize szSuitable = CImage::getSuitableSize(szArea, szImage, dontEnlarge);
+	w = szSuitable.cx;
+	h = szSuitable.cy;
+
+	CImagePtr image(new CImage());
+	if (image != NULL) {
+		for (int i = 0; i < info.frame_count; ++ i) {
+			xl::ui::CDIBSectionPtr dib = 
+				xl::ui::CDIBSection::createDIBSection(w, h, bitcount);
+			if (dib == NULL) {
+				return CImagePtr(); // TODO: out of memory
+			}
+
+			// the "delay" is left for the loader to modify
+			image->insertImage(dib, CImage::DELAY_INFINITE);
+		}
+
+		return image;
+	}
+
+	return CImagePtr();
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+// static 
 CImageLoader* CImageLoader::getInstance () {
 	static CImageLoader loader;
 	return &loader;
 }
 
+//////////////////////////////////////////////////////////////////////////
+// public methods
 void CImageLoader::registerPlugin (ImageLoaderPluginRawPtr plugin) {
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
 		if ((*it)->getPluginName() == plugin->getPluginName()) {
@@ -29,202 +91,125 @@ void CImageLoader::registerPlugin (ImageLoaderPluginRawPtr plugin) {
 	}
 
 	m_plugins.push_back(plugin);
+	plugin->registerExt(m_exts);
 }
 
 bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
-	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
-		if ((*it)->checkFileName(fileName)) {
+	size_t offset = fileName.rfind(_T("."));
+	if (offset == fileName.npos) { // no extension
+		return false;
+	}
+
+	const xl::tchar *ext = &fileName.c_str()[offset + 1];
+	for (size_t i = 0; i < m_exts.size(); ++ i) {
+		if (_tcsicmp(ext, m_exts[i]) == 0) {
 			return true;
 		}
 	}
 
 	return false;
+
+	return false;
 }
 
-CImagePtr CImageLoader::load (const xl::tstring &fileName, IImageLoaderCancel *pCancel) {
+CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallback *pCallback) {
 	std::string data;
-	if (!file_get_contents(fileName, data)) {
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
 		return CImagePtr();
 	}
 
-	size_t header_length = 256;
-	if (header_length > data.length()) {
-		header_length = data.length();
-	}
-	std::string header = data.substr(0, 256);
+	ImageHeaderInfo info;
 	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
-		if ((*it)->checkFileName(fileName) && (*it)->checkHeader(header)) {
-			return (*it)->load(data, pCancel);
+		if ((*it)->readHeader(data, info)) {
+			CImagePtr image = _CreateImageFromHeaderInfo(info);
+
+			if (image != NULL) {
+				if ((*it)->load(image, data, pCallback)) {
+					return image;
+				}
+			}
+			break;
 		}
 	}
 
 	return CImagePtr();
 }
 
-
-
-//////////////////////////////////////////////////////////////////////////
-// jpeg loader
-
-// for safe error handle
-struct safe_jpeg_error_mgr {
-	struct jpeg_error_mgr pub;
-	jmp_buf setjmp_buffer;
-};
-typedef safe_jpeg_error_mgr *safe_jpeg_error_mgr_ptr;
-
-void safe_jpeg_error_exit (j_common_ptr cinfo) {
-	safe_jpeg_error_mgr_ptr myerr = (safe_jpeg_error_mgr_ptr) cinfo->err;
-	longjmp(myerr->setjmp_buffer, 1);
-}
-
-class CImageLoaderPluginJpeg : public IImageLoaderPlugin
-{
-public:
-	CImageLoaderPluginJpeg () {
-		XLTRACE(_T("Jpeg decoder created!\n"));
-	}
-
-	~CImageLoaderPluginJpeg () {
-		XLTRACE(_T("Jpeg decoder destroyed!\n"));
-	}
-
-	virtual xl::tstring getPluginName () {
-		return _T("JPEG Loader");
-	}
-
-	virtual bool checkFileName (const xl::tstring &fileName) {
-		static xl::tchar *extensions[] = {
-			_T("jpg"),
-			_T("jpeg"),
-			_T("jif"),
-		};
-
-		size_t offset = fileName.rfind(_T("."));
-		if (offset == fileName.npos) { // no extension
-			return false;
-		}
-
-		const xl::tchar *ext = &fileName.c_str()[offset + 1];
-		for (int i = 0; i < COUNT_OF(extensions); ++ i) {
-			if (_tcsicmp(ext, extensions[i]) == 0) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	virtual bool checkHeader (const std::string &header) {
-		// return header.find("JFIF") == 6 || header.find("Exif") == 6;
-		if (header.length() < 3) {
-			return false;
-		} else {
-			const unsigned char *data = (const unsigned char *)header.c_str();
-			return *data ++ == 0xFF && *data ++ == 0xD8 && *data ++ == 0xFF;
-		}
-	}
-
-	virtual CImagePtr load (const std::string &data, IImageLoaderCancel *pCancel = NULL) {
-		xl::ui::CDIBSectionPtr dib;
-
-		// load JPEG
-		struct jpeg_decompress_struct cinfo;
-		safe_jpeg_error_mgr em;
-		JSAMPARRAY buffer;
-		int row_stride;
-
-		cinfo.err = jpeg_std_error(&em.pub);
-		em.pub.error_exit = safe_jpeg_error_exit;
-		if (setjmp(em.setjmp_buffer)) {
-			jpeg_destroy_decompress(&cinfo);
-			return CImagePtr();
-		}
-
-		jpeg_create_decompress(&cinfo);
-		jpeg_mem_src(&cinfo, (unsigned char *)data.c_str(), data.length());
-		if (jpeg_read_header(&cinfo, TRUE) != JPEG_HEADER_OK) {
-			(void) jpeg_finish_decompress(&cinfo);
-			jpeg_destroy_decompress(&cinfo);
-			return CImagePtr();
-		}
-
-		int w = cinfo.image_width;
-		int h = cinfo.image_height;
-		assert(w > 0 && h > 0);
-		// int bit_counts = cinfo.out_color_space == JCS_GRAYSCALE ? 8 : 24;
-		dib = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
-
-		bool canceled = false;
-		if (dib) {
-			(void) jpeg_start_decompress(&cinfo);
-			row_stride = cinfo.output_width * cinfo.output_components;
-			int win_row_stride = dib->getStride();
-			buffer = (*cinfo.mem->alloc_sarray)((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-			unsigned char *p1 = (unsigned char *)dib->getData();
-			unsigned char *p2 = buffer[0];
-			int lines = 0;
-			while (cinfo.output_scanline < cinfo.output_height) {
-				if (pCancel && (lines % 10) == 0 && pCancel->shouldCancel()) {
-					canceled = true;
-					break;
-				}
-				jpeg_read_scanlines(&cinfo, buffer, 1);
-				if (cinfo.out_color_space == JCS_GRAYSCALE) {
-					unsigned char *dst = p1;
-					unsigned char *src = p2;
-					for (int i = 0; i < w; ++ i) {
-						unsigned char c = *src ++;
-						*dst ++ = c;
-						*dst ++ = c;
-						*dst ++ = c;
-					}
-				} else if (cinfo.out_color_space == JCS_RGB) {
-					memcpy (p1, p2, row_stride);
-				} else {
-					assert(false); // not supported
-					canceled = true;
-					break;
-				}
-				p1 += win_row_stride;
-				++ lines;
-			}
-
-			if (canceled) {
-				jpeg_abort_decompress(&cinfo);
-			} else {
-				jpeg_finish_decompress(&cinfo);
-			}
-		}
-		jpeg_destroy_decompress(&cinfo);
-
-		if (dib && !canceled) {
-			CImagePtr image(new CImage());
-			image->insertImage(dib, CImage::DELAY_INFINITE);
-			return image;
-		}
-
+CImagePtr CImageLoader::loadSuitable (const xl::tstring &fileName, CSize *szImageRS, CSize szArea, xl::ILongTimeRunCallback *pCallback) {
+	assert(szImageRS != NULL);
+	std::string data;
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
 		return CImagePtr();
 	}
-};
 
-// register
-namespace {
-	class CJpegRegister {
-		CImageLoaderPluginJpeg *m_jpeg;
-	public:
-		CJpegRegister () 
-			: m_jpeg(new CImageLoaderPluginJpeg())
-		{
-			CImageLoader *pLoader = CImageLoader::getInstance();
-			pLoader->registerPlugin(m_jpeg);
+	ImageHeaderInfo info;
+	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
+		if ((*it)->readHeader(data, info)) {
+			szImageRS->cx = info.width;
+			szImageRS->cy = info.height;
+			CImagePtr image = _CreateSuitableImageFromHeaderInfo(szArea, info, true);
+
+			if (image != NULL) {
+				if (image->getImageSize() == CSize(info.width, info.height)) {
+					if ((*it)->load(image, data, pCallback)) {
+						return image;
+					}
+				} else {
+					double ratio = (double)image->getImageWidth() / (double)info.width;
+					if (ratio > 0.5) {
+						xl::ui::CBicubicFilter filter;
+						xl::ui::CResizeEngine resizer(&filter);
+						if ((*it)->loadResize(image, data, &resizer, pCallback)) {
+							return image;
+						}
+					} else { // box filter doesn't works well when ratio is big
+						xl::ui::CBoxFilter filter;
+						xl::ui::CResizeEngine resizer(&filter);
+						if ((*it)->loadResize(image, data, &resizer, pCallback)) {
+							return image;
+						}
+					}
+				} 
+			}
+			break;
 		}
+	}
 
-		~CJpegRegister () {
-			delete m_jpeg;
-		}
-	};
-
-	static CJpegRegister jr;
+	return CImagePtr();
 }
+
+CImagePtr CImageLoader::loadThumbnail (
+                                       const xl::tstring &fileName,
+                                       CSize &szImageRS,
+                                       CSize szThumbnail,
+                                       bool fastOnly,
+                                       xl::ILongTimeRunCallback *pCallback
+                                      ) {
+	std::string data;
+	if (!file_get_contents(fileName, data, 0, pCallback)) {
+		return CImagePtr();
+	}
+
+	ImageHeaderInfo info;
+	for (_Plugins::iterator it = m_plugins.begin(); it != m_plugins.end(); ++ it) {
+		if ((*it)->readHeader(data, info)) {
+			szImageRS.cx = info.width;
+			szImageRS.cy = info.height;
+			CImagePtr thumbnail = _CreateSuitableImageFromHeaderInfo(szThumbnail, info, false);
+			if ((*it)->loadThumbnail(thumbnail, data, pCallback)) {
+				return thumbnail;
+			} else if (!fastOnly) {
+				// xl::ui::CBoxFilter filter;
+				// xl::ui::CResizeEngine resizer(&filter);
+				xl::ui::CResizeEngine resizer(NULL);
+				if (thumbnail && (*it)->loadResize(thumbnail, data, &resizer, pCallback)) {
+					return thumbnail;
+				}
+			}
+			break;
+		}
+	}
+
+	return CImagePtr();
+}
+

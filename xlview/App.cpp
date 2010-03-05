@@ -11,8 +11,7 @@ class CXLViewApp : public xl::ui::CApplicationT<CXLViewApp>
 public:
 
 	virtual HWND createMainWindow (LPCTSTR lpctCmdLine, int) {
-		xl::tstring title = _T("xl / view");
-		HWND hWnd = m_wndMain.Create(NULL, 0, title);
+		HWND hWnd = m_wndMain.Create(NULL, 0, _T(""));
 		if (hWnd != NULL) {
 			const xl::tchar *p = lpctCmdLine;
 			if (_tcslen(p) == 0) {
@@ -24,7 +23,11 @@ public:
 			}
 			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
 			// p = _T("D:\\test_images\\1\\1.jpg");
-			m_wndMain.setFile(p);
+			xl::tstring name(p);
+			name.trim(_T("\""));
+			if (!m_wndMain.setFile(name)) {
+				m_wndMain.DestroyWindow();
+			}
 		}
 		return hWnd;
 	}

@@ -5,16 +5,12 @@
 #include <limits>
 #include <atltypes.h>
 #include "libxl/include/common.h"
+#include "libxl/include/interfaces.h"
 #include "libxl/include/string.h"
 #include "libxl/include/ui/DIBSection.h"
 
 class CImage;
 typedef std::tr1::shared_ptr<CImage>    CImagePtr;
-
-enum {
-	THUMBNAIL_WIDTH = 48,
-	THUMBNAIL_HEIGHT = 48,
-};
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -62,7 +58,7 @@ public:
 	xl::ui::CDIBSectionPtr getImage (xl::uint index);
 
 	void insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay);
-	CImagePtr resize (int width, int height, bool usehalftone = true);
+	CImagePtr resize (int width, int height, bool highQuality, xl::ILongTimeRunCallback *pCallback = NULL);
 
 	static CSize getSuitableSize (CSize szArea, CSize szImage, bool dontEnlarge = true);
 };

@@ -6,54 +6,65 @@
 #include "libxl/include/string.h"
 #include "libxl/include/utilities.h"
 #include "libxl/include/dp/Observable.h"
-#include "DisplayImage.h"
+#include "ClassWithThreads.h"
+#include "ImageConfig.h"
+#include "CachedImage.h"
 #include "ImageLoader.h"
 
 
 class CImageManager 
 	: public xl::dp::CObserableT<CImageManager>
-	, public IImageLoaderCancel
 	, public xl::CUserLock
+	, public ClassWithThreadT<CImageManager, 2>
 {
+	friend class ClassWithThreadT<CImageManager, 2>;
+
 protected:
 	enum DIRECTION {
 		FORWARD,
 		BACKWARD
 	};
 	typedef std::vector<xl::uint>                  _Indexes;
-	typedef std::vector<CDisplayImagePtr>          _Images;
-	typedef _Images::iterator                      _ImageIter;
+	typedef std::vector<CCachedImagePtr>           _CachedImages;
+	typedef _CachedImages::iterator                _CachedImageIter;
 	xl::tstring        m_directory; // include the last '\\'
-	_Images            m_images;
+	_CachedImages      m_cachedImages;
 	xl::uint           m_currIndex;
 	DIRECTION          m_direction;
 
-	CRect              m_rcView;
+	CSize              m_szPrefetch;
 
-	void _AddFile (const xl::tstring &file);
+	void _SetIndexNoLock (int index); // called when already locked
 
-	// threads
-	bool                                           m_exit;
-	bool                                           m_indexChanged;
-	bool                                           m_sizeChanged;
-	HANDLE                                         m_semaphoreWorking;
-	HANDLE                                         m_threadWorking;
-	static unsigned int __stdcall _WorkingThread (void *);
+	// static
 	static void _GetPrefetchIndexes (_Indexes &indexes, int currIndex, int count, DIRECTION direction, int range);
 
-	void _CreateThreads ();
-	void _TerminateThreads ();
-
+	//////////////////////////////////////////////////////////////////////////
+	// thread related
+	enum {
+		THREAD_LOAD     = 0,
+		THREAD_PREFETCH = 1,
+		THREAD_COUNT
+	};
+	bool                                           m_exiting;
+	static unsigned __stdcall _LoadThread (void *);
+	static unsigned __stdcall _PrefetchThread (void *);
+	void _BeginLoad ();
 	void _BeginPrefetch ();
 
-
+	//////////////////////////////////////////////////////////////////////////
+	// for ClassWithThreads
+	void markThreadExit ();
+	void assignThreadProc();
+	const xl::tchar* getThreadName(); 
 public:
 	// event
 	enum EVENT 
-		: xl::dp::CObserableT<CImageManager>::EVT
 	{
-		EVT_READY,                             // param (pointer for total count)
-		EVT_INDEX_CHANGED,                     // param (pointer for the current index)
+		EVT_FILELIST_READY,                    // param (pointer to total count)
+		EVT_INDEX_CHANGED,                     // param (pointer to the current index)
+		EVT_IMAGE_LOADED,                      // param (pointer to the CImagePtr)
+		EVT_THUMBNAIL_LOADED,                  // param (pointer to the current index)
 		EVT_NUM
 	};
 
@@ -61,19 +72,24 @@ public:
 	virtual ~CImageManager ();
 
 	int getCurrIndex () const;
-	int getImageCount () const;
+	size_t getImageCount () const;
 
-	void setFile (const xl::tstring &file);
+	bool setFile (const xl::tstring &file);
 	void setIndex (int index);
 
-	CDisplayImagePtr getImage (int index);
+	void setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr); // only called by CImageView::_ZoomThread
+
+	CCachedImagePtr getCurrentCachedImage ();
+	CImagePtr getThumbnail (int index);
+	xl::tstring getCurrentFileName ();
 
 	//////////////////////////////////////////////////////////////////////////
 	// To be notified
 	void onViewSizeChanged (CRect rc); // called by the view to notify its size changed
 
-	// IImageLoaderCancel
-	virtual bool shouldCancel ();
+	// used for zoom callback test
+	bool isExiting () const { return m_exiting; }
+	CSize getPrefetchSize () const { return m_szPrefetch; }
 };
 
 #endif

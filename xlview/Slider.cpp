@@ -4,21 +4,10 @@
 CSlider::CSlider ()
 	: xl::ui::CCtrlSlider(0, 50, 0)
 {
-	setStyle(_T("padding:0 32; height:32; opacity:0;"));
+	setStyle(_T("padding:0 16; thumbnail-min-width:24; background-color:#c0c0c0;"));
 }
 
 CSlider::~CSlider () {
 
 }
 
-void CSlider::onMouseIn (CPoint pt) {
-	if (!disable) {
-		setStyle (_T("opacity:50"));
-	}
-}
-
-void CSlider::onMouseOut (CPoint pt) {
-	if (!disable) {
-		setStyle (_T("opacity:0"));
-	}
-}

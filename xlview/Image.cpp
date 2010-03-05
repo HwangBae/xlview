@@ -3,6 +3,7 @@
 #include <process.h>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
+#include "ImageConfig.h"
 #include "Image.h"
 #include "ImageLoader.h"
 
@@ -23,11 +24,11 @@ CImage::Frame::~Frame () {
 
 
 CImage::CImage () : m_width(-1), m_height(-1) {
-	XLTRACE(_T("CImage(0x%08x) created by thread(%d)\n"), this, ::GetCurrentThreadId());
+	//XLTRACE(_T("CImage(0x%08x) created by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 CImage::~CImage () {
-	XLTRACE(_T("CImage(0x%08x) destroyed by thread(%d)\n"), this, ::GetCurrentThreadId());
+	//XLTRACE(_T("CImage(0x%08x) destroyed by thread(%d)\n"), this, ::GetCurrentThreadId());
 }
 
 
@@ -88,7 +89,7 @@ void CImage::insertImage (xl::ui::CDIBSectionPtr bitmap, xl::uint delay) {
 	m_frames.push_back(bad);
 }
 
-CImagePtr CImage::resize (int width, int height, bool usehalftone) {
+CImagePtr CImage::resize (int width, int height, bool highQuality, xl::ILongTimeRunCallback *pCallback) {
 	if (width == m_width && height == m_height) {
 		return clone();
 	} else {
@@ -99,9 +100,22 @@ CImagePtr CImage::resize (int width, int height, bool usehalftone) {
 		pImage->m_width = width;
 		pImage->m_height = height;
 
+		xl::ui::CDIBSection::RESIZE_TYPE rt_hq = xl::ui::CDIBSection::RT_BOX;
+		double ratio = (double)width / (double)m_width;
+		if (ratio > 0.33) {
+			rt_hq = xl::ui::CDIBSection::RT_BICUBIC;
+		} 
+		xl::ui::CDIBSection::RESIZE_TYPE rt = highQuality ? rt_hq : xl::ui::CDIBSection::RT_FAST;
 		for (size_t i = 0; i < m_frames.size(); ++ i) {
 			xl::ui::CDIBSectionPtr src = m_frames[i]->bitmap;
-			xl::ui::CDIBSectionPtr dib = src->resize(width, height, usehalftone, src->getBitCounts());
+			xl::ui::CDIBSectionPtr dib = xl::ui::CDIBSection::createDIBSection(width, height, src->getBitCounts(), false);
+			if (!dib) {
+				return CImagePtr();
+			}
+			if (!src->resize(dib.get(), rt, pCallback)) {
+				assert(pCallback && pCallback->shouldStop());
+				return CImagePtr();
+			}
 			pImage->insertImage(dib, m_frames[i]->delay);
 		}
 

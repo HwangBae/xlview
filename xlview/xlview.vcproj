@@ -47,7 +47,7 @@
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
-				WarningLevel="3"
+				WarningLevel="4"
 				DebugInformationFormat="4"
 			/>
 			<Tool
@@ -121,7 +121,7 @@
 				RuntimeLibrary="0"
 				EnableFunctionLevelLinking="true"
 				UsePrecompiledHeader="0"
-				WarningLevel="3"
+				WarningLevel="4"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -179,7 +179,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\DisplayImage.cpp"
+				RelativePath=".\Autobar.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\CachedImage.cpp"
 				>
 			</File>
 			<File
@@ -188,6 +192,10 @@
 			</File>
 			<File
 				RelativePath=".\ImageLoader.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageLoaderJpeg.cpp"
 				>
 			</File>
 			<File
@@ -206,6 +214,10 @@
 				RelativePath=".\Slider.cpp"
 				>
 			</File>
+			<File
+				RelativePath=".\ThumbnailView.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -213,11 +225,27 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}"
 			>
 			<File
-				RelativePath=".\DisplayImage.h"
+				RelativePath=".\Autobar.h"
+				>
+			</File>
+			<File
+				RelativePath=".\CachedImage.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ClassWithThreads.h"
+				>
+			</File>
+			<File
+				RelativePath=".\Fadable.h"
 				>
 			</File>
 			<File
 				RelativePath=".\Image.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageConfig.h"
 				>
 			</File>
 			<File
@@ -238,6 +266,10 @@
 			</File>
 			<File
 				RelativePath=".\Slider.h"
+				>
+			</File>
+			<File
+				RelativePath=".\ThumbnailView.h"
 				>
 			</File>
 		</Filter>
