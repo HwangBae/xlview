@@ -1,8 +1,8 @@
 #include <assert.h>
 #include "Autobar.h"
 
-CAutobar::CAutobar (int fadeout, int fadein, int step, int timeinterval)
-	: CFadable(fadeout, fadein, step, timeinterval)
+CAutobar::CAutobar (int fadeout, int fadein, int step, int fadeoutdelay, int timeinterval)
+	: CFadable(fadeout, fadein, step, fadeoutdelay, timeinterval)
 {
 
 }

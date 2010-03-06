@@ -21,6 +21,10 @@ public:
 		assert(m_pExternalLock != NULL);
 	}
 
+	virtual ~CMultiLock () {
+
+	}
+
 	void lockAll () const {
 		m_pExternalLock->lock();
 		lock();

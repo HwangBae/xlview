@@ -145,7 +145,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	m_ctrlMain->insertChild(m_view);
 
 	// autobar
-	xl::ui::CControlPtr navbar(new CAutobar(0, 50, 30, 50));
+	xl::ui::CControlPtr navbar(new CAutobar(0, 50, 30, 300, 50));
 	m_navbar = navbar;
 	navbar->setStyle(_T("margin:0; padding:0; py:bottom; width:fill; height:102; float:true; disable:true"));
 	m_ctrlMain->insertChild(navbar);

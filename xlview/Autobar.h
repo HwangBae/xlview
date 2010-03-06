@@ -15,7 +15,7 @@ class CAutobar
 	typedef CFadableT<CAutobar>                    CFadable;
 	friend class CFadable;
 public:
-	CAutobar (int fadeout = 0, int fadein = 50, int step = 20, int timeinterval = 150);
+	CAutobar (int fadeout = 0, int fadein = 50, int step = 20, int fadeoutdelaya = 1000, int timeinterval = 150);
 	virtual ~CAutobar();
 
 	virtual void onMouseIn (CPoint);
