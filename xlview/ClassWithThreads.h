@@ -11,7 +11,9 @@
    private:
   	const xl::tchar* getThreadName();
   	void assignThreadProc();
-	void markThreadExit();	
+	void markThreadExit();
+	void _Lock();
+	void _Unlock();
  * }
  */
 
@@ -41,9 +43,9 @@ protected:
 		xl::tchar name[MAX_PATH];
 		
 		T *p = (T *)this;
-		p->assignThreadProc();
-		const xl::tchar *eventName = p->getThreadName();
-		p->lock();
+		p->_AssignThreadProc();
+		const xl::tchar *eventName = p->_GetThreadName();
+		p->_Lock();
 		for (int i = 0; i < THREAD_COUNT; ++ i) {
 			assert(m_hEvents[i] == NULL);
 			assert(m_hThreads[i] == INVALID_HANDLE_VALUE);
@@ -56,13 +58,13 @@ protected:
 			m_hThreads[i] = (HANDLE)_beginthreadex(NULL, 0, m_procThreads[i], (T *)this, 0, NULL);
 			assert(m_hThreads[i] != INVALID_HANDLE_VALUE);
 		}
-		p->unlock();
+		p->_Unlock();
 	}
 
 	void _TerminateThreads () {
 		T *p = (T *)this;
-		p->lock();
-		p->markThreadExit();
+		p->_Lock();
+		p->_MarkThreadExit();
 #ifndef NDEBUG
 		for (int i = 0; i < THREAD_COUNT; ++ i) {
 			assert(m_hEvents[i] != NULL);
@@ -74,13 +76,13 @@ protected:
 			::SetEvent(m_hEvents[i]);
 		}
 
-		p->unlock(); // the thread maybe want the lock, so we unlock it
+		p->_Unlock(); // the thread maybe want the lock, so we unlock it
 
 		if (::WaitForMultipleObjects(THREAD_COUNT, m_hThreads, TRUE, 3000) == WAIT_TIMEOUT) {
 			for (int i = 0; i < THREAD_COUNT; ++ i) {
 				if (::WaitForSingleObject(m_hThreads[i], 0) == WAIT_TIMEOUT) {
 					::TerminateThread(m_hThreads[i], (DWORD)-1);
-					XLTRACE(_T("%s [%d] does not exit normally\n"), p->getThreadName(), i);
+					XLTRACE(_T("%s [%d] does not exit normally\n"), p->_GetThreadName(), i);
 				}
 			}
 		}
@@ -95,12 +97,12 @@ protected:
 
 	void _RunThread (size_t i) {
 		T *p = (T *)this;
-		p->lock();
+		p->_Lock();
 		assert(i < THREAD_COUNT);
 		assert(m_hEvents[i] != NULL);
 
 		::SetEvent(m_hEvents[i]);
-		p->unlock();
+		p->_Unlock();
 	}
 };
 

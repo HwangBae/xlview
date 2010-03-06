@@ -5,6 +5,7 @@
 #include "ImageConfig.h"
 #include "ImageLoader.h"
 #include "ImageManager.h"
+#include "MultiLock.h"
 
 #define ID_VIEW  99
 
@@ -14,7 +15,7 @@
 class CImageView 
 	: public xl::ui::CControl
 	, public CImageManager::IObserver
-	, public xl::CUserLock
+	, public CMultiLock
 	, public ClassWithThreadT<CImageView, 1>
 {
 	friend class ClassWithThreadT<CImageView, 1>;
@@ -77,9 +78,11 @@ protected:
 		THREAD_ZOOM,
 		THREAD_COUNT
 	};
-	const xl::tchar* getThreadName();
-	void assignThreadProc();
-	void markThreadExit();	
+	const xl::tchar* _GetThreadName();
+	void _AssignThreadProc();
+	void _MarkThreadExit();
+	void _Lock();
+	void _Unlock();
 
 public:
 	CImageView(CImageManager *pImageManager);

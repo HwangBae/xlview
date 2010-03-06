@@ -129,7 +129,8 @@ void CThumbnailView::_OnThumbnailLoaded (int index) {
 }
 
 CThumbnailView::CThumbnailView (CImageManager *pImageManager)
-	: m_pImageManager(pImageManager)
+	: CMultiLock(pImageManager)
+	, m_pImageManager(pImageManager)
 	, m_currIndex(-1)
 {
 	assert(m_pImageManager != NULL);
@@ -143,32 +144,28 @@ CThumbnailView::~CThumbnailView() {
 void CThumbnailView::drawMe (HDC hdc) {
 	CRect rc = getClientRect();
 	xl::ui::CDCHandle dc(hdc);
-	xl::CScopeLock lock(this);
 
+	CScopeMultiLock lock(this, false);
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		(*it)->draw(hdc, m_currIndex);
 	}
 }
 
 void CThumbnailView::onSize () {
-	assert(m_pImageManager);
-	m_pImageManager->lock();
-	lock();
+	CScopeMultiLock lock(this, true);
 	_CreateThumbnailList();
-	unlock();
-	m_pImageManager->unlock();
 }
 
 void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	int index = -1;
-	lock();
+	CScopeMultiLock lock(this, false);
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		if ((*it)->getRect().PtInRect(pt)) {
 			index = (*it)->getIndex();
 			break;
 		}
 	}
-	unlock();
+	lock.unlock();
 
 	if (index != -1) {
 		m_pImageManager->setIndex(index);
@@ -178,12 +175,11 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 void CThumbnailView::onEvent (EVT evt, void *param) {
 	assert(m_pImageManager->getLockLevel() > 0);
 
-	xl::CScopeLock lock(this);
+	CScopeMultiLock lock(this, false);
 
 	switch (evt) {
 	case CImageManager::EVT_INDEX_CHANGED:
 		assert(param);
-		// _OnIndexChanged(*(int *)param);
 		m_currIndex = *(int *)param;
 		_CreateThumbnailList();
 		invalidate();

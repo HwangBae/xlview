@@ -265,6 +265,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\MultiLock.h"
+				>
+			</File>
+			<File
 				RelativePath=".\Slider.h"
 				>
 			</File>

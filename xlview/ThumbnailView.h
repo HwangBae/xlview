@@ -5,9 +5,10 @@
 #include "libxl/include/lockable.h"
 #include "libxl/include/ui/Control.h"
 #include "ImageManager.h"
+#include "MultiLock.h"
 
 class CThumbnailView
-	: xl::CUserLock
+	: CMultiLock
 	, public xl::ui::CControl
 	, CImageManager::IObserver
 {

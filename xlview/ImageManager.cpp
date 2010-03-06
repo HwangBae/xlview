@@ -450,17 +450,26 @@ xl::tstring CImageManager::getCurrentFileName () {
 	return cachedImage->getFileName();
 }
 
-void CImageManager::markThreadExit () {
+const xl::tchar* CImageManager::_GetThreadName() {
+	return _T("xlview::ImageManager");
+}
+
+
+void CImageManager::_MarkThreadExit () {
 	m_exiting = true;
 }
 
-void CImageManager::assignThreadProc() {
+void CImageManager::_AssignThreadProc () {
 	m_procThreads[THREAD_LOAD] = &_LoadThread;
 	m_procThreads[THREAD_PREFETCH] = &_PrefetchThread;
 }
 
-const xl::tchar* CImageManager::getThreadName() {
-	return _T("xlview::ImageManager");
+void CImageManager::_Lock () {
+	lock();
+}
+
+void CImageManager::_Unlock () {
+	unlock();
 }
 
 void CImageManager::onViewSizeChanged (CRect rc) {

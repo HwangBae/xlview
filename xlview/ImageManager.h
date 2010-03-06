@@ -54,9 +54,12 @@ protected:
 
 	//////////////////////////////////////////////////////////////////////////
 	// for ClassWithThreads
-	void markThreadExit ();
-	void assignThreadProc();
-	const xl::tchar* getThreadName(); 
+	const xl::tchar* _GetThreadName (); 
+	void _MarkThreadExit ();
+	void _AssignThreadProc ();
+	void _Lock ();
+	void _Unlock ();
+
 public:
 	// event
 	enum EVENT 
