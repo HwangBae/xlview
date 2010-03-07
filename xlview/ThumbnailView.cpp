@@ -62,8 +62,8 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 //////////////////////////////////////////////////////////////////////////
 //
 void CThumbnailView::_CreateThumbnailList () {
-	assert(getLockLevel() > 0);
 	assert(m_pImageManager->getLockLevel() > 0);
+	assert(getLockLevel() > 0);
 
 	m_thumbnails.clear();
 	if (m_currIndex == -1) {
@@ -114,8 +114,8 @@ void CThumbnailView::_CreateThumbnailList () {
 }
 
 void CThumbnailView::_OnThumbnailLoaded (int index) {
-	assert(getLockLevel() > 0);
 	assert(m_pImageManager->getLockLevel() > 0);
+	assert(getLockLevel() > 0);
 
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		if ((*it)->getIndex() == index) {

@@ -97,8 +97,8 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 //////////////////////////////////////////////////////////////////////////
 // protected
 void CImageView::_OnIndexChanged (int index) {
+	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
 	assert(getLockLevel() > 0); // must be called in lock
-	assert(m_pImageManager != NULL);
 
 	_ResetDisplayInfo();
 
@@ -120,8 +120,8 @@ void CImageView::_OnIndexChanged (int index) {
 }
 
 void CImageView::_OnImageLoaded (CImagePtr image) {
+	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
 	assert(getLockLevel() > 0); // must be called in lock
-	assert(m_pImageManager != NULL);
 
 	m_imageRealSize = image;
 	if (m_szDisplay == CSize(-1, -1)) {
@@ -141,8 +141,8 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 }
 
 void CImageView::_OnThumbnailLoaded (int index) {
-	assert(getLockLevel() > 0); // must be called in lock
 	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
+	assert(getLockLevel() > 0); // must be called in lock
 
 	if (index != m_pImageManager->getCurrIndex()) {
 		return;
@@ -177,6 +177,7 @@ CRect CImageView::_CalcDisplayArea (CRect rcView, CSize szDisplay, CPoint ptSrc)
 }
 
 void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
+	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
 	assert(getLockLevel() > 0);
 	CRect rcDisplayAreaBefore = _CalcDisplayArea(rcView, m_szDisplay, m_ptSrc);
 	if (!rcDisplayAreaBefore.PtInRect(ptCur)) {
@@ -230,6 +231,7 @@ void CImageView::_SetZoomSize (CSize szZoom) {
 }
 
 void CImageView::_ResetDisplayInfo () {
+	assert(m_pImageManager && m_pImageManager->getLockLevel() > 0);
 	assert(getLockLevel() > 0); // must be locked
 	m_szDisplay = CSize(-1, -1);
 	m_szReal = CSize(-1, -1);

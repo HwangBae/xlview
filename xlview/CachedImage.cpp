@@ -81,8 +81,8 @@ bool CCachedImage::loadThumbnail (bool fastOnly, xl::ILongTimeRunCallback *pCanc
 
 void CCachedImage::setSuitableImage (CImagePtr image, CSize realSize) {
 	assert(image != NULL);
-	image = image->clone(); // clone it
-	assert(image != NULL);
+// 	image = image->clone(); // clone it
+// 	assert(image != NULL);
 	xl::CScopeLock lock(this);
 	if (m_suitableImage == NULL || m_suitableImage->getImageSize() != image->getImageSize()) {
 		if (m_szImage != CSize(-1, -1)) {
@@ -139,9 +139,9 @@ CImagePtr CCachedImage::getCachedImage () const {
 	if (image == NULL) {
 		image = m_thumbnailImage;
 	}
-	if (image != NULL) {
-		image = image->clone();
-	}
+// 	if (image != NULL) {
+// 		image = image->clone();
+// 	}
 	unlock();
 
 	return image;
@@ -150,9 +150,9 @@ CImagePtr CCachedImage::getCachedImage () const {
 CImagePtr CCachedImage::getSuitableImage () const {
 	lock();
 	CImagePtr image = m_suitableImage;
-	if (image != NULL) {
-		image = image->clone();
-	}
+// 	if (image != NULL) {
+// 		image = image->clone();
+// 	}
 	unlock();
 	return image;
 }
@@ -160,9 +160,9 @@ CImagePtr CCachedImage::getSuitableImage () const {
 CImagePtr CCachedImage::getThumbnailImage () const {
 	lock();
 	CImagePtr image = m_thumbnailImage;
-	if (image != NULL) {
-		image = image->clone();
-	}
+// 	if (image != NULL) {
+// 		image = image->clone();
+// 	}
 	unlock();
 	return image;
 }

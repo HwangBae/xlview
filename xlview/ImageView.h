@@ -30,7 +30,7 @@ protected:
 	CPoint             m_ptSrc; // in zoomed area
 	bool               m_suitable;
 	bool               m_zooming;
-	CImagePtr          m_imageZoomed; // cloned
+	CImagePtr          m_imageZoomed;
 	CImagePtr          m_imageRealSize;
 
 	void _OnIndexChanged (int index);
