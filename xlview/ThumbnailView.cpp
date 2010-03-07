@@ -66,7 +66,7 @@ void CThumbnailView::_CreateThumbnailList () {
 	assert(getLockLevel() > 0);
 
 	m_thumbnails.clear();
-	if (m_currIndex == -1) {
+	if (m_targetIndex == -1) {
 		return;
 	}
 
@@ -86,7 +86,7 @@ void CThumbnailView::_CreateThumbnailList () {
 	x1 -= TV_WIDTH / 2;
 	x2 = x1 + TV_WIDTH;
 	index = m_currIndex;
-	thumbnail = m_pImageManager->getCurrentCachedImage()->getThumbnailImage();
+	thumbnail = m_pImageManager->getThumbnail(index);
 	m_thumbnails.push_back(_CThumbnailPtr(new _CThumbnail(index, CRect(x1, y1, x2, y2), thumbnail)));
 
 	// 2. left
@@ -129,10 +129,24 @@ void CThumbnailView::_OnThumbnailLoaded (int index) {
 	}
 }
 
+void CThumbnailView::_ProcessSlide () {
+	CScopeMultiLock lock(this, true);
+	assert(m_targetIndex != m_currIndex);
+	int step = m_targetIndex > m_currIndex ? 1 : -1;
+	m_currIndex += step;
+	_CreateThumbnailList();
+	if (m_currIndex != m_targetIndex) {
+		_SetTimer(25, (xl::uint)this);
+	}
+	invalidate();
+}
+
 CThumbnailView::CThumbnailView (CImageManager *pImageManager)
 	: CMultiLock(pImageManager)
 	, m_pImageManager(pImageManager)
+	, m_targetIndex(-1)
 	, m_currIndex(-1)
+	, m_responseIndexChange(true)
 	, m_hoverIndex(-1)
 {
 	assert(m_pImageManager != NULL);
@@ -149,7 +163,7 @@ void CThumbnailView::drawMe (HDC hdc) {
 
 	CScopeMultiLock lock(this, false);
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
-		(*it)->draw(hdc, m_currIndex, m_hoverIndex);
+		(*it)->draw(hdc, m_targetIndex, m_hoverIndex);
 	}
 }
 
@@ -161,6 +175,9 @@ void CThumbnailView::onSize () {
 void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	int index = -1;
 	CScopeMultiLock lock(this, false);
+	if (m_currIndex != m_targetIndex) {
+		return;
+	}
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		if ((*it)->getRect().PtInRect(pt)) {
 			index = (*it)->getIndex();
@@ -170,7 +187,17 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	lock.unlock();
 
 	if (index != -1) {
-		m_pImageManager->setIndex(index);
+		if (abs(index - m_currIndex) == 1) {
+			m_pImageManager->setIndex(index);
+		} else {
+			lock.lock(this, true);
+			m_responseIndexChange = false;
+			m_pImageManager->setIndex(index);
+			m_targetIndex = index;
+			m_responseIndexChange = true;
+			lock.unlock();
+			_ProcessSlide();
+		}
 	}
 }
 
@@ -197,6 +224,16 @@ void CThumbnailView::onMouseOut (CPoint) {
 	}
 }
 
+void CThumbnailView::onTimer (xl::uint id) {
+	XL_PARAMETER_NOT_USED(id);
+	assert(id == (xl::uint)this);
+
+	CScopeMultiLock lock(this, true);
+	if (m_currIndex != m_targetIndex) {
+		_ProcessSlide();
+	}
+}
+
 void CThumbnailView::onEvent (EVT evt, void *param) {
 	assert(m_pImageManager->getLockLevel() > 0);
 
@@ -205,9 +242,11 @@ void CThumbnailView::onEvent (EVT evt, void *param) {
 	switch (evt) {
 	case CImageManager::EVT_INDEX_CHANGED:
 		assert(param);
-		m_currIndex = *(int *)param;
-		_CreateThumbnailList();
-		invalidate();
+		if (m_responseIndexChange) {
+			m_currIndex = m_targetIndex = *(int *)param;
+			_CreateThumbnailList();
+			invalidate();
+		}
 		break;
 	case CImageManager::EVT_IMAGE_LOADED:
 		break;

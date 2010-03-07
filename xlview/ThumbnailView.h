@@ -32,12 +32,15 @@ class CThumbnailView
 	typedef std::vector<_CThumbnailPtr>            _Thumbnails;
 
 	CImageManager     *m_pImageManager;
+	int                m_targetIndex;
 	int                m_currIndex;
 	int                m_hoverIndex;
+	bool               m_responseIndexChange;
 	_Thumbnails        m_thumbnails;
 
 	void _CreateThumbnailList ();
 	void _OnThumbnailLoaded (int);
+	void _ProcessSlide ();
 
 public:
 	CThumbnailView(CImageManager *pImageManager);
@@ -52,6 +55,7 @@ public:
 	virtual void onLButtonDown (CPoint, xl::uint);
 	virtual void onMouseMove (CPoint, xl::uint);
 	virtual void onMouseOut (CPoint);
+	virtual void onTimer (xl::uint);
 
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);

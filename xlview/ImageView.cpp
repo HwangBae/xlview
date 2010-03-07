@@ -51,7 +51,12 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 		bool suitable = pThis->m_suitable;
 		CSize szRS = pThis->m_imageRealSize->getImageSize();
 		CSize szZoomTo = pThis->m_szZoom;
-		if (szZoomTo.cx * 2 >= szRS.cx || szZoomTo.cy * 2 >= szRS.cy) {
+		// 1. if ratio > 1, use original
+		// 2. if image size > 2500 * 2000, and ratio > 0.7, use the original
+		double ratio = (double)szZoomTo.cx / (double)szRS.cx;
+		__int64 pixel_count = szRS.cx * szRS.cy;
+		if (ratio >= 0.99 || (pixel_count > 2500 * 2000 && ratio > 0.7))
+		{
 			pThis->m_imageZoomed = pThis->m_imageRealSize;
 			pThis->invalidate();
 			continue; // zoom to a too large size, so we use the real size image instead
