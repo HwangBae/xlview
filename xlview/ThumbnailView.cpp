@@ -41,10 +41,16 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 	}
 	xl::ui::CDIBSectionPtr thumbnail = m_thumbnail->getImage(0);
 	assert(thumbnail != NULL);
+	CSize szImage = m_thumbnail->getImageSize();
 	CRect rc = m_rect;
 	if (currIndex != m_index && hoverIndex != m_index) {
 		rc.DeflateRect(TV_PADDING, TV_PADDING, TV_PADDING, TV_PADDING);
 	}
+
+	CSize szArea(rc.Width(), rc.Height());
+	CSize szDraw = CImage::getSuitableSize(szArea, szImage);
+	int x = rc.left + (rc.Width() - szDraw.cx) / 2;
+	int y = rc.top + (rc.Height() - szDraw.cy) / 2;
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
@@ -52,7 +58,7 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 
 	xl::ui::CDIBSectionHelper helper(thumbnail, mdc);
 	int oldMode = dc.SetStretchBltMode(HALFTONE);
-	dc.StretchBlt(rc.left, rc.top, rc.Width(), rc.Height(),
+	dc.StretchBlt(x, y, szDraw.cx, szDraw.cy,
 		mdc, 0, 0, thumbnail->getWidth(), thumbnail->getHeight(), SRCCOPY);
 	dc.SetStretchBltMode(oldMode);
 	helper.detach();
@@ -161,7 +167,7 @@ void CThumbnailView::drawMe (HDC hdc) {
 	CRect rc = getClientRect();
 	xl::ui::CDCHandle dc(hdc);
 
-	CScopeMultiLock lock(this, false);
+	CScopeMultiLock lock(this, true);
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		(*it)->draw(hdc, m_targetIndex, m_hoverIndex);
 	}
