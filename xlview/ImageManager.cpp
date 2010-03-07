@@ -348,6 +348,9 @@ CImageManager::CImageManager ()
 }
 
 CImageManager::~CImageManager () {
+	lock();
+	_TriggerEvent(EVT_I_AM_DEAD, NULL);
+	unlock();
 	m_exiting = true;
 	_TerminateThreads();
 }

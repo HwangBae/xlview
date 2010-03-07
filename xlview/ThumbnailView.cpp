@@ -4,6 +4,7 @@
 
 static const int TV_WIDTH = 60;
 static const int TV_HEIGHT = 80;
+static const int TV_MARGIN = 0;
 static const int TV_PADDING = 10;
 
 //////////////////////////////////////////////////////////////////////////
@@ -34,15 +35,15 @@ void CThumbnailView::_CThumbnail::setThumbnail (CImagePtr thumbnail) {
 	m_thumbnail = thumbnail;
 }
 
-void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex) {
+void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) {
 	if (m_thumbnail == NULL) {
 		return;
 	}
 	xl::ui::CDIBSectionPtr thumbnail = m_thumbnail->getImage(0);
 	assert(thumbnail != NULL);
 	CRect rc = m_rect;
-	if (currIndex == m_index) {
-		rc.top -= 10;
+	if (currIndex != m_index && hoverIndex != m_index) {
+		rc.DeflateRect(TV_PADDING, TV_PADDING, TV_PADDING, TV_PADDING);
 	}
 
 	xl::ui::CDCHandle dc(hdc);
@@ -75,7 +76,7 @@ void CThumbnailView::_CreateThumbnailList () {
 	}
 
 	int x1 = rc.left + rc.Width() / 2;
-	int y1 = rc.top + 10;
+	int y1 = rc.top;
 	int x2 = x1;
 	int y2 = rc.bottom;
 	int index = -1;
@@ -90,7 +91,7 @@ void CThumbnailView::_CreateThumbnailList () {
 
 	// 2. left
 	while (x2 > rc.left && index > 0) {
-		x2 = x1 - TV_PADDING;
+		x2 = x1 - TV_MARGIN;
 		x1 -= TV_WIDTH;
 		index --;
 		thumbnail = m_pImageManager->getThumbnail(index);
@@ -104,7 +105,7 @@ void CThumbnailView::_CreateThumbnailList () {
 	index = m_currIndex + 1;
 	int count = (int)m_pImageManager->getImageCount();
 	while (x2 < rc.right && index < count) {
-		x1 = x2 + TV_PADDING;
+		x1 = x2 + TV_MARGIN;
 		x2 = x1 + TV_WIDTH;
 		thumbnail = m_pImageManager->getThumbnail(index);
 		m_thumbnails.push_back(_CThumbnailPtr(new _CThumbnail(index, CRect(x1, y1, x2, y2), thumbnail)));
@@ -132,6 +133,7 @@ CThumbnailView::CThumbnailView (CImageManager *pImageManager)
 	: CMultiLock(pImageManager)
 	, m_pImageManager(pImageManager)
 	, m_currIndex(-1)
+	, m_hoverIndex(-1)
 {
 	assert(m_pImageManager != NULL);
 	m_pImageManager->subscribe(this);
@@ -147,7 +149,7 @@ void CThumbnailView::drawMe (HDC hdc) {
 
 	CScopeMultiLock lock(this, false);
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
-		(*it)->draw(hdc, m_currIndex);
+		(*it)->draw(hdc, m_currIndex, m_hoverIndex);
 	}
 }
 
@@ -172,6 +174,29 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	}
 }
 
+void CThumbnailView::onMouseMove (CPoint pt, xl::uint) {
+	CScopeMultiLock lock(this, false);
+	int hover = -1;
+	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
+		if ((*it)->getRect().PtInRect(pt)) {
+			hover = (*it)->getIndex();
+			break;
+		}
+	}
+	if (hover != m_hoverIndex) {
+		m_hoverIndex = hover;
+		invalidate();
+	}
+}
+
+void CThumbnailView::onMouseOut (CPoint) {
+	CScopeMultiLock lock(this, false);
+	if (m_hoverIndex != -1) {
+		m_hoverIndex = -1;
+		invalidate();
+	}
+}
+
 void CThumbnailView::onEvent (EVT evt, void *param) {
 	assert(m_pImageManager->getLockLevel() > 0);
 
@@ -191,6 +216,9 @@ void CThumbnailView::onEvent (EVT evt, void *param) {
 		_OnThumbnailLoaded(*(int *)param);
 		break;
 	case CImageManager::EVT_FILELIST_READY:
+		break;
+	case CImageManager::EVT_I_AM_DEAD:
+		clearExternalLock();
 		break;
 	default:
 		assert(false);

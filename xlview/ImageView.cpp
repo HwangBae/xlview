@@ -729,6 +729,9 @@ void CImageView::onEvent (EVT evt, void *param) {
 		break;
 	case CImageManager::EVT_FILELIST_READY:
 		break;
+	case CImageManager::EVT_I_AM_DEAD:
+		clearExternalLock();
+		break;
 	default:
 		assert(false);
 		break;

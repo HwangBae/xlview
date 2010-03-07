@@ -25,14 +25,23 @@ public:
 
 	}
 
+	void clearExternalLock () {
+		assert(m_pExternalLock != NULL);
+		m_pExternalLock = NULL;
+	}
+
 	void lockAll () const {
-		m_pExternalLock->lock();
+		if (m_pExternalLock) {
+			m_pExternalLock->lock();
+		}
 		lock();
 	}
 
 	void unlockAll () const {
 		unlock();
-		m_pExternalLock->unlock();
+		if (m_pExternalLock) {
+			m_pExternalLock->unlock();
+		}
 	}
 
 	void lockMe () const {

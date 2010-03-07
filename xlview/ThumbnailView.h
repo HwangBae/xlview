@@ -26,13 +26,14 @@ class CThumbnailView
 		bool hasThumbnail () const;
 		void setThumbnail (CImagePtr);
 
-		void draw (HDC hdc, int currIndex);
+		void draw (HDC hdc, int currIndex, int hoverIndex);
 	};
 	typedef std::tr1::shared_ptr<_CThumbnail>      _CThumbnailPtr;
 	typedef std::vector<_CThumbnailPtr>            _Thumbnails;
 
 	CImageManager     *m_pImageManager;
 	int                m_currIndex;
+	int                m_hoverIndex;
 	_Thumbnails        m_thumbnails;
 
 	void _CreateThumbnailList ();
@@ -48,7 +49,9 @@ public:
 	// xl::ui::CControl
 	virtual void drawMe (HDC hdc);
 	virtual void onSize ();
-	virtual void onLButtonDown (CPoint , xl::uint);
+	virtual void onLButtonDown (CPoint, xl::uint);
+	virtual void onMouseMove (CPoint, xl::uint);
+	virtual void onMouseOut (CPoint);
 
 	// CImageManager::IObserver
 	virtual void onEvent (EVT evt, void *param);

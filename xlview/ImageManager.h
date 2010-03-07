@@ -68,6 +68,7 @@ public:
 		EVT_INDEX_CHANGED,                     // param (pointer to the current index)
 		EVT_IMAGE_LOADED,                      // param (pointer to the CImagePtr)
 		EVT_THUMBNAIL_LOADED,                  // param (pointer to the current index)
+		EVT_I_AM_DEAD,                         // param (not used)
 		EVT_NUM
 	};
 
