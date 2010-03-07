@@ -345,6 +345,47 @@ void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZo
 	szDisplay = CSize((int)x, (int)y);
 }
 
+void CImageView::_CreateCachedBitmap () {
+	CRect rc = getClientRect();
+	if (rc.Width() <= 0 || rc.Height() <= 0) {
+		return;
+	}
+
+	if (m_cachedBitmap 
+		&& m_cachedBitmap->getWidth() == rc.Width()
+		&& m_cachedBitmap->getHeight() == rc.Height())
+	{
+		return;
+	}
+
+	m_cachedBitmap = xl::ui::CDIBSection::createDIBSection(rc.Width(), rc.Height(), 24, false);
+}
+
+void CImageView::_SetCachedBitmap (HDC hdc) {
+	CRect rc = getClientRect();
+	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
+
+	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CDC mdc;
+	mdc.CreateCompatibleDC(dc);
+	m_cachedBitmap->attachToDCNoLock(mdc);
+	mdc.BitBlt(0, 0, rc.Width(), rc.Height(), mdc, rc.left, rc.top, SRCCOPY);
+	m_cachedBitmap->detachFromDCNoLock(mdc);
+	m_dirty = false;
+}
+
+void CImageView::_GetCachedBitmap (HDC hdc) {
+	CRect rc = getClientRect();
+	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
+
+	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CDC mdc;
+	mdc.CreateCompatibleDC(dc);
+	m_cachedBitmap->attachToDCNoLock(mdc);
+	dc.BitBlt(rc.left, rc.top, rc.Width(), rc.Height(), mdc, 0, 0, SRCCOPY);
+	m_cachedBitmap->detachFromDCNoLock(mdc);
+}
+
 #ifdef PROGRESS_ZOOMING
 bool CImageView::_CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom) {
 	assert(getLockLevel() > 0);
@@ -384,6 +425,7 @@ CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, CMultiLock(pImageManager)
 	, m_pImageManager(pImageManager)
+	, m_dirty(false)
 	, m_szReal(-1, -1)
 	, m_szDisplay(-1, -1)
 	, m_szZoom(-1, -1)
@@ -563,20 +605,25 @@ void CImageView::onSize () {
 		}
 	}
 	lock.unlock();
+	_CreateCachedBitmap ();
 	invalidate();
 }
 
 void CImageView::drawMe (HDC hdc) {
 	assert(m_pImageManager != NULL);
-	// xl::CTimerLogger logger(_T("drawMe "));
-// 	DWORD tick = ::GetTickCount();
 
-	CScopeMultiLock lock(this, false);
 	CRect rc = getClientRect();
 	CSize szDisplay = m_szDisplay;
 	if (rc.Width() <= 0 || rc.Height() <= 0 || m_szReal == CSize(-1, -1) || szDisplay.cx <= 0 || szDisplay.cy <= 0) {
 		return;
 	}
+	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
+// 	if (!m_dirty) {
+// 		_GetCachedBitmap(hdc);
+// 		return;
+// 	}
+
+	CScopeMultiLock lock(this, false);
 	CImagePtr image = m_imageZoomed;
 	if (image == NULL) {
 		return;
@@ -587,46 +634,36 @@ void CImageView::drawMe (HDC hdc) {
 	CPoint ptSrc = m_ptSrc;
 	lock.unlock();
 
-	// XLTRACE(_T("image size (%d - %d)\n"), szImage.cx, szImage.cy);
 	CRect rcDisplayArea = _CalcDisplayArea(rc, szDisplay, ptSrc);
-
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
+
 	// xl::ui::CDIBSectionHelper dibHelper(dib, mdc);
 	// I don't use ::StretchBlt() in the back thread for zooming, 
 	// so BitBlt or StretchBlt without lock is safe.
 	dib->attachToDCNoLock(mdc);
 
 	if (szImage == szDisplay) {
-		// use BitBlt
 		dc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
 			mdc, ptSrc.x, ptSrc.y, SRCCOPY);
-		// XLTRACE(_T("Use BitBlt()\n"));
 	} else {
 		// use StretchBlt
 		int sx = (int)(0.5 + (double)szImage.cx * (double)ptSrc.x / (double)szDisplay.cx);
 		int sy = (int)(0.5 + (double)szImage.cy * (double)ptSrc.y / (double)szDisplay.cy);
 		int sw = (int)(0.5 + (double)szImage.cx * (double)rcDisplayArea.Width() / (double)szDisplay.cx);
 		int sh = (int)(0.5 + (double)szImage.cy * (double)rcDisplayArea.Height() / (double)szDisplay.cy);
-#if 0
-		dib->stretchBlt(hdc, rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
-			sx, sy, sw, sh, SRCCOPY, false);//true);
-#else
 		CScopeMultiLock lock(this, false);
 		int oldMode = dc.SetStretchBltMode(HALFTONE);
 		dc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
 			mdc, sx, sy, sw, sh, SRCCOPY);
-// 		dc.TransparentBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
-// 			mdc, sx, sy, sw, sh, RGB(255,255,255));
 		dc.SetStretchBltMode(oldMode);
 		lock.unlock();
-#endif
 	}
-	// dibHelper.detach();
 	dib->detachFromDCNoLock(mdc);
 
+//	_SetCachedBitmap(hdc);
 
 	// draw debug information
 	{
@@ -715,6 +752,10 @@ void CImageView::onLostCapture () {
 	m_ptCapture = CPoint(-1, -1);
 }
 
+void CImageView::invalidate () {
+	m_dirty = true;
+	xl::ui::CControl::invalidate();
+}
 
 void CImageView::onEvent (EVT evt, void *param) {
 	assert(m_pImageManager->getLockLevel() > 0);

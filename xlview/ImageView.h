@@ -22,8 +22,13 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 
+	//////////////////////////////////////////////////////////////////////////
 	// for display
-	// 
+	// cached bitmap
+	bool                                           m_dirty;
+	xl::ui::CDIBSectionPtr                         m_cachedBitmap;
+
+	// image related
 	CSize              m_szReal;
 	CSize              m_szDisplay;
 	CSize              m_szZoom;
@@ -64,6 +69,10 @@ protected:
 
 	void _CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZoomin, double factor);
 
+	void _CreateCachedBitmap ();
+	void _SetCachedBitmap (HDC);
+	void _GetCachedBitmap (HDC);
+
 #ifdef PROGRESS_ZOOMING
 	bool _CalcStepedDisplaySize (CSize &szDisplay, CSize szZoom);
 #endif
@@ -87,6 +96,7 @@ protected:
 public:
 	CImageView(CImageManager *pImageManager);
 	virtual ~CImageView(void);
+	void invalidate (); // overwrite xl::ui::CControl::invalidate()
 
 	void showSuitable (CPoint ptCur);
 	void showRealSize (CPoint ptCur);

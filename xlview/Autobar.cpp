@@ -32,6 +32,7 @@ void CAutobar::onMouseOutChild (CPoint pt) {
 }
 
 void CAutobar::onTimer (xl::uint id) {
+	XL_PARAMETER_NOT_USED(id);
 	assert(id == (xl::uint)(CFadable *)this);
 	CFadable::process();
 }
