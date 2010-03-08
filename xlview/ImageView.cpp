@@ -346,21 +346,24 @@ void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZo
 }
 
 void CImageView::_CreateCachedBitmap () {
-	CRect rc = getClientRect();
+	CRect rc = m_rect;
 	if (rc.Width() <= 0 || rc.Height() <= 0) {
 		return;
 	}
 
-	if (m_cachedBitmap 
-		&& m_cachedBitmap->getWidth() == rc.Width()
-		&& m_cachedBitmap->getHeight() == rc.Height())
-	{
+	int w = ::GetSystemMetrics(SM_CXSCREEN);
+	int h = ::GetSystemMetrics(SM_CYSCREEN);
+	w = w > rc.Width() ? w : rc.Width();
+	h = h > rc.Height() ? h : rc.Height();
+
+	if (m_cachedBitmap && m_cachedBitmap->getWidth() >= w && m_cachedBitmap->getHeight() >= h) {
 		return;
 	}
 
-	m_cachedBitmap = xl::ui::CDIBSection::createDIBSection(rc.Width(), rc.Height(), 24, false);
+	m_cachedBitmap = xl::ui::CDIBSection::createDIBSection(w, h, 24, false);
 }
 
+// not used, bitblt into the cached bitmap in drawMe()
 void CImageView::_SetCachedBitmap (HDC hdc) {
 	CRect rc = getClientRect();
 	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
@@ -375,8 +378,8 @@ void CImageView::_SetCachedBitmap (HDC hdc) {
 }
 
 void CImageView::_GetCachedBitmap (HDC hdc) {
-	CRect rc = getClientRect();
-	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
+	CRect rc = m_rect;
+	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() >= rc.Width() && m_cachedBitmap->getHeight() >= rc.Height());
 
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
@@ -440,9 +443,8 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, m_hCurMove(::LoadCursor(NULL, IDC_SIZEALL))
 	, m_exiting(false)
 {
-	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2 2 2 2;"));
-	// setStyle(_T("background-color:#808080;"));
-	setStyle(_T("background-color:#202020;"));
+	setStyle(_T("px:left;py:top;width:fill;height:fill;padding:2;"));
+	// setStyle(_T("background-color:#202020;"));
 
 	m_pImageManager->subscribe(this);
 
@@ -617,12 +619,15 @@ void CImageView::drawMe (HDC hdc) {
 	if (rc.Width() <= 0 || rc.Height() <= 0 || m_szReal == CSize(-1, -1) || szDisplay.cx <= 0 || szDisplay.cy <= 0) {
 		return;
 	}
-	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() == rc.Width() && m_cachedBitmap->getHeight() == rc.Height());
-// 	if (!m_dirty) {
-// 		_GetCachedBitmap(hdc);
-// 		return;
-// 	}
+	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() >= m_rect.Width() && m_cachedBitmap->getHeight() >= m_rect.Height());
+	if (!m_dirty) {
+		xl::CTimerLogger logger(_T("drawMe using cached image cost"));
+		_GetCachedBitmap(hdc);
+		return;
+	}
 
+	m_dirty = false;
+	xl::CTimerLogger logger(_T("drawMe using not cached image cost"));
 	CScopeMultiLock lock(this, false);
 	CImagePtr image = m_imageZoomed;
 	if (image == NULL) {
@@ -637,6 +642,11 @@ void CImageView::drawMe (HDC hdc) {
 	CRect rcDisplayArea = _CalcDisplayArea(rc, szDisplay, ptSrc);
 
 	xl::ui::CDCHandle dc(hdc);
+	xl::ui::CDC cdc;
+	cdc.CreateCompatibleDC(dc);
+	m_cachedBitmap->attachToDCNoLock(cdc);
+	cdc.FillSolidRect(m_rect, RGB(0x20, 0x20, 0x20));
+
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
 
@@ -646,7 +656,7 @@ void CImageView::drawMe (HDC hdc) {
 	dib->attachToDCNoLock(mdc);
 
 	if (szImage == szDisplay) {
-		dc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
+		cdc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
 			mdc, ptSrc.x, ptSrc.y, SRCCOPY);
 	} else {
 		// use StretchBlt
@@ -655,15 +665,17 @@ void CImageView::drawMe (HDC hdc) {
 		int sw = (int)(0.5 + (double)szImage.cx * (double)rcDisplayArea.Width() / (double)szDisplay.cx);
 		int sh = (int)(0.5 + (double)szImage.cy * (double)rcDisplayArea.Height() / (double)szDisplay.cy);
 		CScopeMultiLock lock(this, false);
-		int oldMode = dc.SetStretchBltMode(HALFTONE);
-		dc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
+		int oldMode = cdc.SetStretchBltMode(HALFTONE);
+		cdc.StretchBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(),
 			mdc, sx, sy, sw, sh, SRCCOPY);
-		dc.SetStretchBltMode(oldMode);
+		cdc.SetStretchBltMode(oldMode);
 		lock.unlock();
 	}
 	dib->detachFromDCNoLock(mdc);
+	m_cachedBitmap->detachFromDCNoLock(cdc);
 
 //	_SetCachedBitmap(hdc);
+	_GetCachedBitmap(hdc);
 
 	// draw debug information
 	{

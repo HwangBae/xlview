@@ -303,6 +303,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 			++ offset;
 		}
+		logger.log();
 
 		// 1.5 load the remaining prefetch images
 		for (_CachedImages::iterator it = images.begin();

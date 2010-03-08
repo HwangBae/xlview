@@ -184,6 +184,7 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	if (m_currIndex != m_targetIndex) {
 		return;
 	}
+	int currIndex = m_currIndex;
 	for (_Thumbnails::iterator it = m_thumbnails.begin(); it != m_thumbnails.end(); ++ it) {
 		if ((*it)->getRect().PtInRect(pt)) {
 			index = (*it)->getIndex();
@@ -192,7 +193,7 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	}
 	lock.unlock();
 
-	if (index != -1) {
+	if (index != -1 && index != currIndex) {
 		if (abs(index - m_currIndex) == 1) {
 			m_pImageManager->setIndex(index);
 		} else {
