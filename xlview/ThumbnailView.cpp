@@ -6,6 +6,7 @@ static const int TV_WIDTH = 60;
 static const int TV_HEIGHT = 80;
 static const int TV_MARGIN = 0;
 static const int TV_PADDING = 10;
+static const int TV_PADDING_ACTIVE = 4;
 
 //////////////////////////////////////////////////////////////////////////
 // 
@@ -45,6 +46,8 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 	CRect rc = m_rect;
 	if (currIndex != m_index && hoverIndex != m_index) {
 		rc.DeflateRect(TV_PADDING, TV_PADDING, TV_PADDING, TV_PADDING);
+	} else {
+		rc.DeflateRect(TV_PADDING_ACTIVE, TV_PADDING_ACTIVE, TV_PADDING_ACTIVE, TV_PADDING_ACTIVE);
 	}
 
 	CSize szArea(rc.Width(), rc.Height());
@@ -62,6 +65,10 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 		mdc, 0, 0, thumbnail->getWidth(), thumbnail->getHeight(), SRCCOPY);
 	dc.SetStretchBltMode(oldMode);
 	helper.detach();
+
+	if (currIndex == m_index || hoverIndex == m_index) {
+		dc.drawRectangle(rc, TV_PADDING_ACTIVE, RGB(192,192,255));
+	}
 }
 
 

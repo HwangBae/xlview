@@ -621,13 +621,11 @@ void CImageView::drawMe (HDC hdc) {
 	}
 	assert(m_cachedBitmap != NULL && m_cachedBitmap->getWidth() >= m_rect.Width() && m_cachedBitmap->getHeight() >= m_rect.Height());
 	if (!m_dirty) {
-		xl::CTimerLogger logger(_T("drawMe using cached image cost"));
 		_GetCachedBitmap(hdc);
 		return;
 	}
 
 	m_dirty = false;
-	xl::CTimerLogger logger(_T("drawMe using not cached image cost"));
 	CScopeMultiLock lock(this, false);
 	CImagePtr image = m_imageZoomed;
 	if (image == NULL) {
