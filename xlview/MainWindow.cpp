@@ -149,7 +149,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	// autobar
 	xl::ui::CControlPtr navbar(new CAutobar(0, 75, 25, 300, 25));
 	m_navbar = navbar;
-	navbar->setStyle(_T("margin:0; padding:0; py:bottom; width:fill; height:100; float:true; disable:true"));
+	navbar->setStyle(_T("margin:0; padding:0; border-top:0 #d0d0d0; py:bottom; width:fill; height:100; float:true; disable:true"));
 	m_ctrlMain->insertChild(navbar);
 
 	// thumbnail
@@ -166,13 +166,15 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	// nav view bar
 	navbar.reset(new CAutobar(0, 75, 25, 300, 25));
-	navbar->setStyle(_T("margin:0 20 100 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
+	navbar->setStyle(_T("margin:0 150 110 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
 	m_ctrlMain->insertChild(navbar);
 
 	// nav view
-	xl::ui::CControlPtr naview(new CNavView(this));
-	naview->setStyle(_T("padding:30 10 10 10;"));
+	CNavView *pNavView = new CNavView(this, pView);
+	xl::ui::CControlPtr naview(pNavView);
+	naview->setStyle(_T("border:1 #ffffff; padding:20 4 4 4;"));
 	navbar->insertChild(naview);
+	pView->setNavView(pNavView);
 
 	return TRUE;
 }

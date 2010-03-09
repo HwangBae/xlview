@@ -1,11 +1,12 @@
 #include <assert.h>
 #include "libxl/include/ui/Gdi.h"
+#include "libxl/include/ui/CtrlMain.h"
 #include "ThumbnailView.h"
 
 static const int TV_WIDTH = 60;
 static const int TV_HEIGHT = 80;
 static const int TV_MARGIN = 0;
-static const int TV_PADDING = 10;
+static const int TV_PADDING = 12;
 static const int TV_PADDING_ACTIVE = 4;
 
 //////////////////////////////////////////////////////////////////////////
@@ -67,7 +68,10 @@ void CThumbnailView::_CThumbnail::draw (HDC hdc, int currIndex, int hoverIndex) 
 	helper.detach();
 
 	if (currIndex == m_index || hoverIndex == m_index) {
-		dc.drawRectangle(rc, TV_PADDING_ACTIVE, RGB(192,192,255));
+		rc = m_rect;
+		rc.DeflateRect(2, 2, 2, 2);
+		COLORREF color = currIndex == m_index ? RGB(255,255,255) : RGB(168,168,192);
+		dc.drawRectangle(rc, TV_PADDING_ACTIVE, color);
 	}
 }
 
@@ -150,6 +154,10 @@ void CThumbnailView::_ProcessSlide () {
 	_CreateThumbnailList();
 	if (m_currIndex != m_targetIndex) {
 		_SetTimer(25, (xl::uint)this);
+	} else {
+		// get the hover item
+		CPoint pt = _GetMainCtrl()->getCursorPos();
+		onMouseMove(pt, 0);
 	}
 	invalidate();
 }
@@ -203,6 +211,8 @@ void CThumbnailView::onLButtonDown (CPoint pt, xl::uint) {
 	if (index != -1 && index != currIndex) {
 		if (abs(index - m_currIndex) == 1) {
 			m_pImageManager->setIndex(index);
+			CPoint pt = _GetMainCtrl()->getCursorPos();
+			onMouseMove(pt, 0); // get hover
 		} else {
 			lock.lock(this, true);
 			m_responseIndexChange = false;

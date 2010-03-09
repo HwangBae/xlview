@@ -2,16 +2,71 @@
 #include "libxl/include/ui/Gdi.h"
 #include "NavView.h"
 #include "ImageManager.h"
+#include "ImageView.h"
 
 void CNavView::_CreateDisplayInfo () {
+	if (m_currIndex == -1) {
+		return;
+	}
+	if (m_szDisplay == CSize(-1, -1)) {
+		return;
+	}
+
+	CRect rc = getClientRect();
+	CSize szArea(rc.Width(), rc.Height());
+	if (m_szDisplay.cx > m_szView.cx || m_szDisplay.cy > m_szView.cy) {
+		// image (partial) > view
+		m_dragable = true;
+		CSize szImage = CImage::getSuitableSize(szArea, m_szDisplay);
+		int x = (rc.Width() - szImage.cx) / 2;
+		int y = (rc.Height() - szImage.cy) / 2;
+		m_rcImage = CRect(x, y, x + szImage.cx, y + szImage.cy);
+
+		double ratio = (double)szImage.cx / (double)m_szDisplay.cx;
+		CSize szView = CSize((int)(m_szView.cx * ratio + 0.5), (int)(m_szView.cy * ratio + 0.5));
+		if (szView.cx > szImage.cx) {
+			szView.cx = szImage.cx;
+		}
+		if (szView.cy > szImage.cy) {
+			szView.cy = szImage.cy;
+		}
+		x = m_rcImage.left + (int)(m_ptSrc.x * ratio + 0.5);
+		y = m_rcImage.top + (int)(m_ptSrc.y * ratio + 0.5);
+		m_rcView = CRect(x, y, x + szView.cx, y + szView.cy);
+	} else {
+		// view > image
+		m_dragable = false;
+		CSize szView = CImage::getSuitableSize(szArea, m_szView);
+		int x = (rc.Width() - szView.cx) / 2;
+		int y = (rc.Height() - szView.cy) / 2;
+		m_rcView = CRect(x, y, x + szView.cx, y + szView.cy);
+
+		double ratio = (double)szView.cx / (double)m_szView.cx;
+		CSize szImage = CSize((int)(m_szDisplay.cx * ratio + 0.5), (int)(m_szDisplay.cy * ratio + 0.5));
+		x = m_rcView.left + (m_rcView.Width() - szImage.cx) / 2;
+		y = m_rcView.top + (m_rcView.Height() - szImage.cy) / 2;
+		m_rcImage = CRect(x, y, x + szImage.cx, y + szImage.cy);
+	}
 
 }
 
-CNavView::CNavView (CImageManager *pImageManager)
+CNavView::CNavView (CImageManager *pImageManager, CImageView *pImageView)
 	: m_pImageManager(pImageManager)
+	, m_pImageView(pImageView)
 	, m_currIndex(-1)
+	, m_dragable(false)
+	, m_ptCapture(-1, -1)
+	, m_ptSrcCapture(-1, -1)
+	, m_curArrow(::LoadCursor(NULL, IDC_ARROW))
+	, m_curMove(::LoadCursor(NULL, IDC_SIZEALL))
 {
 	assert(m_pImageManager != NULL);
+	assert(m_pImageView != NULL);
+	m_dibView = xl::ui::CDIBSection::createDIBSection(1, 1, 24, false);
+	xl::uint8 *data = m_dibView->getLine(0);
+	*data ++ = 0xff;
+	*data ++ = 0xff;
+	*data ++ = 0xff;
 }
 
 CNavView::~CNavView () {
@@ -28,14 +83,6 @@ void CNavView::setInfo (int index, CSize szDisplay, CSize szView, CPoint ptSrc) 
 	invalidate();
 }
 
-static void _drawView (HDC hdc, CRect rc, CSize szView) {
-	int x = rc.left + (rc.Width() - szView.cx) / 2;
-	int y = rc.top + (rc.Height() - szView.cy) / 2;
-	xl::ui::CDCHandle dc(hdc);
-	CRect rcView(x, y, x + szView.cx, y + szView.cy);
-	dc.FillSolidRect(rcView, RGB(255,255,255));
-}
-
 void CNavView::drawMe (HDC hdc) {
 	if (m_currIndex == -1) {
 		return;
@@ -45,7 +92,6 @@ void CNavView::drawMe (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
-	CSize szArea(rc.Width(), rc.Height());
 
 	xl::CScopeLock lock(m_pImageManager);
 	CImagePtr image = m_pImageManager->getThumbnail(m_currIndex);
@@ -56,24 +102,93 @@ void CNavView::drawMe (HDC hdc) {
 	CSize szImage = image->getImageSize();
 	image.reset();
 
-	if (m_szView.cx >= m_szDisplay.cx && m_szView.cy >= m_szDisplay.cy) {
-		assert(m_ptSrc.x == 0 && m_ptSrc.y == 0);
-		CSize szView = CImage::getSuitableSize(szArea, m_szView, false);
-		_drawView(hdc, rc, szView);
-		double ratio = (double)szView.cx / (double)m_szView.cx;
+	int oldMode = dc.SetStretchBltMode(HALFTONE);
+	if (!m_dragable) {
+		CRect rcView = m_rcView;
+		rcView.OffsetRect(rc.left, rc.top);
+		m_dibView->attachToDCNoLock(mdc);
+		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
+		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
+		m_dibView->detachFromDCNoLock(mdc);
+		
 
-		int image_x = (int)(ratio * m_szDisplay.cx);
-		int image_y = (int)(ratio * m_szDisplay.cy);
+		CRect rcImage = m_rcImage;
+		rcImage.OffsetRect(rc.left, rc.top);
 
-		int x = rc.left + (rc.Width() - image_x) / 2;
-		int y = rc.top + (rc.Height() - image_y) / 2;
 		dib->attachToDCNoLock(mdc);
-		dc.StretchBlt(x, y, image_x, image_y, mdc, 0, 0, dib->getWidth(), dib->getHeight(), SRCCOPY);
+		dc.StretchBlt(rcImage.left, rcImage.top, rcImage.Width(), rcImage.Height(), mdc, 0, 0, dib->getWidth(), dib->getHeight(), SRCCOPY);
 		dib->detachFromDCNoLock(mdc);
 	} else {
+		CRect rcImage = m_rcImage;
+		rcImage.OffsetRect(rc.left, rc.top);
 
+		dib->attachToDCNoLock(mdc);
+		int oldMode = dc.SetStretchBltMode(HALFTONE);
+		dc.StretchBlt(rcImage.left, rcImage.top, rcImage.Width(), rcImage.Height(), mdc, 0, 0, dib->getWidth(), dib->getHeight(), SRCCOPY);
+		dc.SetStretchBltMode(oldMode);
+		dib->detachFromDCNoLock(mdc);
+
+		CRect rcView = m_rcView;
+		rcView.OffsetRect(rc.left, rc.top);
+		m_dibView->attachToDCNoLock(mdc);
+		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
+		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
+		m_dibView->detachFromDCNoLock(mdc);
+		dc.drawRectangle(rcView, 1, RGB(32,32,32), PS_SOLID);
 	}
+	dc.SetStretchBltMode(oldMode);
 
 	dib.reset();
 	lock.unlock();
+}
+
+void CNavView::onMouseMove (CPoint pt, xl::uint) {
+	if (!m_dragable) {
+		::SetCursor(m_curArrow);
+	} else {
+		CRect rcView = m_rcView;
+		CRect rc = getClientRect();
+		rcView.OffsetRect(rc.left, rc.top);
+		if (rcView.PtInRect(pt)) {
+			::SetCursor(m_curMove);
+		} else {
+			::SetCursor(m_curArrow);
+		}
+	}
+
+	if (m_ptCapture != CPoint(-1, -1)) {
+		int x = pt.x - m_ptCapture.x;
+		int y = pt.y - m_ptCapture.y;
+
+		double ratio = (double)m_rcImage.Width() / (double)m_szDisplay.cx;
+		x = (int)((double)x / (double)ratio + 0.5);
+		y = (int)((double)y / (double)ratio + 0.5);
+		x += m_ptSrcCapture.x;
+		y += m_ptSrcCapture.y;
+		assert(m_pImageView);
+		m_pImageView->setPtSrc(x, y);
+	}
+}
+
+void CNavView::onLButtonDown (CPoint pt, xl::uint) {
+	assert(m_ptCapture == CPoint(-1, -1));
+	CRect rcView = m_rcView;
+	CRect rc = getClientRect();
+	rcView.OffsetRect(rc.left, rc.top);
+	if (rcView.PtInRect(pt)) {
+		_Capture(true);
+		m_ptCapture = pt;
+		m_ptSrcCapture = m_ptSrc;
+	}
+}
+
+void CNavView::onLButtonUp (CPoint, xl::uint) {
+	_Capture(false);
+	m_ptCapture = CPoint(-1, -1);
+	m_ptSrcCapture = CPoint(-1, -1);
+}
+
+void CNavView::onLostCapture () {
+	m_ptCapture = CPoint(-1, -1);
+	m_ptSrcCapture = CPoint(-1, -1);
 }

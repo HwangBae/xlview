@@ -591,6 +591,19 @@ void CImageView::showRight (CPoint ptCur) {
 	}
 }
 
+void CImageView::setPtSrc (int x, int y) {
+	CPoint ptSrc = CPoint(x, y);
+	_CheckPtSrc(ptSrc);
+
+	if (m_ptSrc != ptSrc) {
+		m_ptSrc = ptSrc;
+
+		_NotifyDisplayChanged();
+
+		invalidate();
+	}
+}
+
 void CImageView::setNavView (CNavView *pNavView) {
 	assert(m_pNavView == NULL);
 	assert(pNavView != NULL);

@@ -108,6 +108,7 @@ public:
 	void showBottom (CPoint ptCur);
 	void showLeft (CPoint ptCur);
 	void showRight (CPoint ptCur);
+	void setPtSrc (int x, int y);
 
 	void setNavView (CNavView *);
 	//////////////////////////////////////////////////////////////////////////
