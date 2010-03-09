@@ -211,6 +211,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\NavView.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\Slider.cpp"
 				>
 			</File>
@@ -266,6 +270,10 @@
 			</File>
 			<File
 				RelativePath=".\MultiLock.h"
+				>
+			</File>
+			<File
+				RelativePath=".\NavView.h"
 				>
 			</File>
 			<File

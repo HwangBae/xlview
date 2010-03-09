@@ -9,7 +9,7 @@
 
 #define ID_VIEW  99
 
-
+class CNavView;
 //////////////////////////////////////////////////////////////////////////
 // CImageView
 class CImageView 
@@ -21,6 +21,7 @@ class CImageView
 	friend class ClassWithThreadT<CImageView, 1>;
 protected:
 	CImageManager     *m_pImageManager;
+	CNavView          *m_pNavView;
 
 	//////////////////////////////////////////////////////////////////////////
 	// for display
@@ -29,6 +30,7 @@ protected:
 	xl::ui::CDIBSectionPtr                         m_cachedBitmap;
 
 	// image related
+	int                m_currIndex;
 	CSize              m_szReal;
 	CSize              m_szDisplay;
 	CSize              m_szZoom;
@@ -107,6 +109,7 @@ public:
 	void showLeft (CPoint ptCur);
 	void showRight (CPoint ptCur);
 
+	void setNavView (CNavView *);
 	//////////////////////////////////////////////////////////////////////////
 	// virtual
 

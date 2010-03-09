@@ -6,6 +6,7 @@
 #include "libxl/include/ui/CtrlMain.h"
 #include "ImageView.h"
 #include "MainWindow.h"
+#include "NavView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // callback when zooming
@@ -105,6 +106,7 @@ void CImageView::_OnIndexChanged (int index) {
 	assert(m_pImageManager != NULL && m_pImageManager->getLockLevel() > 0);
 	assert(getLockLevel() > 0); // must be called in lock
 
+	m_currIndex = index;
 	_ResetDisplayInfo();
 
 	if (index == m_pImageManager->getCurrIndex()) {
@@ -279,14 +281,15 @@ void CImageView::_CheckPtSrc (CPoint &ptSrc) {
 }
 
 void CImageView::_NotifyDisplayChanged () {
-	CRect rc = getClientRect();
-	CSize szDisplay = m_szDisplay;
-	CSize szView(rc.Width(), rc.Height());
-	CPoint ptSrc = m_ptSrc;
+	if (m_pNavView) {
+		CRect rc = getClientRect();
+		CSize szDisplay = m_szDisplay;
+		CSize szView(rc.Width(), rc.Height());
+		CPoint ptSrc = m_ptSrc;
 
-	// TODO:
-	// notify others with: 1. szDisplay; 2. szView; 3. ptSrc
-	// and other info can be calculated by the three parameters
+		assert(m_currIndex != -1);
+		m_pNavView->setInfo(m_currIndex, szDisplay, szView, ptSrc);
+	}
 }
 
 void CImageView::_CalculateZoomedSize (CSize &szDisplay, CSize szReal, bool isZoomin, double factor) {
@@ -428,6 +431,8 @@ CImageView::CImageView (CImageManager *pImageManager)
 	: xl::ui::CControl(ID_VIEW)
 	, CMultiLock(pImageManager)
 	, m_pImageManager(pImageManager)
+	, m_pNavView(NULL)
+	, m_currIndex(-1)
 	, m_dirty(false)
 	, m_szReal(-1, -1)
 	, m_szDisplay(-1, -1)
@@ -586,8 +591,16 @@ void CImageView::showRight (CPoint ptCur) {
 	}
 }
 
+void CImageView::setNavView (CNavView *pNavView) {
+	assert(m_pNavView == NULL);
+	assert(pNavView != NULL);
+	m_pNavView = pNavView;
+	if (m_currIndex != -1) {
+		_NotifyDisplayChanged();
+	}
+}
+
 void CImageView::onSize () {
-	// xl::CTimerLogger logger(_T("onSize "));
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
 	m_pImageManager->onViewSizeChanged(rc);
