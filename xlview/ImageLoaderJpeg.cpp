@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <setjmp.h>
-#include <basetsd.h> // for refedinition for INT32, and so on (which defined in jmorecfg.h)
+#include <basetsd.h> // for re-definition for INT32, and so on (which defined in jmorecfg.h)
 #include "../libs/jpeglib.h"
 #include "libxl/include/utilities.h"
 #include "ImageLoader.h"
@@ -88,6 +88,9 @@ public:
 	}
 
 	virtual bool readHeader (const std::string &data, ImageHeaderInfo &info) {
+		if (data.length() == 0 || (xl::uint8)data.at(0) != 0xff) {
+			return false;
+		}
 		struct jpeg_decompress_struct cinfo;
 		safe_jpeg_error_mgr em;
 

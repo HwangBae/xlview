@@ -438,7 +438,7 @@ CCachedImagePtr CImageManager::getCurrentCachedImage () {
 
 CCachedImagePtr CImageManager::getCachedImage (int index) {
 	xl::CScopeLock lock(this);
-	assert(index >= 0 && index < getImageCount());
+	assert(index >= 0 && index < (int)getImageCount());
 	CCachedImagePtr cachedImage = m_cachedImages[index];
 	lock.unlock();
 	return cachedImage;

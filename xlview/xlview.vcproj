@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="../libs/jpeg.lib ../../libxl/Debug/libxl.lib"
+				AdditionalDependencies="../libs/jpeg.lib ../libs/libpng.lib ../libs/zlib.lib ../../libxl/Debug/libxl.lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -135,7 +135,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="../libs/jpeg.lib ../../libxl/Release/libxl.lib"
+				AdditionalDependencies="../libs/jpeg.lib ../libs/libpng.lib ../libs/zlib.lib ../../libxl/Release/libxl.lib"
 				LinkIncremental="1"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -196,6 +196,10 @@
 			</File>
 			<File
 				RelativePath=".\ImageLoaderJpeg.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\ImageLoaderPng.cpp"
 				>
 			</File>
 			<File

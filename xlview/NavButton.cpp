@@ -21,7 +21,7 @@ CNavButton::~CNavButton () {
 	::DeleteObject(m_cursor);
 }
 
-void CNavButton::drawMe (HDC hdc) {
+void CNavButton::drawMe (HDC /*hdc*/) {
 
 }
 
