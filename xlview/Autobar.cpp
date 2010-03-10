@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "libxl/include/ui/CtrlMain.h"
 #include "Autobar.h"
 
 CAutobar::CAutobar (int fadeout, int fadein, int step, int fadeoutdelay, int timeinterval)
@@ -20,13 +21,19 @@ void CAutobar::onMouseInChild (CPoint /*pt*/) {
 }
 
 void CAutobar::onMouseOut (CPoint pt) {
-	if (!m_rect.PtInRect(pt)) {
+	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
+	assert(pCtrlMain != NULL);
+	xl::ui::CControlPtr ctrlCapture = pCtrlMain->getCaptureCtrl();
+	if (!m_rect.PtInRect(pt) || !isChild(ctrlCapture)) {
 		CFadable::fadeOut();
 	}
 }
 
 void CAutobar::onMouseOutChild (CPoint pt) {
-	if (!m_rect.PtInRect(pt)) {
+	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
+	assert(pCtrlMain != NULL);
+	xl::ui::CControlPtr ctrlCapture = pCtrlMain->getCaptureCtrl();
+	if (!m_rect.PtInRect(pt) || !isChild(ctrlCapture)) {
 		CFadable::fadeOut();
 	}
 }

@@ -101,13 +101,16 @@ void CNavView::drawMe (HDC hdc) {
 	mdc.CreateCompatibleDC(dc);
 
 	xl::CScopeLock lock(m_pImageManager);
-	CImagePtr image = m_pImageManager->getThumbnail(m_currIndex);
+	CCachedImagePtr cachedImage = m_pImageManager->getCachedImage(m_currIndex);
+	CImagePtr image = cachedImage->getThumbnailImage();
 	if (image == NULL) {
+		cachedImage.reset();
 		return;
 	}
 	xl::ui::CDIBSectionPtr dib = image->getImage(0);
+	lock.unlock();
+
 	CSize szImage = image->getImageSize();
-	image.reset();
 
 	// draw text
 	CRect rcText = m_rect;
@@ -154,7 +157,13 @@ void CNavView::drawMe (HDC hdc) {
 	}
 	dc.SetStretchBltMode(oldMode);
 
+	cachedImage->lock();
 	dib.reset();
+	image.reset();
+	cachedImage->unlock();
+
+	lock.lock(m_pImageManager);
+	cachedImage.reset();
 	lock.unlock();
 }
 

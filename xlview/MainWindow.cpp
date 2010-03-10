@@ -166,7 +166,8 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	// nav view bar
 	navbar.reset(new CAutobar(0, 75, 25, 300, 25));
-	navbar->setStyle(_T("margin:0 150 110 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
+	navbar->setStyle(_T("margin:0 100 110 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
+	// navbar->setStyle(_T("margin:20 0 0 20; px:left; py:top;"));
 	m_ctrlMain->insertChild(navbar);
 
 	// nav view

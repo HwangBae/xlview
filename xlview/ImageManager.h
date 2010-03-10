@@ -84,6 +84,7 @@ public:
 	void setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr); // only called by CImageView::_ZoomThread
 
 	CCachedImagePtr getCurrentCachedImage ();
+	CCachedImagePtr getCachedImage (int index);
 	CImagePtr getThumbnail (int index);
 	xl::tstring getCurrentFileName ();
 

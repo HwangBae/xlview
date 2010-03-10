@@ -2,6 +2,7 @@
 #include <process.h>
 #include <vector>
 #include <set>
+#include <algorithm>
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
 #include "ImageManager.h"
@@ -181,7 +182,9 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 			assert(callback.shouldStop());
 		} else {
 			lock.lock(pThis);
-			pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
+			if (currIndex == pThis->getCurrIndex()) { // make sure the image is the "current" one
+				pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
+			}
 			image.reset();
 			lock.unlock();
 		}
@@ -221,17 +224,14 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		}
 
 		// 1.2 clear the useless zoomed images, and unlock
-		// note that 2.1 and 2.2 should be fast enough for a lock operation
+		// note that 1.1 and 1.2 should be fast enough for a lock operation
 		for (xl::uint i = 0; i < pThis->m_cachedImages.size(); ++ i) {
 			bool removed = true;
 			if ((int)i == currIndex) {
 				removed = false;
 			} else {
-				// TODO: use std::find instead
-				for (xl::uint j = 0; j < indexes.size(); ++ j) {
-					if (i == indexes[j]) {
-						removed = false;
-					}
+				if (std::find(indexes.begin(), indexes.end(), i) != indexes.end()) {
+					removed = false;
 				}
 			}
 			if (removed) {
@@ -432,6 +432,14 @@ CCachedImagePtr CImageManager::getCurrentCachedImage () {
 	xl::CScopeLock lock(this);
 	assert(m_currIndex >= 0 && m_currIndex < getImageCount());
 	CCachedImagePtr cachedImage = m_cachedImages[m_currIndex];
+	lock.unlock();
+	return cachedImage;
+}
+
+CCachedImagePtr CImageManager::getCachedImage (int index) {
+	xl::CScopeLock lock(this);
+	assert(index >= 0 && index < getImageCount());
+	CCachedImagePtr cachedImage = m_cachedImages[index];
 	lock.unlock();
 	return cachedImage;
 }
