@@ -283,12 +283,13 @@ void CImageView::_CheckPtSrc (CPoint &ptSrc) {
 void CImageView::_NotifyDisplayChanged () {
 	if (m_pNavView) {
 		CRect rc = getClientRect();
+		CSize szImageReal = m_szReal;
 		CSize szDisplay = m_szDisplay;
 		CSize szView(rc.Width(), rc.Height());
 		CPoint ptSrc = m_ptSrc;
 
 		assert(m_currIndex != -1);
-		m_pNavView->setInfo(m_currIndex, szDisplay, szView, ptSrc);
+		m_pNavView->setInfo(m_currIndex, szImageReal, szDisplay, szView, ptSrc);
 	}
 }
 

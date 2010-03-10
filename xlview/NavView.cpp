@@ -48,6 +48,12 @@ void CNavView::_CreateDisplayInfo () {
 		m_rcImage = CRect(x, y, x + szImage.cx, y + szImage.cy);
 	}
 
+	double ratio = (double)m_szDisplay.cx / (double)m_szImageReal.cx;
+	int r = (int)(ratio * 100 + 0.5);
+	if (r == 0) {
+		r = 1;
+	}
+	_stprintf_s(m_ratio, COUNT_OF(m_ratio), _T("%d%%"), r);
 }
 
 CNavView::CNavView (CImageManager *pImageManager, CImageView *pImageView)
@@ -73,8 +79,9 @@ CNavView::~CNavView () {
 
 }
 
-void CNavView::setInfo (int index, CSize szDisplay, CSize szView, CPoint ptSrc) {
+void CNavView::setInfo (int index, CSize szImageReal, CSize szDisplay, CSize szView, CPoint ptSrc) {
 	m_currIndex = index;
+	m_szImageReal = szImageReal;
 	m_szDisplay = szDisplay;
 	m_szView = szView;
 	m_ptSrc = ptSrc;
@@ -101,6 +108,15 @@ void CNavView::drawMe (HDC hdc) {
 	xl::ui::CDIBSectionPtr dib = image->getImage(0);
 	CSize szImage = image->getImageSize();
 	image.reset();
+
+	// draw text
+	CRect rcText = m_rect;
+	rcText.top += border.top.width + 2;
+	rcText.left += border.left.width + 2;
+	COLORREF oldColor = dc.SetTextColor(RGB(255,255,255));
+	dc.drawTransparentTextWithDefaultFont(m_ratio, -1, rcText, DT_LEFT);
+	dc.SetTextColor(oldColor);
+
 
 	int oldMode = dc.SetStretchBltMode(HALFTONE);
 	if (!m_dragable) {
@@ -191,4 +207,21 @@ void CNavView::onLButtonUp (CPoint, xl::uint) {
 void CNavView::onLostCapture () {
 	m_ptCapture = CPoint(-1, -1);
 	m_ptSrcCapture = CPoint(-1, -1);
+}
+
+void CNavView::onMouseWheel (CPoint pt, int delta, xl::uint) {
+	assert(m_pImageView != NULL);
+	CRect rcImage = m_rcImage;
+	CRect rcView = m_rcView;
+	CRect rc = getClientRect();
+	rcImage.OffsetRect(rc.left, rc.top);
+	rcView.OffsetRect(rc.left, rc.top);
+	if (rcImage.PtInRect(pt) || rcView.PtInRect(pt)) {
+		CPoint ptCenter(-1, -1);
+		if (delta > 0) {
+			m_pImageView->showLarger(ptCenter);
+		} else {
+			m_pImageView->showSmaller(ptCenter);
+		}
+	}
 }

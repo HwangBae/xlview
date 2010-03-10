@@ -10,6 +10,7 @@ class CImageView;
 class CNavView : public xl::ui::CControl {
 	CImageManager      *m_pImageManager;
 	CImageView         *m_pImageView;
+	CSize               m_szImageReal;
 	CSize               m_szDisplay;
 	CSize               m_szView;
 	CPoint              m_ptSrc;
@@ -24,6 +25,7 @@ class CNavView : public xl::ui::CControl {
 	HCURSOR             m_curArrow;
 	HCURSOR             m_curMove;
 	xl::ui::CDIBSectionPtr                         m_dibView;
+	xl::tchar           m_ratio[32];
 
 	void _CreateDisplayInfo ();
 
@@ -31,13 +33,14 @@ public:
 	CNavView (CImageManager *, CImageView *);
 	virtual ~CNavView ();
 
-	void setInfo (int index, CSize szDisplay, CSize szView, CPoint ptSrc);
+	void setInfo (int index, CSize szImageReal, CSize szDisplay, CSize szView, CPoint ptSrc);
 
 	virtual void drawMe (HDC hdc);
 	virtual void onMouseMove (CPoint, xl::uint);
 	virtual void onLButtonDown (CPoint, xl::uint);
 	virtual void onLButtonUp (CPoint, xl::uint);
 	virtual void onLostCapture ();
+	virtual void onMouseWheel (CPoint, int, xl::uint);
 };
 
 #endif
