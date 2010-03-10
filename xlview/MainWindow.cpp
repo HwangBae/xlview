@@ -8,18 +8,43 @@
 #include "libxl/include/ui/Gdi.h"
 #include "libxl/include/ui/ResMgr.h"
 
+#include "CommandId.h"
 #include "MainWindow.h"
 #include "ImageView.h"
 #include "Autobar.h"
 #include "ThumbnailView.h"
 #include "Slider.h"
 #include "NavView.h"
+#include "NavButton.h"
 
 static const xl::tchar *MAIN_TITLE = _T("xl / view");
 
 
-void CMainWindow::onCommand (xl::uint /*id*/, xl::ui::CControlPtr /*ctrl*/) {
-
+void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
+	switch (id) {
+	case ID_NAV_NEXT:
+		{
+			xl::uint new_index = m_currIndex + 1;
+			if (new_index == m_cachedImages.size()) {
+				new_index = 0;
+			}
+			setIndex((int)new_index);
+		}
+		break;
+	case ID_NAV_PREV:
+		{
+			int new_index = m_currIndex;
+			if (new_index == 0) {
+				new_index = m_cachedImages.size() - 1;
+			} else {
+				new_index --;
+			}
+			setIndex(new_index);
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tracking, xl::ui::CControlPtr ctrl) {
@@ -176,6 +201,15 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	naview->setStyle(_T("border:1 #ffffff; padding:20 4 4 4;"));
 	navbar->insertChild(naview);
 	pView->setNavView(pNavView);
+
+	// nav button
+	CNavButton *pNavButton = new CNavButton(true);
+	pNavButton->setStyle(_T("width:100; margin:100 0"));
+	m_ctrlMain->insertChild(xl::ui::CControlPtr(pNavButton));
+
+	pNavButton = new CNavButton(false);
+	pNavButton->setStyle(_T("width:100; margin:100 0"));
+	m_ctrlMain->insertChild(xl::ui::CControlPtr(pNavButton));
 
 	return TRUE;
 }
