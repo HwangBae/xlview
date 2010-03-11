@@ -179,7 +179,8 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 		xl::CTimerLogger logger(_T("Load %s cost"), fileName.c_str());
 		CImagePtr image = pImageLoader->load(fileName, &callback);
 		if (image == NULL) {
-			assert(callback.shouldStop());
+			// assert(callback.shouldStop());
+			XLTRACE(_T("**** load %s failed\n"), fileName.c_str());
 		} else {
 			lock.lock(pThis);
 			if (currIndex == pThis->getCurrIndex()) { // make sure the image is the "current" one
@@ -203,6 +204,7 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 		if (pThis->m_exiting) {
 			break;
 		}
+		// continue;
 
 		xl::CScopeLock lock(pThis);
 		CSize szPrefetch = pThis->m_szPrefetch;

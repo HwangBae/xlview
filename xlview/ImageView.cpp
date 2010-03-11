@@ -214,14 +214,15 @@ void CImageView::_SetDisplaySize (CRect rcView, CSize szDisplay, CPoint ptCur) {
 	if (m_imageRealSize != NULL) {
 		CCachedImagePtr cachedImage = m_pImageManager->getCurrentCachedImage();
 		CImagePtr image = cachedImage->getCachedImage();
-		assert(image != NULL);
-		CSize szCached = image->getImageSize();
-		if (m_imageZoomed == m_imageRealSize) {
-			if (szCached.cx >= szDisplay.cx && szCached.cy >= szDisplay.cy) {
-				m_imageZoomed = image;
+		if (image != NULL) {
+			CSize szCached = image->getImageSize();
+			if (m_imageZoomed == m_imageRealSize) {
+				if (szCached.cx >= szDisplay.cx && szCached.cy >= szDisplay.cy) {
+					m_imageZoomed = image;
+				}
 			}
+			image.reset();
 		}
-		image.reset();
 		cachedImage.reset();
 	}
 
