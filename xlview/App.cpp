@@ -23,6 +23,7 @@ public:
 			}
 			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
 			// p = _T("D:\\test_images\\1\\1.jpg");
+			// p = _T("I:\\test_images\\1266987653527.png");
 			xl::tstring name(p);
 			name.trim(_T("\""));
 			if (!m_wndMain.setFile(name)) {

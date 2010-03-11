@@ -58,11 +58,7 @@ static void _read_row_callback(png_structp png_ptr, png_uint_32 /*row*/, int /*p
 
 
 static void _error_handle (png_structp /*png_ptr*/, const char *error) {
-	// throw error;
-	volatile int i = 0;
-	++ i;
-
-	// longjmp()
+	throw error;
 }
 
 static void _warning_handle (png_structp /*png_ptr*/, const char * /*warning*/) {
@@ -83,7 +79,6 @@ class CImageLoaderPluginPng : public IImageLoaderPlugin
 		}
 
 		png_structp psp = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, _error_handle, _warning_handle);
-		// png_structp psp = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, _warning_handle);
 		if (!psp) {
 			return NULL;
 		}
@@ -214,14 +209,6 @@ public:
 		_DataSource ds(NULL, data);
 		png_set_read_fn(psp, &ds, _read_data);
 
-		if (setjmp(png_jmpbuf(psp))) {
-			if (psp != NULL) {
-				png_destroy_read_struct(&psp, &infop, &endp);
-			}
-
-			return false;
-		}
-
 		try {
 			png_read_info(psp, infop);
 			png_get_IHDR(psp, infop, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
@@ -252,6 +239,7 @@ public:
 		xl::ui::CDIBSectionPtr dibPtr = image->getImage(0);
 		xl::ui::CDIBSection *dib = dibPtr.get();
 		dibPtr.reset();
+		bool result = false;
 
 		xl::uint8* *lines = NULL;
 		xl::uint width, height;
@@ -264,18 +252,6 @@ public:
 		_DataSource ds(pCallback, data);
 		png_set_read_fn(psp, &ds, _read_data);
 		png_set_read_status_fn(psp, _read_row_callback);
-
-		if (setjmp(png_jmpbuf(psp))) {
-			if (lines != NULL) {
-				delete []lines;
-			}
-
-			if (psp != NULL) {
-				png_destroy_read_struct(&psp, &infop, &endp);
-			}
-
-			return false;
-		}
 
 		try {
 			png_read_info(psp, infop);
@@ -292,20 +268,20 @@ public:
 				lines[i] = dib->getLine(i);
 			}
 
+			result = true;
 			png_read_image(psp, lines);
+			png_destroy_read_struct(&psp, &infop, &endp);
 
 			delete []lines;
 			lines = NULL;
 
-
-			png_destroy_read_struct(&psp, &infop, &endp);
 			return true;
 		} catch (...) {
 			if (lines != NULL) {
 				delete []lines;
 			}
 			png_destroy_read_struct(&psp, &infop, &endp);
-			return false;
+			return result;
 		}
 	}
 
@@ -326,16 +302,7 @@ public:
 		png_set_read_fn(psp, &ds, _read_data);
 		png_set_read_status_fn(psp, _read_row_callback);
 
-		if (setjmp(png_jmpbuf(psp))) {
-			if (psp != NULL) {
-				png_destroy_read_struct(&psp, &infop, &endp);
-			}
-
-			return false;
-		}
-
 		try {
-			bool result = false;
 			png_read_info(psp, infop);
 			png_get_IHDR(psp, infop, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 			number_of_passes = _SetProperty(psp, infop);
