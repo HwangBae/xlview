@@ -75,6 +75,7 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
 		CZoomingCallback callback(szZoomTo, index, pThis, pThis->m_pImageManager);
 		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true, &callback);
+		// CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, false, &callback);
 		logger.log();
 
 		lock.lock(pThis, true);
