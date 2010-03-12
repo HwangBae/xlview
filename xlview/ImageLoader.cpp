@@ -108,8 +108,6 @@ bool CImageLoader::isFileSupported (const xl::tstring &fileName) {
 	}
 
 	return false;
-
-	return false;
 }
 
 CImagePtr CImageLoader::load (const xl::tstring &fileName, xl::ILongTimeRunCallback *pCallback) {

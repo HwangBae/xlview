@@ -210,6 +210,7 @@ public:
 		png_set_read_fn(psp, &ds, _read_data);
 
 		try {
+			volatile char tmp_c = data.at(0); // make the try-catch work
 			png_read_info(psp, infop);
 			png_get_IHDR(psp, infop, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 			pixel_depth = infop->pixel_depth;
