@@ -81,7 +81,7 @@ public:
 	bool setFile (const xl::tstring &file);
 	void setIndex (int index);
 
-	void setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr); // only called by CImageView::_ZoomThread
+	void setSuitableImage (CImagePtr image, CSize szImage, int index);
 
 	CCachedImagePtr getCurrentCachedImage ();
 	CCachedImagePtr getCachedImage (int index);

@@ -157,9 +157,7 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 		int currIndex = pThis->getCurrIndex();
 		CLoadingCallback callback(currIndex, pThis);
 		CCachedImagePtr cachedImage = pThis->getCurrentCachedImage();
-		CImagePtr zoomedImage = cachedImage->getCachedImage();
-		bool preloadThumbnail = zoomedImage == NULL;
-		zoomedImage.reset();
+		bool preloadThumbnail = cachedImage->getCachedImage() == NULL;
 		if (!preloadThumbnail) {
 			cachedImage.reset();
 		}
@@ -170,6 +168,7 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 			if (cachedImage->loadThumbnail(true, &callback)) {
 				lock.lock(pThis);
 				if (!callback.shouldStop()) {
+					preloadThumbnail = false;
 					pThis->_TriggerEvent(EVT_THUMBNAIL_LOADED, &currIndex);
 				}
 				lock.unlock();
@@ -186,8 +185,8 @@ unsigned __stdcall CImageManager::_LoadThread (void *param) {
 			if (currIndex == pThis->getCurrIndex()) { // make sure the image is the "current" one
 				pThis->_TriggerEvent(EVT_IMAGE_LOADED, &image);
 			}
-			image.reset();
 			lock.unlock();
+			image.reset();
 		}
 	}
 
@@ -240,9 +239,9 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 				pThis->m_cachedImages[i]->clear(false); // remain the thumbnail
 			}
 		}
+		lock.unlock();
 
 		CZoomingCallback callback(szPrefetch, currIndex, pThis);
-		lock.unlock();
 
 		// 1.3 load most 2 zoomed images
 		int prefetched_count = 0;
@@ -258,7 +257,9 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 
 		// 1.4 load the thumbnail
 		size_t processed_count = 1;
-		int offset = 1;
+		int offset = 0; // 0 to check the current, because if the image loader doesn't support
+				// load thumbnail fast (such as the PNG loader), it thumbnail is not 
+				// ready for display even if the image itself it loaded completely.
 		xl::CTimerLogger logger(_T("** process %d thumbnails cost"), count);
 		while (processed_count < count && !callback.shouldStop()) {
 			// forward
@@ -298,11 +299,6 @@ unsigned __stdcall CImageManager::_PrefetchThread (void *param) {
 				lock.unlock();
 			}
 			++ processed_count;
-
-			lock.lock(pThis);
-			cachedImage.reset();
-			lock.unlock();
-
 			++ offset;
 		}
 		logger.log();
@@ -423,10 +419,10 @@ void CImageManager::setIndex (int index) {
 	_SetIndexNoLock(index);
 }
 
-void CImageManager::setCurrentSuitableImage (CImagePtr image, CSize szImage, int curr) {
+void CImageManager::setSuitableImage (CImagePtr image, CSize szImage, int index) {
 	xl::CScopeLock lock(this);
-	if ((int)m_currIndex == curr) {
-		m_cachedImages[curr]->setSuitableImage(image, szImage);
+	if ((int)m_currIndex == index) {
+		m_cachedImages[index]->setSuitableImage(image, szImage);
 	}
 }
 

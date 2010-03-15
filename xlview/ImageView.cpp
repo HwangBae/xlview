@@ -75,11 +75,10 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 			szRS.cx, szRS.cy, szZoomTo.cx, szZoomTo.cy);
 		CZoomingCallback callback(szZoomTo, index, pThis, pThis->m_pImageManager);
 		CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, true, &callback);
-		// CImagePtr imageZoomed = imageRS->resize(szZoomTo.cx, szZoomTo.cy, false, &callback);
+		imageRS.reset(); // no use now, save memory
 		logger.log();
 
 		lock.lock(pThis, true);
-		imageRS.reset(); // no use now
 		pThis->m_zooming = false;
 		if (imageZoomed != NULL && index == pThis->m_pImageManager->getCurrIndex()) {
 			pThis->m_imageZoomed = imageZoomed;
@@ -87,12 +86,8 @@ unsigned __stdcall CImageView::_ZoomThread (void *param) {
 			lock.unlock();
 
 			if (suitable) {
-				pThis->m_pImageManager->setCurrentSuitableImage(imageZoomed, szRS, index);
+				pThis->m_pImageManager->setSuitableImage(imageZoomed, szRS, index);
 			}
-
-			lock.lock(pThis, true);
-			imageZoomed.reset(); // avoid race condition 
-			lock.unlock();
 		} else {
 			lock.unlock();
 		}
