@@ -377,9 +377,9 @@ void CImageView::_SetCachedBitmap (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
-	m_cachedBitmap->attachToDCNoLock(mdc);
+	m_cachedBitmap->attachToDC(mdc);
 	mdc.BitBlt(0, 0, rc.Width(), rc.Height(), mdc, rc.left, rc.top, SRCCOPY);
-	m_cachedBitmap->detachFromDCNoLock(mdc);
+	m_cachedBitmap->detachFromDC(mdc);
 	m_dirty = false;
 }
 
@@ -390,9 +390,9 @@ void CImageView::_GetCachedBitmap (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC mdc;
 	mdc.CreateCompatibleDC(dc);
-	m_cachedBitmap->attachToDCNoLock(mdc);
+	m_cachedBitmap->attachToDC(mdc);
 	dc.BitBlt(rc.left, rc.top, rc.Width(), rc.Height(), mdc, 0, 0, SRCCOPY);
-	m_cachedBitmap->detachFromDCNoLock(mdc);
+	m_cachedBitmap->detachFromDC(mdc);
 }
 
 #ifdef PROGRESS_ZOOMING
@@ -671,7 +671,7 @@ void CImageView::drawMe (HDC hdc) {
 	xl::ui::CDCHandle dc(hdc);
 	xl::ui::CDC cdc;
 	cdc.CreateCompatibleDC(dc);
-	m_cachedBitmap->attachToDCNoLock(cdc);
+	m_cachedBitmap->attachToDC(cdc);
 	cdc.FillSolidRect(m_rect, RGB(0x20, 0x20, 0x20));
 
 	xl::ui::CDC mdc;
@@ -680,7 +680,7 @@ void CImageView::drawMe (HDC hdc) {
 	// xl::ui::CDIBSectionHelper dibHelper(dib, mdc);
 	// I don't use ::StretchBlt() in the back thread for zooming, 
 	// so BitBlt or StretchBlt without lock is safe.
-	dib->attachToDCNoLock(mdc);
+	dib->attachToDC(mdc);
 
 	if (szImage == szDisplay) {
 		cdc.BitBlt(rcDisplayArea.left, rcDisplayArea.top, rcDisplayArea.Width(), rcDisplayArea.Height(), 
@@ -698,8 +698,8 @@ void CImageView::drawMe (HDC hdc) {
 		cdc.SetStretchBltMode(oldMode);
 		lock.unlock();
 	}
-	dib->detachFromDCNoLock(mdc);
-	m_cachedBitmap->detachFromDCNoLock(cdc);
+	dib->detachFromDC(mdc);
+	m_cachedBitmap->detachFromDC(cdc);
 
 //	_SetCachedBitmap(hdc);
 	_GetCachedBitmap(hdc);

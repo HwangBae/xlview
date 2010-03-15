@@ -282,6 +282,9 @@ public:
 				delete []lines;
 			}
 			png_destroy_read_struct(&psp, &infop, &endp);
+			if (pCallback && pCallback->shouldStop()) {
+				return false;
+			}
 			return result;
 		}
 	}

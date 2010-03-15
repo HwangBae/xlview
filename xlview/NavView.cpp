@@ -125,34 +125,34 @@ void CNavView::drawMe (HDC hdc) {
 	if (!m_dragable) {
 		CRect rcView = m_rcView;
 		rcView.OffsetRect(rc.left, rc.top);
-		m_dibView->attachToDCNoLock(mdc);
+		m_dibView->attachToDC(mdc);
 		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
 		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
-		m_dibView->detachFromDCNoLock(mdc);
+		m_dibView->detachFromDC(mdc);
 		
 
 		CRect rcImage = m_rcImage;
 		rcImage.OffsetRect(rc.left, rc.top);
 
-		dib->attachToDCNoLock(mdc);
+		dib->attachToDC(mdc);
 		dc.StretchBlt(rcImage.left, rcImage.top, rcImage.Width(), rcImage.Height(), mdc, 0, 0, dib->getWidth(), dib->getHeight(), SRCCOPY);
-		dib->detachFromDCNoLock(mdc);
+		dib->detachFromDC(mdc);
 	} else {
 		CRect rcImage = m_rcImage;
 		rcImage.OffsetRect(rc.left, rc.top);
 
-		dib->attachToDCNoLock(mdc);
+		dib->attachToDC(mdc);
 		int oldMode = dc.SetStretchBltMode(HALFTONE);
 		dc.StretchBlt(rcImage.left, rcImage.top, rcImage.Width(), rcImage.Height(), mdc, 0, 0, dib->getWidth(), dib->getHeight(), SRCCOPY);
 		dc.SetStretchBltMode(oldMode);
-		dib->detachFromDCNoLock(mdc);
+		dib->detachFromDC(mdc);
 
 		CRect rcView = m_rcView;
 		rcView.OffsetRect(rc.left, rc.top);
-		m_dibView->attachToDCNoLock(mdc);
+		m_dibView->attachToDC(mdc);
 		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
 		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
-		m_dibView->detachFromDCNoLock(mdc);
+		m_dibView->detachFromDC(mdc);
 		dc.drawRectangle(rcView, 1, RGB(32,32,32), PS_SOLID);
 	}
 	dc.SetStretchBltMode(oldMode);
