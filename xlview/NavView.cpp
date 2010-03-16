@@ -120,7 +120,6 @@ void CNavView::drawMe (HDC hdc) {
 	dc.drawTransparentTextWithDefaultFont(m_ratio, -1, rcText, DT_LEFT);
 	dc.SetTextColor(oldColor);
 
-
 	int oldMode = dc.SetStretchBltMode(HALFTONE);
 	if (!m_dragable) {
 		CRect rcView = m_rcView;
@@ -129,7 +128,6 @@ void CNavView::drawMe (HDC hdc) {
 		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
 		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
 		m_dibView->detachFromDC(mdc);
-		
 
 		CRect rcImage = m_rcImage;
 		rcImage.OffsetRect(rc.left, rc.top);
@@ -156,15 +154,6 @@ void CNavView::drawMe (HDC hdc) {
 		dc.drawRectangle(rcView, 1, RGB(32,32,32), PS_SOLID);
 	}
 	dc.SetStretchBltMode(oldMode);
-
-	cachedImage->lock();
-	dib.reset();
-	image.reset();
-	cachedImage->unlock();
-
-	lock.lock(m_pImageManager);
-	cachedImage.reset();
-	lock.unlock();
 }
 
 void CNavView::onMouseMove (CPoint pt, xl::uint) {
