@@ -15,7 +15,7 @@ void CImageManager::_SetIndexNoLock (int index) {
 	assert(getLockLevel() > 0);
 	assert(index >= 0 && index < (int)m_cachedImages.size());
 	if ((int)m_currIndex != index) {
-		XLTRACE(_T("--== change index from %d to %d ==--\n"), m_currIndex, index);
+		// XLTRACE(_T("--== change index from %d to %d ==--\n"), m_currIndex, index);
 		if ((int)m_currIndex < index) {
 			m_direction = FORWARD;
 		} else {
