@@ -129,6 +129,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
+				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -316,6 +317,10 @@
 			</File>
 			<File
 				RelativePath=".\resources\prev.cur"
+				>
+			</File>
+			<File
+				RelativePath=".\resources\xlview.ico"
 				>
 			</File>
 			<File

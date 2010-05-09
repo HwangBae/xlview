@@ -44,8 +44,17 @@ END
 // Cursor
 //
 
-IDC_NEXT             CURSOR                  "resources\\next.cur"
-IDC_PREV             CURSOR                  "resources\\prev.cur"
+IDC_NEXT                CURSOR                  "resources\\next.cur"
+IDC_PREV                CURSOR                  "resources\\prev.cur"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_XLVIEW              ICON                    "resources\\xlview.ico"
 /////////////////////////////////////////////////////////////////////////////
 
 
