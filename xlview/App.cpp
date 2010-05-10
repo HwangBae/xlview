@@ -1,7 +1,9 @@
 #define _WTL_NO_CSTRING
 #include <stdlib.h>
 #include "libxl/include/ui/Application.h"
+#include "libxl/include/ui/ResMgr.h"
 #include "MainWindow.h"
+#include "resource.h"
 
 #pragma warning (disable:4996)
 
@@ -13,6 +15,13 @@ public:
 	virtual HWND createMainWindow (LPCTSTR lpctCmdLine, int) {
 		HWND hWnd = m_wndMain.Create(NULL, 0, _T(""));
 		if (hWnd != NULL) {
+			xl::ui::CResMgr *rm = xl::ui::CResMgr::getInstance();
+			HICON icon = rm->getIcon(IDI_XLVIEW);
+			if (icon != NULL) {
+				::SendMessage(hWnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+				::SendMessage(hWnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+			}
+
 			const xl::tchar *p = lpctCmdLine;
 			if (_tcslen(p) == 0) {
 				p = _tgetenv(_T("xlview_test_image"));
