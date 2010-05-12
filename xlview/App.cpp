@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "libxl/include/ui/Application.h"
 #include "libxl/include/ui/ResMgr.h"
+#include "Registry.h"
 #include "MainWindow.h"
 #include "resource.h"
 
@@ -43,7 +44,12 @@ public:
 	}
 
 	virtual void preRun () {
-
+		// isAppRegistered(_T("ed2k"));
+		xl::tstring app = _T("xlview");
+		xl::tstring appName = _T("xlview is an image viewer :)");
+		registerApp(app, appName);
+		registerExt(_T("jpg"), app, appName);
+		registerExt(_T("png"), app, appName);
 	}
 
 	virtual void postRun () {

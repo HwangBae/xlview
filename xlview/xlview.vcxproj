@@ -108,6 +108,7 @@
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="NavButton.cpp" />
     <ClCompile Include="NavView.cpp" />
+    <ClCompile Include="Registry.cpp" />
     <ClCompile Include="Slider.cpp" />
     <ClCompile Include="ThumbnailView.cpp" />
   </ItemGroup>
@@ -126,6 +127,7 @@
     <ClInclude Include="MultiLock.h" />
     <ClInclude Include="NavButton.h" />
     <ClInclude Include="NavView.h" />
+    <ClInclude Include="Registry.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Slider.h" />
     <ClInclude Include="ThumbnailView.h" />

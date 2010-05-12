@@ -127,8 +127,8 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 	assert(getLockLevel() > 0); // must be called in lock
 
 	m_imageRealSize = image;
+	m_szReal = image->getImageSize();
 	if (m_szDisplay == CSize(-1, -1)) {
-		m_szReal = image->getImageSize();
 		CRect rc = getClientRect();
 		if (rc.Width() <= 0 || rc.Height() <= 0) {
 			invalidate();
@@ -617,7 +617,7 @@ void CImageView::onSize () {
 	m_pImageManager->onViewSizeChanged(rc);
 
 	CScopeMultiLock lock(this, false);
-	if (m_imageZoomed != NULL) {
+	if (m_imageRealSize != NULL) {
 		if (m_suitable) {
 			assert(m_szReal != CSize(-1, -1));
 			CSize szArea(rc.Width(), rc.Height());
