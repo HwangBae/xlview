@@ -112,11 +112,13 @@ void CImageView::_OnIndexChanged (int index) {
 			assert(cachedImage->getImageSize() != CSize(-1, -1));
 			m_szReal = cachedImage->getImageSize();
 			CRect rc = getClientRect();
-			CSize szArea(rc.Width(), rc.Height());
-			CSize szDisplay = CImage::getSuitableSize(szArea, m_szReal);
-			// _SetDisplaySize(rc, szDisplay);
-			m_szDisplay = szDisplay; // _SetDisplaySize need m_szDisplay not (-1, -1)
-			_NotifyDisplayChanged();
+			if (rc.Width() > 0 && rc.Height() > 0) {
+				CSize szArea(rc.Width(), rc.Height());
+				CSize szDisplay = CImage::getSuitableSize(szArea, m_szReal);
+				// _SetDisplaySize(rc, szDisplay);
+				m_szDisplay = szDisplay; // _SetDisplaySize need m_szDisplay not (-1, -1)
+				_NotifyDisplayChanged();
+			}
 		}
 	}
 	invalidate();
@@ -130,6 +132,7 @@ void CImageView::_OnImageLoaded (CImagePtr image) {
 	m_szReal = image->getImageSize();
 	if (m_szDisplay == CSize(-1, -1)) {
 		CRect rc = getClientRect();
+		// xl::trace(_T("rc: %d %d"), rc.Width(), rc.Height());
 		if (rc.Width() <= 0 || rc.Height() <= 0) {
 			invalidate();
 			return;
