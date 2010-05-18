@@ -5,6 +5,19 @@
 ;
 OutFile "xlview.setup.exe"
 
+;-----------------------------------------------------------
+
+; Local variables
+
+; windows version, xp is 5 and vista, win7 is 6
+; initialized in detectWindowsVersion
+Var winMajorVersion
+
+; initialized in .onInit and ** un.onInit ** !!important!!
+Var progId ; xlview.image.1
+Var appName ; xlview
+
+
 ; The default installation directory
 InstallDir $PROGRAMFILES\xlview
 
@@ -41,11 +54,12 @@ Section "xlview (required)"
 	File "..\..\Release\xlview.exe"
 
 	; Write the installation path into the registry
-	WriteRegStr HKLM SOFTWARE\xlview "Install_Dir" "$INSTDIR"
+	WriteRegStr HKLM SOFTWARE\$appName "Install_Dir" "$INSTDIR"
 
 	; Write the uninstall keys for Windows
 	Call writeUninstallKeys
 	Call writeApplicationKeys
+	Call writeFileAssociation
 
 	; write the uninstall program
 	WriteUninstaller "uninstall.exe"
@@ -56,17 +70,20 @@ SectionEnd
 Section "Start Menu Shortcuts"
 
 	SetShellVarContext all
-	CreateDirectory "$SMPROGRAMS\xlview"
-	CreateShortCut "$SMPROGRAMS\xlview\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
-	; CreateShortCut "$SMPROGRAMS\xlview\xlview.lnk" "$INSTDIR\xlview.exe" "" "$INSTDIR\xlview.exe" 0
+	CreateDirectory "$SMPROGRAMS\$appName"
+	CreateShortCut "$SMPROGRAMS\$appName\Uninstall.lnk" "$INSTDIR\uninstall.exe" "" "$INSTDIR\uninstall.exe" 0
+	; CreateShortCut "$SMPROGRAMS\$appName\xlview.lnk" "$INSTDIR\xlview.exe" "" "$INSTDIR\xlview.exe" 0
 
 SectionEnd
 
 section "uninstall"
+	StrCmp $appName "" var_error
+
 	; Remove registry keys
 	Call un.deleteUninstallKeys
 	Call un.deleteApplicationKeys
-	DeleteRegKey HKLM SOFTWARE\xlview
+	Call un.deleteFileAssociation
+	DeleteRegKey HKLM SOFTWARE\$appName
 
 	; Remove files and uninstaller
 	Delete $INSTDIR\xlview.exe
@@ -74,63 +91,101 @@ section "uninstall"
 
 	SetShellVarContext all
 	; Remove shortcuts, if any
-	Delete "$SMPROGRAMS\xlview\*.*"
+	Delete "$SMPROGRAMS\$appName\*.*"
 
 	; Remove directories used
-	RMDir "$SMPROGRAMS\xlview"
+	RMDir "$SMPROGRAMS\$appName"
 	RMDir "$INSTDIR"
+	Quit
+
+var_error:
+	MessageBox MB_OK "error!"
+	Quit
 sectionEnd
 
 
 Function .onInit
+	StrCpy $progId 'xlview.image.1'
+	StrCpy $appName 'xlview'
+
 #TODO: call UserInfo plugin to make sure user in admin
+	Call detectWindowsVersion
+FunctionEnd
+
+Function un.onInit
+	StrCpy $progId 'xlview.image.1'
+	StrCpy $appName 'xlview'
 FunctionEnd
 
 
 ; Function write uninstall keys for Windows
 Function writeUninstallKeys
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\xlview" "DisplayName" "xlview"
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\xlview" "UninstallString" '"$INSTDIR\uninstall.exe"'
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\xlview" "NoModify" 1
-	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\xlview" "NoRepair" 1
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "DisplayName" "$appName"
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "UninstallString" '"$INSTDIR\uninstall.exe"'
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoModify" 1
+	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName" "NoRepair" 1
 FunctionEnd
 
 Function un.deleteUninstallKeys
-	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\xlview"
+	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\$appName"
 FunctionEnd
 
 ; Function write the application keys
 Function writeApplicationKeys
 
 	; progid
-	WriteRegStr HKLM "Software\Classes\xlview.image.1" "DefaultIcon" "$INSTDIR\xlview.exe"
-	WriteRegStr HKLM "Software\Classes\xlview.image.1\shell\open" "" "Open with xlview"
-	WriteRegStr HKLM "Software\Classes\xlview.image.1\shell\open\command" "" '"$INSTDIR\xlview.exe" "%1"'
+	WriteRegStr HKLM "Software\Classes\$progId" "DefaultIcon" "$INSTDIR\xlview.exe"
+	WriteRegStr HKLM "Software\Classes\$progId\shell\open" "" "Open with xlview"
+	WriteRegStr HKLM "Software\Classes\$progId\shell\open\command" "" '"$INSTDIR\xlview.exe" "%1"'
 
 	; Capabilities
-	WriteRegStr HKLM "Software\xlview\Capabilities" "ApplicationDescription" "xlview is a fast and easy to use image viewer"
-	WriteRegStr HKLM "Software\xlview\Capabilities" "ApplicationName" "xlview"
-	WriteRegStr HKLM "Software\xlview\Capabilities\FileAssociations" ".jpg" "xlview.image.1"
-	WriteRegStr HKLM "Software\xlview\Capabilities\FileAssociations" ".jpeg" "xlview.image.1"
-	WriteRegStr HKLM "Software\xlview\Capabilities\FileAssociations" ".jfif" "xlview.image.1"
-	WriteRegStr HKLM "Software\xlview\Capabilities\FileAssociations" ".png" "xlview.image.1"
+	WriteRegStr HKLM "Software\$appName\Capabilities" "ApplicationDescription" "xlview is a fast and easy to use image viewer"
+	WriteRegStr HKLM "Software\$appName\Capabilities" "ApplicationName" "xlview"
+	WriteRegStr HKLM "Software\$appName\Capabilities\FileAssociations" ".jpg" "$progId"
+	WriteRegStr HKLM "Software\$appName\Capabilities\FileAssociations" ".jpeg" "$progId"
+	WriteRegStr HKLM "Software\$appName\Capabilities\FileAssociations" ".jfif" "$progId"
+	WriteRegStr HKLM "Software\$appName\Capabilities\FileAssociations" ".png" "$progId"
 
 	; registered application 
-	WriteRegStr HKLM "Software\RegisteredApplications" "xlview" "Software\xlview\Capabilities"
+	WriteRegStr HKLM "Software\RegisteredApplications" "$progId" "Software\$appName\Capabilities"
 
 FunctionEnd
 
 Function un.deleteApplicationKeys
 
 	; delete progid
-	DeleteRegKey HKLM "Software\Classes\xlview.image.1"
+	DeleteRegKey HKLM "Software\Classes\$progId"
 
 	; delete capabilities
-	DeleteRegKey HKLM "Software\xlview"
+	DeleteRegKey HKLM "Software\$appName"
 
 	; delete registered application
-	DeleteRegValue HKLM "Software\RegisteredApplications" "xlview"
+	DeleteRegValue HKLM "Software\RegisteredApplications" "$progId"
 
 FunctionEnd
 
+; Function write the file association
+Function writeFileAssociation
+FunctionEnd
 
+Function un.deleteFileAssociation
+FunctionEnd
+
+; Function detect windows version
+; The major version number is stored in winMajorVersion
+; from: http://nsis.sourceforge.net/Windows_Version_Detection
+Function detectWindowsVersion
+	Push $R0
+	Push $R1
+ 
+	ClearErrors
+	StrCpy $winMajorVersion '0'
+ 
+	ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
+	IfErrors 0 version_gotten
+version_gotten:
+	StrCpy $winMajorVersion $R0 1
+ 
+	Pop $R1
+	Exch $R0
+FunctionEnd
