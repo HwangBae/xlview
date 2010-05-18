@@ -160,7 +160,7 @@ bool registerApp (const xl::tstring &app, const xl::tstring &name) {
 	return node.write(ROOT_KEY);
 }
 
-void unregisterApp (const xl::tstring &app) {
+void unregisterApp (const xl::tstring &/*app*/) {
 }
 
 bool registerExt (const xl::tstring &ext, const xl::tstring &app) {

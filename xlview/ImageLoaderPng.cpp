@@ -211,6 +211,8 @@ public:
 
 		try {
 			volatile char tmp_c = data.at(0); // make the try-catch work
+			tmp_c = tmp_c;
+
 			png_read_info(psp, infop);
 			png_get_IHDR(psp, infop, &width, &height, &bit_depth, &color_type, NULL, NULL, NULL);
 			pixel_depth = infop->pixel_depth;
@@ -339,10 +341,11 @@ public:
 
 	virtual bool loadThumbnail (
                                     CImagePtr image,
-                                    const std::string &data,
+                                    const std::string & /*data*/,
                                     xl::ILongTimeRunCallback *pCallback = NULL
                                    )
 	{
+		XL_PARAMETER_NOT_USED(pCallback);
 // 		xl::ui::CBoxFilter filter;
 // 		xl::ui::CResizeEngine resizer(&filter);
 // 		return loadResize(image, data, &resizer, pCallback);

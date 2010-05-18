@@ -166,9 +166,17 @@ FunctionEnd
 
 ; Function write the file association
 Function writeFileAssociation
+	WriteRegStr HKCU "Software\Classes\.png\OpenWithProgids" "$progId" ""
+	WriteRegStr HKCU "Software\Classes\.jpg\OpenWithProgids" "$progId" ""
+	WriteRegStr HKCU "Software\Classes\.jpeg\OpenWithProgids" "$progId" ""
+	WriteRegStr HKCU "Software\Classes\.jfif\OpenWithProgids" "$progId" ""
 FunctionEnd
 
 Function un.deleteFileAssociation
+	DeleteRegValue HKCU "Software\Classes\.png\OpenWithProgids" "$progId"
+	DeleteRegValue HKCU "Software\Classes\.jpg\OpenWithProgids" "$progId"
+	DeleteRegValue HKCU "Software\Classes\.jpeg\OpenWithProgids" "$progId"
+	DeleteRegValue HKCU "Software\Classes\.jfif\OpenWithProgids" "$progId"
 FunctionEnd
 
 ; Function detect windows version
