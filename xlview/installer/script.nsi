@@ -134,8 +134,10 @@ FunctionEnd
 Function writeApplicationKeys
 
 	; progid
-	WriteRegStr HKLM "Software\Classes\$progId" "DefaultIcon" "$INSTDIR\xlview.exe"
+	WriteRegStr HKLM "Software\Classes\$progId" "" "Image supported by xlview"
+	WriteRegStr HKLM "Software\Classes\$progId\DefaultIcon" "" "$INSTDIR\xlview.exe"
 	WriteRegStr HKLM "Software\Classes\$progId\shell\open" "" "Open with xlview"
+	WriteRegStr HKLM "Software\Classes\$progId\shell\open" "MuiVerb" "Open with xlview" ; it seems no use
 	WriteRegStr HKLM "Software\Classes\$progId\shell\open\command" "" '"$INSTDIR\xlview.exe" "%1"'
 
 	; Capabilities
@@ -161,6 +163,9 @@ Function un.deleteApplicationKeys
 
 	; delete registered application
 	DeleteRegValue HKLM "Software\RegisteredApplications" "$progId"
+
+	; delete the shell muicache
+	DeleteRegValue HKCU "Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" "$INSTDIR\xlview.exe"
 
 FunctionEnd
 
