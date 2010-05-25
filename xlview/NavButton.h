@@ -5,12 +5,15 @@
 
 class CNavButton : public xl::ui::CCtrlButton {
 	HCURSOR        m_cursor;
+	HCURSOR        m_curArrow;
+
 public:
 	CNavButton (bool next);
 	virtual ~CNavButton ();
 
 	virtual void drawMe (HDC hdc);
 	virtual void onMouseMove (CPoint, xl::uint);
+	virtual void onMouseOut (CPoint);
 };
 
 #endif

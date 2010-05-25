@@ -9,6 +9,7 @@
 #include "libxl/include/ui/ResMgr.h"
 
 #include "CommandId.h"
+#include "resource.h"
 #include "MainWindow.h"
 #include "ImageView.h"
 #include "Autobar.h"
@@ -40,6 +41,18 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 				new_index --;
 			}
 			setIndex(new_index);
+		}
+		break;
+	case ID_NAV_ZOOMIN:
+	case ID_NAV_ZOOMOUT:
+		{
+			CImageView *pView = (CImageView *)m_view.get();
+			assert(pView);
+			if (id == ID_NAV_ZOOMIN) {
+				pView->showLarger(CPoint(-1, -1));
+			} else {
+				pView->showSmaller(CPoint(-1, -1));
+			}
 		}
 		break;
 	default:
@@ -177,6 +190,28 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	navbar->setStyle(_T("margin:0; padding:0; border-top:0 #d0d0d0; py:bottom; width:fill; height:100; float:true; disable:true"));
 	m_ctrlMain->insertChild(navbar);
 
+	// toolbar
+	xl::ui::CControlPtr toolbar(new CAutobar(0, 75, 25, 300, 25));
+	m_toolbar = toolbar;
+	toolbar->setStyle(_T("margin:0 auto; padding:0; border-top:0 #d0d0d0; py:top; width:196; height:72; float:true; disable:true"));
+	toolbar->setStyle(_T("background-color:#cccccc"));
+	m_ctrlMain->insertChild(toolbar);
+
+	// toolbar buttons
+	xl::ui::CControlPtr button(new xl::ui::CCtrlImageButton(ID_NAV_ZOOMIN, IDB_ZOOMIN, IDB_ZOOMIN, IDB_ZOOMIN, true));
+	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	m_toolbar->insertChild(button);
+
+	button.reset(new xl::ui::CCtrlImageButton(ID_NAV_ZOOMOUT, IDB_ZOOMOUT, IDB_ZOOMOUT, IDB_ZOOMOUT, true));
+	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	m_toolbar->insertChild(button);
+
+	button.reset(new xl::ui::CCtrlImageButton(ID_SETTING, IDB_SETTING, IDB_SETTING, IDB_SETTING, true));
+	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	m_toolbar->insertChild(button);
+
+
+
 	// thumbnail
 	xl::ui::CControlPtr thumbview(new CThumbnailView(this));
 	thumbview->setStyle(_T("margin:0; padding:0; width:fill; height:70; background-color:#000000"));
@@ -231,6 +266,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	switch (evt) {
 	case CImageManager::EVT_FILELIST_READY:
 		m_navbar->setStyle(_T("disable:false"));
+		m_toolbar->setStyle(_T("disable:false"));
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
 		{

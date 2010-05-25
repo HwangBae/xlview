@@ -127,6 +127,12 @@
     <None Include="resources\xlview.ico">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="resources\zin.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\zout.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="xlview.rc">

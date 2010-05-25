@@ -138,6 +138,8 @@
     <None Include="resources\next.cur" />
     <None Include="resources\prev.cur" />
     <None Include="resources\xlview.ico" />
+    <None Include="resources\zin.bmp" />
+    <None Include="resources\zout.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="xlview.rc" />

@@ -16,6 +16,7 @@ class CMainWindow
 {
 
 	xl::ui::CControlPtr                            m_navbar;
+	xl::ui::CControlPtr                            m_toolbar;
 	xl::ui::CControlPtr                            m_slider;
 	xl::ui::CControlPtr                            m_view;
 

@@ -65,6 +65,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nC
 	CXLViewApp *pApp = CXLViewApp::getInstance();
 	pApp->initialize(hInstance);
 
+	nCmdShow = SW_MAXIMIZE;// -- maximize the windows seems a good idea
 	int nRet = pApp->run(lpstrCmdLine, nCmdShow);
 
 	pApp->cleanup();

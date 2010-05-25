@@ -15,10 +15,12 @@ CNavButton::CNavButton (bool next)
 
 	m_cursor = ::LoadCursor(::GetModuleHandle(NULL), 
 		next ? MAKEINTRESOURCE(IDC_NEXT) : MAKEINTRESOURCE(IDC_PREV));
+	m_curArrow = ::LoadCursor(NULL, MAKEINTRESOURCE(IDC_ARROW));
 }
 
 CNavButton::~CNavButton () {
 	::DeleteObject(m_cursor);
+	::DeleteObject(m_curArrow);
 }
 
 void CNavButton::drawMe (HDC /*hdc*/) {
@@ -27,4 +29,8 @@ void CNavButton::drawMe (HDC /*hdc*/) {
 
 void CNavButton::onMouseMove (CPoint, xl::uint) {
 	::SetCursor(m_cursor);
+}
+
+void CNavButton::onMouseOut (CPoint) {
+	::SetCursor(m_curArrow);
 }
