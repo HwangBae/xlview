@@ -45,13 +45,16 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 		break;
 	case ID_NAV_ZOOMIN:
 	case ID_NAV_ZOOMOUT:
+	case ID_NAV_ZOOM:
 		{
 			CImageView *pView = (CImageView *)m_view.get();
 			assert(pView);
 			if (id == ID_NAV_ZOOMIN) {
 				pView->showLarger(CPoint(-1, -1));
-			} else {
+			} else if (id == ID_NAV_ZOOMOUT) {
 				pView->showSmaller(CPoint(-1, -1));
+			} else {
+				pView->showSuitable(CPoint(-1, -1));
 			}
 		}
 		break;
@@ -193,24 +196,26 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	// toolbar
 	xl::ui::CControlPtr toolbar(new CAutobar(0, 75, 25, 300, 25));
 	m_toolbar = toolbar;
-	toolbar->setStyle(_T("margin:0 auto; padding:0; border-top:0 #d0d0d0; py:top; width:196; height:72; float:true; disable:true"));
+	toolbar->setStyle(_T("margin:0 auto; padding:0 4; border-top:0 #d0d0d0; py:top; width:156; height:40; float:true; disable:true"));
 	toolbar->setStyle(_T("background-color:#cccccc"));
 	m_ctrlMain->insertChild(toolbar);
 
 	// toolbar buttons
-	xl::ui::CControlPtr button(new xl::ui::CCtrlImageButton(ID_NAV_ZOOMIN, IDB_ZOOMIN, IDB_ZOOMIN, IDB_ZOOMIN, true));
-	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	xl::ui::CControlPtr button(new xl::ui::CCtrlButton(ID_NAV_ZOOMIN, _T(""), IDB_ZOOMIN, true));
+	button->setStyle(_T("margin:4 4 4 4; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 
-	button.reset(new xl::ui::CCtrlImageButton(ID_NAV_ZOOMOUT, IDB_ZOOMOUT, IDB_ZOOMOUT, IDB_ZOOMOUT, true));
-	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	button.reset(new xl::ui::CCtrlButton(ID_NAV_ZOOMOUT, _T(""), IDB_ZOOMOUT, true));
+	button->setStyle(_T("margin:4 4 4 0; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 
-	button.reset(new xl::ui::CCtrlImageButton(ID_SETTING, IDB_SETTING, IDB_SETTING, IDB_SETTING, true));
-	button->setStyle(_T("margin:4 0; width:64; height:64;"));
+	button.reset(new xl::ui::CCtrlButton(ID_NAV_ZOOM, _T(""), IDB_ZOOM, true));
+	button->setStyle(_T("margin:4 4 4 0; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 
-
+	button.reset(new xl::ui::CCtrlButton(ID_SETTING, _T(""), IDB_SETTING, true));
+	button->setStyle(_T("margin:4 4 4 0; width:32; height:32;"));
+	m_toolbar->insertChild(button);
 
 	// thumbnail
 	xl::ui::CControlPtr thumbview(new CThumbnailView(this));
