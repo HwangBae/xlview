@@ -10,6 +10,7 @@
 
 #include "CommandId.h"
 #include "resource.h"
+#include "Settings.h"
 #include "MainWindow.h"
 #include "ImageView.h"
 #include "Autobar.h"
@@ -45,7 +46,7 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 		break;
 	case ID_NAV_ZOOMIN:
 	case ID_NAV_ZOOMOUT:
-	case ID_NAV_ZOOM:
+	case ID_NAV_SWITCH:
 		{
 			CImageView *pView = (CImageView *)m_view.get();
 			assert(pView);
@@ -54,9 +55,12 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 			} else if (id == ID_NAV_ZOOMOUT) {
 				pView->showSmaller(CPoint(-1, -1));
 			} else {
-				pView->showSuitable(CPoint(-1, -1));
+				pView->showSwitch(CPoint(-1, -1));
 			}
 		}
+		break;
+	case ID_SETTING:
+		launchAssociation();
 		break;
 	default:
 		break;
@@ -209,7 +213,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	button->setStyle(_T("margin:4 4 4 0; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 
-	button.reset(new xl::ui::CCtrlButton(ID_NAV_ZOOM, _T(""), IDB_ZOOM, true));
+	button.reset(new xl::ui::CCtrlButton(ID_NAV_SWITCH, _T(""), IDB_SWITCH, true));
 	button->setStyle(_T("margin:4 4 4 0; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 

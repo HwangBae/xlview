@@ -108,7 +108,7 @@ END
 
 IDB_ZOOMIN              BITMAP                  "resources\\zin.bmp"
 IDB_ZOOMOUT             BITMAP                  "resources\\zout.bmp"
-IDB_ZOOM                BITMAP                  "resources\\zoom.bmp"
+IDB_SWITCH              BITMAP                  "resources\\switch.bmp"
 IDB_SETTING             BITMAP                  "resources\\setting.bmp"
 #endif    // Chinese (Simplified, PRC) resources
 /////////////////////////////////////////////////////////////////////////////

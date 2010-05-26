@@ -7,7 +7,7 @@
 #define IDI_XLVIEW                      103
 #define IDB_ZOOMIN                      104
 #define IDB_ZOOMOUT                     105
-#define IDB_ZOOM                        106
+#define IDB_SWITCH                      106
 #define IDB_SETTING                     107
 
 // Next default values for new objects

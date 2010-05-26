@@ -102,6 +102,7 @@ public:
 
 	void showSuitable (CPoint ptCur);
 	void showRealSize (CPoint ptCur);
+	void showSwitch (CPoint ptCur);
 	void showLarger (CPoint ptCur);
 	void showSmaller (CPoint ptCur);
 	void showTop (CPoint ptCur);

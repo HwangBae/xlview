@@ -506,6 +506,14 @@ void CImageView::showRealSize (CPoint ptCur) {
 #endif
 }
 
+void CImageView::showSwitch (CPoint ptCur) {
+	if (m_suitable) {
+		showRealSize(ptCur);
+	} else {
+		showSuitable(ptCur);
+	}
+}
+
 void CImageView::showLarger (CPoint ptCur) {
 	CScopeMultiLock lock(this, true);
 	if (m_szReal == CSize(-1, -1)) {
