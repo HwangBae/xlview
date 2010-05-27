@@ -101,6 +101,7 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="Autobar.cpp" />
     <ClCompile Include="CachedImage.cpp" />
+    <ClCompile Include="Dispatch.cpp" />
     <ClCompile Include="Image.cpp" />
     <ClCompile Include="ImageLoader.cpp" />
     <ClCompile Include="ImageLoaderJpeg.cpp" />
@@ -114,12 +115,14 @@
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="Slider.cpp" />
     <ClCompile Include="ThumbnailView.cpp" />
+    <ClCompile Include="ToolbarButton.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Autobar.h" />
     <ClInclude Include="CachedImage.h" />
     <ClInclude Include="ClassWithThreads.h" />
     <ClInclude Include="CommandId.h" />
+    <ClInclude Include="Dispatch.h" />
     <ClInclude Include="Fadable.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="ImageConfig.h" />
@@ -135,6 +138,7 @@
     <ClInclude Include="Settings.h" />
     <ClInclude Include="Slider.h" />
     <ClInclude Include="ThumbnailView.h" />
+    <ClInclude Include="ToolbarButton.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\next.cur" />
