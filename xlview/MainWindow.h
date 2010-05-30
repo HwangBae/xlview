@@ -3,7 +3,9 @@
 
 #include "libxl/include/string.h"
 #include "libxl/include/ui/MainWindow.h"
+
 #include "ImageManager.h"
+#include "GestureMap.h"
 
 #define WM_XLVIEW_IMAGE_LOADED                         (WM_XL_END + 1)
 #define WM_XLVIEW_INVALIDE                             (WM_XL_END + 2)
@@ -24,6 +26,7 @@ class CMainWindow
 	xl::ui::CControlPtr                            m_view;
 
 	CDispatch                                     *m_pDispatch;
+	CGestureMap                                    m_gestureMap;
 
 public:
 	virtual void onCommand (xl::uint id, xl::ui::CControlPtr ctrl);

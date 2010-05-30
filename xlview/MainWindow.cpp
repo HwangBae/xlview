@@ -27,24 +27,10 @@ static const xl::tchar *MAIN_TITLE = _T("xl / view");
 void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 	switch (id) {
 	case ID_NAV_NEXT:
-		{
-			xl::uint new_index = m_currIndex + 1;
-			if (new_index == m_cachedImages.size()) {
-				new_index = 0;
-			}
-			setIndex((int)new_index);
-		}
+		cmdNext();
 		break;
 	case ID_NAV_PREV:
-		{
-			int new_index = m_currIndex;
-			if (new_index == 0) {
-				new_index = m_cachedImages.size() - 1;
-			} else {
-				new_index --;
-			}
-			setIndex(new_index);
-		}
+		cmdPrev();
 		break;
 	case ID_NAV_ZOOMIN:
 	case ID_NAV_ZOOMOUT:
@@ -85,86 +71,12 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		return _T("timeout");
 	}
 
-	CImageView *pView = (CImageView *)m_view.get();
-	// test gesture and prev & next
-	if (gesture == _T("R")) {
+	xl::tstring action = m_gestureMap.onGesture(gesture);
+	if (_tcsicmp(action.c_str(), _T("Unknown")) != 0) {
 		if (release) {
-			xl::uint new_index = m_currIndex + 1;
-			if (new_index == m_cachedImages.size()) {
-				new_index = 0;
-			}
-			setIndex((int)new_index);
+			m_pDispatch->execute(action, ptDown);
 		}
-		return _T("Next");
-	}
-
-	if (gesture == _T("L")) {
-		if (release) {
-			int new_index = m_currIndex;
-			if (new_index == 0) {
-				new_index = m_cachedImages.size() - 1;
-			} else {
-				new_index --;
-			}
-			setIndex(new_index);
-		}
-		return _T("Prev");
-	}
-
-	if (gesture == _T("U")) {
-		if (release) {
-			pView->showLarger(ptDown);
-		}
-		return _T("Larger");
-	}
-
-	if (gesture == _T("D")) {
-		if (release) {
-			pView->showSmaller(ptDown);
-		}
-		return _T("Smaller");
-	}
-
-	if (gesture == _T("RD")) {
-		if (release) {
-			pView->showRealSize(ptDown);
-		}
-		return _T("Show original size");
-	}
-
-	if (gesture == _T("LD")) {
-		if (release) {
-			pView->showSuitable(ptDown);
-		}
-		return _T("Show suitable size");
-	}
-
-	if (gesture == _T("ULR")) {
-		if (release) {
-			pView->showTop(ptDown);
-		}
-		return _T("Scroll to top");
-	}
-
-	if (gesture == _T("DRL")) {
-		if (release) {
-			pView->showBottom(ptDown);
-		}
-		return _T("Scroll to bottom");
-	}
-
-	if (gesture == _T("LUD")) {
-		if (release) {
-			pView->showLeft(ptDown);
-		}
-		return _T("Scroll to left");
-	}
-
-	if (gesture == _T("RUD")) {
-		if (release) {
-			pView->showRight(ptDown);
-		}
-		return _T("Scroll to right");
+		return action;
 	}
 
 	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
@@ -321,6 +233,24 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 // command functions
 void CMainWindow::cmdExit () {
 	PostMessage(WM_QUIT, 0, 0);
+}
+
+void CMainWindow::cmdPrev () {
+	int new_index = m_currIndex;
+	if (new_index == 0) {
+		new_index = m_cachedImages.size() - 1;
+	} else {
+		new_index --;
+	}
+	setIndex(new_index);
+}
+
+void CMainWindow::cmdNext () {
+	xl::uint new_index = m_currIndex + 1;
+	if (new_index == m_cachedImages.size()) {
+		new_index = 0;
+	}
+	setIndex((int)new_index);
 }
 
 void CMainWindow::cmdMinimize () {

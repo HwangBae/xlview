@@ -3,10 +3,13 @@
 #include "ImageView.h"
 #include "Dispatch.h"
 
+///////////////////////////////////////////////////////////////////////
 // typedefs
 typedef void (CMainWindow::*LPMAINWINDOWFUNC)();
 typedef void (CImageView::*LPVIEWFUNC)(CPoint);
 
+
+///////////////////////////////////////////////////////////////////////
 // mapping
 template<class T>
 struct CmdMappingT {
@@ -14,9 +17,12 @@ struct CmdMappingT {
 	T              func;
 };
 
+///////////////////////////////////////////////////////////////////////
 // map
 static CmdMappingT<LPMAINWINDOWFUNC> sMainWindowCmdMap[] = {
 	{_T("Exit"),                                  &CMainWindow::cmdExit},
+	{_T("showPrev"),                              &CMainWindow::cmdPrev},
+	{_T("showNext"),                              &CMainWindow::cmdNext},
 	{_T("Minimize"),                              &CMainWindow::cmdMinimize},
 	{_T("MaximizeOrRestore"),                     &CMainWindow::cmdMaximizeOrRestore},
 };
@@ -33,6 +39,8 @@ static CmdMappingT<LPVIEWFUNC> sImageViewCmdMap[] = {
 	{_T("showRight"),                             &CImageView::showRight},
 };
 
+
+///////////////////////////////////////////////////////////////////////
 
 CDispatch::CDispatch (CMainWindow *pMainWindow, CImageView *pView)
 	: m_pMainWindow(pMainWindow)
