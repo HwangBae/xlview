@@ -19,6 +19,7 @@
 #include "NavView.h"
 #include "NavButton.h"
 #include "ToolbarButton.h"
+#include "Dispatch.h"
 
 static const xl::tchar *MAIN_TITLE = _T("xl / view");
 
@@ -171,9 +172,8 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 
 
 LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL &bHandled) {
-	subscribe(this);
-
 	bHandled = false;
+	subscribe(this);
 
 	SetWindowText(MAIN_TITLE);
 
@@ -256,6 +256,18 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	pNavButton->setStyle(_T("width:100; margin:100 0"));
 	m_ctrlMain->insertChild(xl::ui::CControlPtr(pNavButton));
 
+
+	// Dispatch
+	m_pDispatch = new CDispatch(this, pView);
+
+	return TRUE;
+}
+
+LRESULT CMainWindow::OnDestroy (UINT, WPARAM, LPARAM, BOOL &bHandled) {
+	bHandled = FALSE;
+	unsubscribe(this);
+	delete m_pDispatch;
+	m_pDispatch = NULL;
 	return TRUE;
 }
 
@@ -303,5 +315,22 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	default:
 		assert(false);
 		break;
+	}
+}
+
+// command functions
+void CMainWindow::cmdExit () {
+	PostMessage(WM_QUIT, 0, 0);
+}
+
+void CMainWindow::cmdMinimize () {
+	ShowWindow(SW_MINIMIZE);
+}
+
+void CMainWindow::cmdMaximizeOrRestore () {
+	if (IsZoomed()) {
+		ShowWindow(SW_RESTORE);
+	} else {
+		ShowWindow(SW_MAXIMIZE);
 	}
 }
