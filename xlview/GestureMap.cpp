@@ -3,7 +3,7 @@
 #include "GestureMap.h"
 
 /**
- * The whole action list please refer to the "map" section of Dispatch.cpp
+ * The whole command list please refer to the "map" section of Dispatch.cpp
  */
 void CGestureMap::_LoadMap () {
 	m_map.clear();
@@ -35,18 +35,18 @@ void CGestureMap::reload () {
 
 
 /**
- * Return the action (in string)
+ * Return the command (in string)
  */
 xl::tstring CGestureMap::onGesture (const xl::tstring &gesture) {
-	xl::tstring action = _T("unknown");
+	xl::tstring command = _T("unknown");
 	const xl::tchar *gst = gesture.c_str();
 	auto it = std::find_if(m_map.begin(), m_map.end(), 
-		[=, &action] (_MapItem &item) {
+		[=, &command] (_MapItem &item) {
 			return _tcsicmp(gst, item.gesture.c_str()) == 0;
 		});
 	if (it != m_map.end()) {
-		action = it->action;
+		command = it->command;
 	}
 
-	return action;
+	return command;
 }

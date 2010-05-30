@@ -1,7 +1,7 @@
 #ifndef XL_VIEW_GESTURE_MAP_H
 #define XL_VIEW_GESTURE_MAP_H
 /**
- * Maintains the mapping relationship of the gesture and the action
+ * Maintains the mapping relationship of the gesture and the command
  */
 #include <vector>
 
@@ -11,8 +11,8 @@
 class CGestureMap {
 	struct _MapItem {
 		xl::tstring gesture;
-		xl::tstring action;
-		_MapItem (const xl::tstring &gst, const xl::tstring &act) : gesture(gst), action(act) 
+		xl::tstring command;
+		_MapItem (const xl::tstring &gst, const xl::tstring &cmd) : gesture(gst), command(cmd) 
 		{}
 	};
 	typedef std::vector<_MapItem>                  _MapType;
