@@ -19,9 +19,9 @@ void CGestureMap::_LoadMap () {
 	m_map.push_back(_MapItem(_T("RDR"), _T("showSwitch")));
 	m_map.push_back(_MapItem(_T("U"), _T("showLarger")));
 	m_map.push_back(_MapItem(_T("D"), _T("showSmaller")));
-	m_map.push_back(_MapItem(_T("URL"), _T("showTop")));
+	m_map.push_back(_MapItem(_T("ULR"), _T("showTop")));
 	m_map.push_back(_MapItem(_T("DRL"), _T("showBottom")));
-	m_map.push_back(_MapItem(_T("LUD"), _T("showLeft")));
+	m_map.push_back(_MapItem(_T("LDU"), _T("showLeft")));
 	m_map.push_back(_MapItem(_T("RUD"), _T("showRight")));
 }
 

@@ -5,6 +5,7 @@
 
 #include "libxl/include/fs.h"
 #include "libxl/include/utilities.h"
+#include "libxl/include/Language.h"
 #include "libxl/include/ui/Gdi.h"
 #include "libxl/include/ui/ResMgr.h"
 
@@ -67,8 +68,9 @@ void CMainWindow::onSlider (xl::uint id, int _min, int _max, int _curr, bool tra
 
 
 xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, bool release) {
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
 	if (gesture == _T("canceled")) {
-		return _T("timeout");
+		return pLanguage->getString(_T("GestureTimeout"));
 	}
 
 	xl::tstring action = m_gestureMap.onGesture(gesture);
@@ -76,10 +78,11 @@ xl::tstring CMainWindow::onGesture (const xl::tstring &gesture, CPoint ptDown, b
 		if (release) {
 			m_pDispatch->execute(action, ptDown);
 		}
-		return action;
+		return pLanguage->getString(_T("Gesture") + action);
 	}
 
-	return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
+	// return xl::ui::CCtrlTarget::onGesture(gesture, ptDown, release);
+	return pLanguage->getString(_T("GestureUnknown"));
 }
 
 
@@ -103,12 +106,6 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	CImageView *pView = new CImageView(this);
 	m_view = xl::ui::CControlPtr(pView);
 	m_ctrlMain->insertChild(m_view);
-
-	// autobar
-	xl::ui::CControlPtr navbar(new CAutobar(0, 75, 25, 300, 25));
-	m_navbar = navbar;
-	navbar->setStyle(_T("margin:0; padding:0; border-top:0 #d0d0d0; py:bottom; width:fill; height:100; float:true; disable:true"));
-	m_ctrlMain->insertChild(navbar);
 
 	// toolbar
 	xl::ui::CControlPtr toolbar(new CAutobar(0, 75, 25, 300, 25));
@@ -134,6 +131,12 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	button->setStyle(_T("margin:8 16 8 0; width:32; height:32;"));
 	m_toolbar->insertChild(button);
 
+	// autobar
+	xl::ui::CControlPtr navbar(new CAutobar(0, 75, 25, 300, 25));
+	m_navbar = navbar;
+	navbar->setStyle(_T("margin:0; padding:0; border-top:0 #d0d0d0; py:bottom; width:fill; height:100; float:true; disable:true"));
+	m_ctrlMain->insertChild(navbar);
+
 	// thumbnail
 	xl::ui::CControlPtr thumbview(new CThumbnailView(this));
 	thumbview->setStyle(_T("margin:0; padding:0; width:fill; height:70; background-color:#000000"));
@@ -148,7 +151,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	// nav view bar
 	navbar.reset(new CAutobar(0, 75, 25, 300, 25));
-	navbar->setStyle(_T("margin:0 100 110 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
+	navbar->setStyle(_T("margin:0 210 110 0; padding:0; px:right; py:bottom; width:140; height:200; float:true; background-color:#000000"));
 	// navbar->setStyle(_T("margin:20 0 0 20; px:left; py:top;"));
 	m_ctrlMain->insertChild(navbar);
 
@@ -161,11 +164,11 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 
 	// nav button
 	CNavButton *pNavButton = new CNavButton(true);
-	pNavButton->setStyle(_T("width:100; margin:100 0"));
+	pNavButton->setStyle(_T("width:200; margin:100 0"));
 	m_ctrlMain->insertChild(xl::ui::CControlPtr(pNavButton));
 
 	pNavButton = new CNavButton(false);
-	pNavButton->setStyle(_T("width:100; margin:100 0"));
+	pNavButton->setStyle(_T("width:200; margin:100 0"));
 	m_ctrlMain->insertChild(xl::ui::CControlPtr(pNavButton));
 
 
@@ -213,7 +216,8 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 
 			xl::tstring title = MAIN_TITLE;
 			_stprintf_s(buf, 128, _T(" (%d/%d)"), _curr + 1, _max + 1);
-			title += _T(" - ") + m_cachedImages[_curr]->getFileName();
+			// title += _T(" - ") + m_cachedImages[_curr]->getFileName();
+			title += _T(" - ") + file_get_name(m_cachedImages[_curr]->getFileName());
 			title += buf;
 			SetWindowText(title);
 		}

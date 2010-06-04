@@ -552,6 +552,7 @@ void CImageView::showTop (CPoint ptCur) {
 	}
 
 	m_ptSrc.y = 0;
+	_NotifyDisplayChanged();
 	invalidate();
 }
 
@@ -568,6 +569,7 @@ void CImageView::showBottom (CPoint ptCur) {
 	_CheckPtSrc(ptSrc);
 	if (ptSrc != m_ptSrc) {
 		m_ptSrc = ptSrc;
+		_NotifyDisplayChanged();
 		invalidate();
 	}
 }
@@ -580,6 +582,7 @@ void CImageView::showLeft (CPoint ptCur) {
 	}
 
 	m_ptSrc.x = 0;
+	_NotifyDisplayChanged();
 	invalidate();
 }
 
@@ -596,6 +599,7 @@ void CImageView::showRight (CPoint ptCur) {
 	_CheckPtSrc(ptSrc);
 	if (ptSrc != m_ptSrc) {
 		m_ptSrc = ptSrc;
+		_NotifyDisplayChanged();
 		invalidate();
 	}
 }
