@@ -145,6 +145,8 @@
   <ItemGroup>
     <None Include="resources\next.cur" />
     <None Include="resources\prev.cur" />
+    <None Include="resources\setting.bmp" />
+    <None Include="resources\switch.bmp" />
     <None Include="resources\xlview.ico" />
     <None Include="resources\zin.bmp" />
     <None Include="resources\zout.bmp" />

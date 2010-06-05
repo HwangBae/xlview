@@ -157,6 +157,12 @@
     <None Include="resources\zout.bmp">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="resources\switch.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="resources\setting.bmp">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="xlview.rc">
