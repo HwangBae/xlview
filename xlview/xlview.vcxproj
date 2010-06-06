@@ -114,6 +114,7 @@
     <ClCompile Include="NavView.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="Settings.cpp" />
+    <ClCompile Include="SettingUI.cpp" />
     <ClCompile Include="Slider.cpp" />
     <ClCompile Include="ThumbnailView.cpp" />
     <ClCompile Include="ToolbarButton.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="Registry.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Settings.h" />
+    <ClInclude Include="SettingUI.h" />
     <ClInclude Include="Slider.h" />
     <ClInclude Include="ThumbnailView.h" />
     <ClInclude Include="ToolbarButton.h" />

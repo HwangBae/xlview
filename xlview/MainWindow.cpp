@@ -12,6 +12,7 @@
 #include "CommandId.h"
 #include "resource.h"
 #include "Settings.h"
+#include "SettingUI.h"
 #include "MainWindow.h"
 #include "ImageView.h"
 #include "Autobar.h"
@@ -49,7 +50,11 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 		}
 		break;
 	case ID_SETTING:
-		launchAssociation();
+		// launchAssociation();
+		{
+			CSettingDialog dlg;
+			dlg.DoModal(m_hWnd);
+		}
 		break;
 	default:
 		break;
