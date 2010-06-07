@@ -52,6 +52,8 @@ Section "xlview (required)"
 
 	; Put file there
 	File "..\..\Release\xlview.exe"
+	File "..\lang-0409.ini"
+	File "..\lang-0804.ini"
 
 	; Write the installation path into the registry
 	WriteRegStr HKLM SOFTWARE\$appName "Install_Dir" "$INSTDIR"
@@ -88,6 +90,7 @@ section "uninstall"
 	; Remove files and uninstaller
 	Delete $INSTDIR\xlview.exe
 	Delete $INSTDIR\uninstall.exe
+	Delete $INSTDIR\*.*
 
 	SetShellVarContext all
 	; Remove shortcuts, if any

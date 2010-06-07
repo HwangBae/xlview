@@ -52,6 +52,7 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 	case ID_SETTING:
 		// launchAssociation();
 		{
+			m_toolbar->setOpacity(0);
 			CSettingDialog dlg;
 			dlg.DoModal(m_hWnd);
 		}
@@ -197,6 +198,30 @@ LRESULT CMainWindow::OnSize (UINT /*msg*/, WPARAM wParam, LPARAM /*lParam*/, BOO
 		CRect rc;
 		GetClientRect(rc);
 		m_ctrlMain->layout(rc);
+	}
+	return 0;
+}
+
+LRESULT CMainWindow::OnKeyDown (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+	XL_PARAMETER_NOT_USED(lParam);
+	assert(m_pDispatch != NULL);
+	switch (wParam) {
+	case VK_LEFT:
+		m_pDispatch->execute(_T("showNext"));
+		break;
+	case VK_RIGHT:
+	case VK_SPACE:
+		m_pDispatch->execute(_T("showPrev"));
+		break;
+	case VK_UP:
+		m_pDispatch->execute(_T("showLarger"));
+		break;
+	case VK_DOWN:
+		m_pDispatch->execute(_T("showSmaller"));
+		break;
+	default:
+		bHandled = false;
+		break;
 	}
 	return 0;
 }

@@ -39,12 +39,14 @@ public:
 		MESSAGE_HANDLER (WM_CREATE, OnCreate)
 		MESSAGE_HANDLER (WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER (WM_SIZE, OnSize)
+		MESSAGE_HANDLER (WM_KEYDOWN, OnKeyDown)
 		CHAIN_MSG_MAP(CMainWindowT)
 	END_MSG_MAP ()
 
 	LRESULT OnCreate (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnDestroy (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
+	LRESULT OnKeyDown (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 
 	// CImageManager::IObserver
 	virtual void onEvent (CImageManager::IObserver::EVT evt, void *param);
