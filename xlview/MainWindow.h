@@ -9,6 +9,7 @@
 
 #define WM_XLVIEW_IMAGE_LOADED                         (WM_XL_END + 1)
 #define WM_XLVIEW_INVALIDE                             (WM_XL_END + 2)
+#define WM_XLVIEW_EXIT                                 (WM_XL_END + 3)
 
 // forward declaration
 class CDispatch;
@@ -40,6 +41,7 @@ public:
 		MESSAGE_HANDLER (WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER (WM_SIZE, OnSize)
 		MESSAGE_HANDLER (WM_KEYDOWN, OnKeyDown)
+		MESSAGE_HANDLER (WM_XLVIEW_EXIT, OnXLViewExit)
 		CHAIN_MSG_MAP(CMainWindowT)
 	END_MSG_MAP ()
 
@@ -47,6 +49,7 @@ public:
 	LRESULT OnDestroy (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnSize (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnKeyDown (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
+	LRESULT OnXLViewExit (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 
 	// CImageManager::IObserver
 	virtual void onEvent (CImageManager::IObserver::EVT evt, void *param);

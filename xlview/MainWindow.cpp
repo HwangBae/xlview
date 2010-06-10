@@ -53,7 +53,7 @@ void CMainWindow::onCommand (xl::uint id, xl::ui::CControlPtr /*ctrl*/) {
 		// launchAssociation();
 		{
 			m_toolbar->setOpacity(0);
-			CSettingDialog dlg;
+			CSettingDialog dlg(&m_gestureMap);
 			dlg.DoModal(m_hWnd);
 		}
 		break;
@@ -226,6 +226,11 @@ LRESULT CMainWindow::OnKeyDown (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandl
 	return 0;
 }
 
+LRESULT CMainWindow::OnXLViewExit (UINT, WPARAM, LPARAM, BOOL &) {
+	DestroyWindow();
+	return 0;
+}
+
 void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 	xl::ui::CCtrlSlider *pSlider = (xl::ui::CCtrlSlider *)m_slider.get();
 	assert(pSlider != NULL);
@@ -266,7 +271,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 
 // command functions
 void CMainWindow::cmdExit () {
-	PostMessage(WM_QUIT, 0, 0);
+	PostMessage(WM_XLVIEW_EXIT, 0, 0);
 }
 
 void CMainWindow::cmdPrev () {

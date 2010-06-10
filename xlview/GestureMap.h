@@ -21,9 +21,18 @@ class CGestureMap {
 	void _LoadMap ();
 
 public:
+	typedef _MapType::const_iterator               Iter;
+	static const int MAX_LENGTH = 16; // A gesture can't have more than ... characters
+
 	CGestureMap ();
 	void reload ();
 	xl::tstring onGesture (const xl::tstring &gesture);
+
+	Iter begin () const;
+	Iter end () const;
+	void setGesture (const xl::tstring &command, const xl::tstring &gesture);
+
+	xl::tstring translateGesture (const xl::tstring &gesture);
 };
 
 #endif
