@@ -26,6 +26,8 @@ public:
 
 	CGestureMap ();
 	void reload ();
+	void save ();
+	xl::tstring getIniPathName () const;
 	xl::tstring onGesture (const xl::tstring &gesture);
 
 	Iter begin () const;

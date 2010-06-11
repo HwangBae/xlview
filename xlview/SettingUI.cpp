@@ -1,5 +1,7 @@
 #include <assert.h>
 #include "libxl/include/Language.h"
+#include "libxl/include/ui/ResMgr.h"
+#include "libxl/include/ui/Gdi.h"
 #include "SettingUI.h"
 #include "GestureMap.h"
 
@@ -11,6 +13,153 @@ static const int TAB_PADDING_X = 4;
 static const int TAB_PADDING_Y = 8;
 static const int TAB_MARGIN_Y = 8;
 static const int TAB_MARGIN_X = 8;
+
+
+///////////////////////////////////////////////////////////////////////
+// draw gesture
+CDrawGestureDialog::CDrawGestureDialog (CGestureMap *pGestureMap) : m_canvas(this, pGestureMap) {
+}
+
+CDrawGestureDialog::~CDrawGestureDialog () {
+}
+
+LRESULT CDrawGestureDialog::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &bHandled) {
+	//WORD code = HIWORD(wParam);
+	WORD id = LOWORD(wParam);
+	//HWND hCtrl = (HWND)lParam;
+
+	switch (id) {
+	case IDOK:
+	case IDCLOSE:
+	case IDCANCEL:
+		EndDialog(0);
+		break;
+	default:
+		bHandled = false;
+		break;
+	}
+
+	return 0;
+}
+
+LRESULT CDrawGestureDialog::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
+	DWORD dwStyle = WS_CHILD | WS_VISIBLE;
+	HWND hWnd = m_canvas.Create(m_hWnd, 0, 0, dwStyle);
+	if (hWnd != NULL) {
+		m_canvas.SetWindowLong(GWL_STYLE, dwStyle);
+	}
+
+	CRect rc;
+	GetClientRect(&rc);
+	m_canvas.MoveWindow(rc.left, rc.top, rc.Width(), rc.Height());
+
+	// set language
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
+	xl::tchar title[128];
+	::GetWindowText(m_hWnd, title, 128);
+	xl::tstring lang = pLanguage->getString(title);
+	::SetWindowText(m_hWnd, lang.c_str());
+
+	return TRUE;
+}
+
+LRESULT CDrawGestureDialog::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
+	CRect rc;
+	GetClientRect(&rc);
+	m_canvas.MoveWindow(rc.left, rc.top, rc.Width(), rc.Height());
+	return 0;
+}
+
+
+CDrawGestureDialog::CCanvas::CCanvas (CDrawGestureDialog *pDialog, CGestureMap *pGestureMap)
+	: m_pDialog(pDialog)
+	, m_pGestureMap(pGestureMap)
+{
+	assert(m_pDialog != NULL);
+}
+
+CDrawGestureDialog::CCanvas::~CCanvas () {
+}
+
+void CDrawGestureDialog::CCanvas::onCommand (xl::uint, xl::ui::CControlPtr) {
+}
+
+void CDrawGestureDialog::CCanvas::onSlider (xl::uint, int, int, int, bool, xl::ui::CControlPtr) {
+}
+
+xl::tstring CDrawGestureDialog::CCanvas::onGesture (const xl::tstring &gesture, CPoint, bool release) {
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
+	if (gesture == _T("canceled")) {
+		return pLanguage->getString(_T("GestureTimeout"));
+	}
+
+	if (release) {
+		m_pDialog->m_gesture = gesture;
+		m_pDialog->EndDialog(1);
+	}
+
+	xl::tstring action = m_pGestureMap->onGesture(gesture);
+	if (_tcsicmp(action.c_str(), _T("Unknown")) != 0) {
+		return pLanguage->getString(_T("Gesture") + action);
+	} else {
+		return gesture;
+	}
+}
+
+LRESULT CDrawGestureDialog::CCanvas::OnCreate (UINT, WPARAM, LPARAM, BOOL &) {
+	if (m_ctrlMain == NULL) {
+		m_ctrlMain.reset(new xl::ui::CCtrlMain(this, this));
+	}
+
+	// gesture
+	m_ctrlMain->enableGesture(true);
+	m_ctrlMain->setStyle(_T("background-color:#00ffff"));
+	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
+	gestureCtrl->setStyle(_T("color:#ff0000; gesture-timeout:50000"));
+
+	return TRUE;
+}
+
+LRESULT CDrawGestureDialog::CCanvas::OnDestroy (UINT, WPARAM, LPARAM, BOOL &) {
+	return 0;
+}
+
+LRESULT CDrawGestureDialog::CCanvas::OnSize (UINT, WPARAM wParam, LPARAM, BOOL &) {
+	if (m_ctrlMain && wParam != SIZE_MINIMIZED) {
+		CRect rc;
+		GetClientRect(&rc);
+		rc.top += BARHEIGHT;
+		m_ctrlMain->layout(rc);
+	}
+	return 0;
+}
+
+LRESULT CDrawGestureDialog::CCanvas::OnPaint (UINT, WPARAM, LPARAM, BOOL &bHandled) {
+	bHandled = false;
+
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
+	xl::tstring text = pLanguage->getString(_T("DrawGestureDetail"));
+
+	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
+	HFONT font = pResMgr->getSysFont(16);
+
+	CRect rc;
+	GetClientRect(&rc);
+	rc.bottom = BARHEIGHT;
+	HDC hdc = GetDC();
+	xl::ui::CDCHandle dc(hdc);
+
+	HFONT oldFont = dc.SelectFont(font);
+	int oldMode = dc.SetBkMode(TRANSPARENT);
+
+	dc.DrawText(text.c_str(), text.length(), &rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+
+	dc.SetBkMode(oldMode);
+	dc.SelectFont(oldFont);
+
+	ReleaseDC(hdc);
+	return 0;
+}
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -209,10 +358,10 @@ LRESULT CGestureDialog::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 	return TRUE;
 }
 
-LRESULT CGestureDialog::OnCommand (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+LRESULT CGestureDialog::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &bHandled) {
 	WORD code = HIWORD(wParam);
 	WORD id = LOWORD(wParam);
-	HWND hCtrl = (HWND)lParam;
+	//HWND hCtrl = (HWND)lParam;
 
 	switch (id) {
 	case IDC_EDIT_GESTURE:
@@ -222,6 +371,22 @@ LRESULT CGestureDialog::OnCommand (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHa
 		break;
 	case IDC_BUTTON_EDIT_GESTURE_OK:
 		_Apply ();
+		break;
+	case IDC_BUTTON_DRAW_GESTURE:
+		{
+			CDrawGestureDialog dlg(m_gestureMap);
+			if (dlg.DoModal(m_hWnd) == 1) {
+				xl::tstring gesture = dlg.m_gesture;
+				assert(gesture.length() > 0);
+				if (gesture.length() > CGestureMap::MAX_LENGTH) {
+					gesture = gesture.substr(0, CGestureMap::MAX_LENGTH);
+				}
+
+				HWND hEdit = GetDlgItem(IDC_EDIT_GESTURE);
+				assert(hEdit != NULL);
+				::SetWindowText(hEdit, gesture.c_str());
+			}
+		}
 		break;
 	default:
 		bHandled = false;
@@ -346,10 +511,10 @@ LRESULT CGestureDialog::OnListGestureNotify (int, LPNMHDR lpNMHDR, BOOL &bHandle
 // The whole setting dialog
 
 void CSettingDialog::_CreateTabs () {
-	DWORD dwDlgBase = ::GetDialogBaseUnits(); 
+/*	DWORD dwDlgBase = ::GetDialogBaseUnits(); 
 	int cxMargin = LOWORD(dwDlgBase) / 4; 
 	int cyMargin = HIWORD(dwDlgBase) / 8; 
-
+*/
 	HWND hWnd = GetDlgItem(IDC_SETTING_TAB);
 	if (hWnd == NULL) {
 		return;
@@ -374,23 +539,20 @@ void CSettingDialog::_CreateTabs () {
 }
 
 void CSettingDialog::_SetLanguage () {
+	TCHAR text[MAX_PATH];
 	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
 	::SetWindowText(m_hWnd, pLanguage->getString(_T("Settings")).c_str());
 
 	HWND hWnd = GetDlgItem(IDOK);
 	if (hWnd != NULL) {
-		::SetWindowText(hWnd, pLanguage->getString(_T("OK")).c_str());
+		::GetWindowText(hWnd, text, MAX_PATH);
+		::SetWindowText(hWnd, pLanguage->getString(text).c_str());
 	}
 
-	hWnd = GetDlgItem(IDCANCEL);
-	if (hWnd != NULL) {
-		::SetWindowText(hWnd, pLanguage->getString(_T("Cancel")).c_str());
-	}
 
 	hWnd = GetDlgItem(IDC_SETTING_TAB);
 	int tabCount = TabCtrl_GetItemCount(hWnd);
 	assert(tabCount == COUNT_OF(tabNames));
-	TCHAR text[MAX_PATH];
 	for (int i = 0; i < tabCount; ++ i) {
 		TCITEM tie;
 		memset(&tie, 0, sizeof(tie));

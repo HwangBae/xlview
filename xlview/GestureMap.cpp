@@ -25,7 +25,7 @@ void CGestureMap::_LoadMap () {
 	m_map.push_back(_MapItem(_T("LDU"), _T("showLeft")));
 	m_map.push_back(_MapItem(_T("RUD"), _T("showRight")));
 
-	xl::CIni ini(_T("gesture.ini"));
+	xl::CIni ini(getIniPathName());
 	for (auto it = ini.begin(_T("")); it != ini.end(_T("")); ++ it) {
 		xl::tstring command = it->first;
 		xl::tstring gesture = it->second;
@@ -41,6 +41,14 @@ CGestureMap::CGestureMap () {
 void CGestureMap::reload () {
 	m_map.clear();
 	_LoadMap ();
+}
+
+void CGestureMap::save () {
+	// TODO:
+}
+
+xl::tstring CGestureMap::getIniPathName () const {
+	return _T("gesture.ini");
 }
 
 CGestureMap::Iter CGestureMap::begin () const {
