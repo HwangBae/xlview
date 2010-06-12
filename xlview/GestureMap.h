@@ -35,6 +35,7 @@ public:
 	void setGesture (const xl::tstring &command, const xl::tstring &gesture);
 
 	xl::tstring translateGesture (const xl::tstring &gesture);
+	xl::tstring translateCommand (const xl::tstring &command);
 };
 
 #endif

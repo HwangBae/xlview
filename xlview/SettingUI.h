@@ -41,6 +41,8 @@ class CDrawGestureDialog : public CDialogImpl<CDrawGestureDialog>
 	};
 
 	CCanvas            m_canvas;
+	CGestureMap       *m_gestureMap;
+	xl::tstring        m_command;
 public:
 	xl::tstring        m_gesture;
 	enum {
@@ -53,7 +55,7 @@ public:
 		MESSAGE_HANDLER (WM_SIZE, OnSize)
 	END_MSG_MAP ()
 
-	CDrawGestureDialog (CGestureMap *);
+	CDrawGestureDialog (CGestureMap *, const xl::tstring &command);
 	virtual ~CDrawGestureDialog ();
 
 	LRESULT OnCommand (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
@@ -71,6 +73,7 @@ class CGestureDialog : public CDialogImpl<CGestureDialog>
 	void _SetLanguage ();
 	void _OnListItemChanged ();
 	void _OnEditChanged ();
+	void _Draw ();
 	void _Apply ();
 
 

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <algorithm>
+#include <Userenv.h>
 #include "libxl/include/Language.h"
 #include "libxl/include/ini.h"
 #include "GestureMap.h"
@@ -44,11 +45,24 @@ void CGestureMap::reload () {
 }
 
 void CGestureMap::save () {
-	// TODO:
+	xl::CIni ini(getIniPathName());
+	for (Iter it = begin(); it != end(); ++ it) {
+		ini.set(_T(""), it->command, it->gesture);
+	}
+	ini.write();
 }
 
 xl::tstring CGestureMap::getIniPathName () const {
-	return _T("gesture.ini");
+	xl::tchar *profileDir = _tgetenv(_T("USERPROFILE"));
+	xl::tstring pathName = profileDir;
+	xl::tchar lastChar = pathName.at(pathName.length() - 1);
+	if (lastChar != _T('\\') && lastChar != _T('/')) {
+		pathName += _T("\\xlview-gesture.ini");
+	} else {
+		pathName += _T("xlview-gesture.ini");
+	}
+
+	return pathName;
 }
 
 CGestureMap::Iter CGestureMap::begin () const {
@@ -85,6 +99,11 @@ xl::tstring CGestureMap::translateGesture (const xl::tstring &gesture) {
 	}
 
 	return text;
+}
+
+xl::tstring CGestureMap::translateCommand (const xl::tstring &command) {
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
+	return pLanguage->getString(_T("Gesture") + command);
 }
 
 

@@ -17,7 +17,11 @@ static const int TAB_MARGIN_X = 8;
 
 ///////////////////////////////////////////////////////////////////////
 // draw gesture
-CDrawGestureDialog::CDrawGestureDialog (CGestureMap *pGestureMap) : m_canvas(this, pGestureMap) {
+CDrawGestureDialog::CDrawGestureDialog (CGestureMap *pGestureMap, const xl::tstring &command)
+	: m_canvas(this, pGestureMap)
+	, m_gestureMap(pGestureMap)
+	, m_command(command)
+{
 }
 
 CDrawGestureDialog::~CDrawGestureDialog () {
@@ -58,6 +62,8 @@ LRESULT CDrawGestureDialog::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 	xl::tchar title[128];
 	::GetWindowText(m_hWnd, title, 128);
 	xl::tstring lang = pLanguage->getString(title);
+	lang += _T(" : ");
+	lang += m_gestureMap->translateCommand(m_command);
 	::SetWindowText(m_hWnd, lang.c_str());
 
 	return TRUE;
@@ -192,11 +198,10 @@ void CGestureDialog::_InitGestureList () {
 	}
 
 	// 3. insert gestures
-	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
 	int index = 0;
 	for (auto it = m_gestureMap->begin(); it != m_gestureMap->end(); ++ it) {
 		xl::tstring gesture = m_gestureMap->translateGesture(it->gesture);
-		xl::tstring command = pLanguage->getString(_T("Gesture") + it->command);
+		xl::tstring command = m_gestureMap->translateCommand(it->command);
 		LVITEM lvi;
 		memset(&lvi, 0, sizeof(lvi));
 		lvi.mask = LVIF_TEXT;
@@ -284,8 +289,27 @@ void CGestureDialog::_OnEditChanged () {
 		_tcsicmp(gesture, p) != 0 && _tcslen(gesture) > 0);
 }
 
+void CGestureDialog::_Draw () {
+	HWND hWnd = GetDlgItem(IDC_LIST_GESTURE);
+	int index = ListView_GetNextItem(hWnd, -1, LVNI_SELECTED);
+	assert(index != -1);
+	CDrawGestureDialog dlg(m_gestureMap, (m_gestureMap->begin() + index)->command);
+	if (dlg.DoModal(m_hWnd) == 1) {
+		xl::tstring gesture = dlg.m_gesture;
+		assert(gesture.length() > 0);
+		if (gesture.length() > CGestureMap::MAX_LENGTH) {
+			gesture = gesture.substr(0, CGestureMap::MAX_LENGTH);
+		}
+
+		HWND hEdit = GetDlgItem(IDC_EDIT_GESTURE);
+		assert(hEdit != NULL);
+		::SetWindowText(hEdit, gesture.c_str());
+	}
+}
+
 void CGestureDialog::_Apply () {
 	assert(m_currIndex != -1);
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
 	xl::tchar gesture[MAX_PATH];
 	HWND hEdit = GetDlgItem(IDC_EDIT_GESTURE);
 	::GetWindowText(hEdit, gesture, MAX_PATH);
@@ -296,21 +320,43 @@ void CGestureDialog::_Apply () {
 	for (int i = 0; i < length; ++ i) {
 		xl::tchar c = gesture[i];
 		if (c != _T('L') && c != _T('R') && c != _T('U') && c != _T('D')) {
-			xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
 			xl::tstring prompt = pLanguage->getString(_T("OnlyLRUDAllowed"));
 			MessageBox(prompt.c_str(), _T(""), MB_ICONERROR);
 			return;
 		}
 	}
 
-	// Set the new gesture
+	// test for conflict
+	auto itConflict = m_gestureMap->end();
+	for (auto it = m_gestureMap->begin(); it != m_gestureMap->end(); ++ it) {
+		if (_tcscmp(it->gesture, gesture) == 0) {
+			if (it != m_gestureMap->begin() + m_currIndex) {
+				itConflict = it;
+				xl::tstring pattern = pLanguage->getString(_T("GestrueConflictWith"));
+				if (pattern.find(_T("%s")) == pattern.npos) {
+					pattern += _T("(%s)");
+				}
+				xl::tchar buf[MAX_PATH];
+				_sntprintf_s(buf, MAX_PATH, pattern.c_str(), 
+					m_gestureMap->translateCommand(it->command).c_str());
+				if (MessageBox(buf, pLanguage->getString(_T("GestureConflict")).c_str(), MB_YESNO) != IDYES) {
+					return;
+				}
+			}
+		}
+	}
+
+	// Set the new gesture, and clear the conflicted one (if exists)
 	auto it = m_gestureMap->begin();
 	it += m_currIndex;
 	xl::tstring command = it->command;
 	m_gestureMap->setGesture(command, gesture);
 
-	// TODO: save it
-	// .......
+	if (itConflict != m_gestureMap->end()) {
+		m_gestureMap->setGesture(itConflict->command, _T(""));
+	}
+
+	m_gestureMap->save();
 
 	// update the list control
 	xl::tstring description = m_gestureMap->translateGesture(gesture);
@@ -326,6 +372,12 @@ void CGestureDialog::_Apply () {
 		lvi.pszText = text;
 		_tcsncpy_s(text, description.c_str(), MAX_PATH - 1);
 		ListView_SetItem(hWnd, &lvi);
+
+		if (itConflict != m_gestureMap->end()) {
+			lvi.iItem = itConflict - m_gestureMap->begin();
+			_tcsncpy_s(text, _T(""), MAX_PATH - 1);
+			ListView_SetItem(hWnd, &lvi);
+		}
 	}
 
 	// disable the apply button
@@ -373,20 +425,7 @@ LRESULT CGestureDialog::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &bHandled) 
 		_Apply ();
 		break;
 	case IDC_BUTTON_DRAW_GESTURE:
-		{
-			CDrawGestureDialog dlg(m_gestureMap);
-			if (dlg.DoModal(m_hWnd) == 1) {
-				xl::tstring gesture = dlg.m_gesture;
-				assert(gesture.length() > 0);
-				if (gesture.length() > CGestureMap::MAX_LENGTH) {
-					gesture = gesture.substr(0, CGestureMap::MAX_LENGTH);
-				}
-
-				HWND hEdit = GetDlgItem(IDC_EDIT_GESTURE);
-				assert(hEdit != NULL);
-				::SetWindowText(hEdit, gesture.c_str());
-			}
-		}
+		_Draw();
 		break;
 	default:
 		bHandled = false;
