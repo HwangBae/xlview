@@ -12,7 +12,9 @@
 #define IDD_SETTING                     120
 #define IDD_SETTING_GESTURE             122
 #define IDD_SETTING_DRAW_GESTURE        123
-#define IDD_DIALOG1                     124
+#define IDD_SETTING_FILEASSOC_XP        124
+#define IDD_SETTING_FILEASSOC_VISTA     125
+#define IDD_DIALOG1                     126
 #define IDC_SETTING_TAB                 1001
 #define IDC_LIST_GESTURE                1002
 #define IDC_BUTTON_EDIT_GESTURE         1003
@@ -20,15 +22,18 @@
 #define IDC_EDIT_GESTURE                1005
 #define IDC_BUTTON_EDIT_GESTURE_OK      1006
 #define IDC_STATIC_GESTURE              1007
+#define IDC_BUTTON_FILEASSOC            1008
+#define IDC_STATIC_REINSTALL            1009
+#define IDC_BUTTON1                     1010
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NO_MFC                     1
-#define _APS_NEXT_RESOURCE_VALUE        125
+#define _APS_NEXT_RESOURCE_VALUE        127
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1008
+#define _APS_NEXT_CONTROL_VALUE         1011
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
