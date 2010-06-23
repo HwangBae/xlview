@@ -5,6 +5,102 @@
 #include "Settings.h"
 #include "SettingFileAssoc.h"
 
+///////////////////////////////////////////////////////////////////////////////
+// fOR wINDOWS xP
+
+CFileAssociationDialogXp::CFileAssociationDialogXp () {
+}
+
+CFileAssociationDialogXp::~CFileAssociationDialogXp () {
+}
+
+LRESULT CFileAssociationDialogXp::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
+	HWND hStatic = GetDlgItem(IDC_STATIC_REINSTALL);
+	assert(hStatic != NULL);
+	DWORD dwStyle = ::GetWindowLong(hStatic, GWL_STYLE);
+	dwStyle |= SS_CENTER;
+	::SetWindowLong(hStatic, GWL_STYLE, dwStyle);
+	HWND hButton = GetDlgItem(IDC_BUTTON_FILEASSOC);
+	assert(hButton);
+
+	if (!isAppRegistered()) {
+		::ShowWindow(hStatic, SW_SHOW);
+		::ShowWindow(hButton, SW_HIDE);
+	} else {
+		::ShowWindow(hStatic, SW_HIDE);
+		::ShowWindow(hButton, SW_SHOW);
+	}
+
+	xl::tchar text[MAX_PATH];
+	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
+	HWND hWnds[] = {hStatic, hButton};
+	for (int i = 0; i < COUNT_OF(hWnds); ++ i) {
+		HWND hWnd = hWnds[i];
+		::GetWindowText(hWnd, text, MAX_PATH);
+		xl::tstring lang = pLanguage->getString(text);
+		::SetWindowText(hWnd, lang.c_str());
+	}
+
+	return TRUE;
+}
+
+LRESULT CFileAssociationDialogXp::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
+	HWND hStatic = GetDlgItem(IDC_STATIC_REINSTALL);
+	assert(hStatic != NULL);
+	HWND hButton = GetDlgItem(IDC_BUTTON_FILEASSOC);
+	assert(hButton);
+
+	CRect rc;
+	GetClientRect(&rc);
+	rc.DeflateRect(8, 20);
+
+	CRect rcStatic;
+	::GetClientRect(hStatic, &rcStatic);
+
+	CRect rcButton;
+	::GetClientRect(hButton, &rcButton);
+
+	if (!isAppRegistered()) {
+		::MoveWindow(hStatic, rc.left, rc.top, rc.Width(), rc.Height(), TRUE);
+	} else {
+		int x = (rc.Width() - rcButton.Width()) / 2;
+		int y = (rc.Height() - rcButton.Height()) / 2;
+		::MoveWindow(hButton, x, y, rcButton.Width(), rcButton.Height(), TRUE);
+	}
+
+	return 0;
+}
+
+LRESULT CFileAssociationDialogXp::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &bHandled) {
+	WORD code = HIWORD(wParam);
+	code = code;
+	WORD id = LOWORD(wParam);
+
+	switch (id) {
+	case IDC_BUTTON_FILEASSOC:
+		break;
+	default:
+		bHandled = false;
+		break;
+	}
+
+	return 0;
+}
+
+
+LRESULT CFileAssociationDialogXp::OnEraseBkGnd (UINT, WPARAM, LPARAM, BOOL &) {
+	return TRUE;
+}
+
+LRESULT CFileAssociationDialogXp::OnCtlColorStatic (UINT, WPARAM, LPARAM, BOOL &) {
+	return (LRESULT)::GetStockObject(NULL_BRUSH);
+}
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+// fOR vISTA aND wINDOWS 7
 void CFileAssociationDialogVista::_LaunchSysFileAssociationDialog () {
 	if (!launchAssociationOnVista()) {
 		HWND hStatic = GetDlgItem(IDC_STATIC_REINSTALL);
@@ -81,6 +177,7 @@ LRESULT CFileAssociationDialogVista::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 
 LRESULT CFileAssociationDialogVista::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &bHandled) {
 	WORD code = HIWORD(wParam);
+	code = code;
 	WORD id = LOWORD(wParam);
 
 	switch (id) {
