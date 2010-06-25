@@ -1,5 +1,6 @@
 #ifndef XL_VIEW_SETTING_UI_H
 #define XL_VIEW_SETTING_UI_H
+// #include <memory>
 #include <atlbase.h>
 #include <atltypes.h>
 #include <atlapp.h>
@@ -17,6 +18,8 @@ class CGestureMap;
 class CSettingDialog : public CDialogImpl<CSettingDialog>
 {
 	CGestureDialog                                 m_dlgGesture;
+	// std::auto_ptr<CDialogImpl>                     m_pDlgFileAssoc;
+	CFileAssociationDialogXp                       m_dlgFileAssocXp;
 	CFileAssociationDialogVista                    m_dlgFileAssocVista;
 
 	void _CreateTabs ();

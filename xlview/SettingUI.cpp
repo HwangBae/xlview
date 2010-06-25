@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <libxl/include/utilities.h>
 #include "libxl/include/Language.h"
 #include "libxl/include/ui/ResMgr.h"
 #include "libxl/include/ui/Gdi.h"
@@ -24,6 +25,7 @@ void CSettingDialog::_CreateTabs () {
 	if (hWnd == NULL) {
 		return;
 	}
+	HWND hTab = hWnd;
 
 	TCHAR text[MAX_PATH];
 	TCITEM tie;
@@ -32,17 +34,24 @@ void CSettingDialog::_CreateTabs () {
 	tie.iImage = -1;
 	tie.pszText = text;
 	for (size_t i = 0; i < COUNT_OF(tabNames); ++ i) {
-		TabCtrl_InsertItem(hWnd, i, &tie);
+		TabCtrl_InsertItem(hTab, i, &tie);
 	}
 	CRect rc;
-	::GetWindowRect(hWnd, &rc);
-	TabCtrl_AdjustRect(hWnd, FALSE, &rc);
-	ScreenToClient(&rc);
+	::GetWindowRect(hTab, &rc);
+	TabCtrl_AdjustRect(hTab, FALSE, &rc);
+	::ScreenToClient(m_hWnd, &rc.TopLeft());
+	::ScreenToClient(m_hWnd, &rc.BottomRight());
 
 	hWnd = m_dlgGesture.Create(m_hWnd, 0);
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
 	tabWindow[0] = hWnd;
-	hWnd = m_dlgFileAssocVista.Create(m_hWnd);
+	if (xl::os_is_vista_or_later()) {
+		hWnd = m_dlgFileAssocVista.Create(m_hWnd);
+	} else {
+		assert(xl::os_is_xp());
+		m_dlgFileAssocXp.setTabWindow(hTab);
+		hWnd = m_dlgFileAssocXp.Create(m_hWnd);
+	}
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
 	tabWindow[1] = hWnd;
 }

@@ -526,7 +526,15 @@ LRESULT CGestureDialog::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	return 0;
 }
 
-LRESULT CGestureDialog::OnCtlColorStatic (UINT, WPARAM, LPARAM, BOOL &) {
+LRESULT CGestureDialog::OnCtlColorStatic (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+	HWND hWnd = (HWND)lParam;
+	if (hWnd != GetDlgItem(IDC_STATIC_GESTURE)) {
+		bHandled = false;
+		return 0;
+	}
+
+	HDC hdc = (HDC)wParam;
+	::SetBkMode(hdc, TRANSPARENT);
 	return (LRESULT)::GetStockObject(NULL_BRUSH);
 }
 

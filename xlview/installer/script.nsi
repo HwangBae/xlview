@@ -66,6 +66,7 @@ Section "xlview (required)"
 	; write the uninstall program
 	WriteUninstaller "uninstall.exe"
 
+
 SectionEnd
 
 ; Optional section (can be disabled by the user)
@@ -118,6 +119,8 @@ FunctionEnd
 Function un.onInit
 	StrCpy $progId 'xlview.image.1'
 	StrCpy $appName 'xlview'
+
+	Call un.detectWindowsVersion
 FunctionEnd
 
 
@@ -154,6 +157,23 @@ Function writeApplicationKeys
 	; registered application 
 	WriteRegStr HKLM "Software\RegisteredApplications" "$progId" "Software\$appName\Capabilities"
 
+	; write for different windows version
+	StrCmp $winMajorVersion '5' write_4_xp
+	StrCmp $winMajorVersion '6' write_4_vista
+	Goto write_done
+
+	write_4_xp:
+	WriteRegStr HKCU "Software\Classes\.jpg" "" "$progId"
+	WriteRegStr HKCU "Software\Classes\.jpeg" "" "$progId"
+	WriteRegStr HKCU "Software\Classes\.jfif" "" "$progId"
+	WriteRegStr HKCU "Software\Classes\.png" "" "$progId"
+	Goto write_done
+
+	write_4_vista:
+	Goto write_done
+
+	write_done:
+
 FunctionEnd
 
 Function un.deleteApplicationKeys
@@ -169,6 +189,23 @@ Function un.deleteApplicationKeys
 
 	; delete the shell muicache
 	DeleteRegValue HKCU "Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" "$INSTDIR\xlview.exe"
+
+	; for different windows version, restore the default settings
+	StrCmp $winMajorVersion '5' write_4_xp
+	StrCmp $winMajorVersion '6' write_4_vista
+	Goto write_done
+
+	write_4_xp:
+	WriteRegStr HKCU "Software\Classes\.jpg" "" "jpegfile"
+	WriteRegStr HKCU "Software\Classes\.jpeg" "" "jpegfile"
+	WriteRegStr HKCU "Software\Classes\.jfif" "" "jpegfile"
+	WriteRegStr HKCU "Software\Classes\.png" "" "pngfile"
+	Goto write_done
+
+	write_4_vista:
+	Goto write_done
+
+	write_done:
 
 FunctionEnd
 
@@ -191,6 +228,22 @@ FunctionEnd
 ; The major version number is stored in winMajorVersion
 ; from: http://nsis.sourceforge.net/Windows_Version_Detection
 Function detectWindowsVersion
+	Push $R0
+	Push $R1
+ 
+	ClearErrors
+	StrCpy $winMajorVersion '0'
+ 
+	ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\Windows NT\CurrentVersion" CurrentVersion
+	IfErrors 0 version_gotten
+version_gotten:
+	StrCpy $winMajorVersion $R0 1
+ 
+	Pop $R1
+	Exch $R0
+FunctionEnd
+
+Function un.detectWindowsVersion
 	Push $R0
 	Push $R1
  
