@@ -19,6 +19,8 @@ class CFileAssociationDialogXp : public CDialogImpl<CFileAssociationDialogXp>
 	std::vector<HWND>  m_checkBoxes;
 
 	void _Check4Association ();
+	void _OnCheckboxChange ();
+	void _OnApply ();
 public:
 	enum {
 		IDD = IDD_SETTING_FILEASSOC_XP,

@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include <algorithm>
+#include <tuple>
 
 #include <Windows.h>
 #include <WindowsX.h>
@@ -14,21 +15,28 @@
 
 #pragma comment (lib, "UxTheme.lib")
 
+static const int TAB_PADDING_X = 4;
+static const int TAB_PADDING_Y = 8;
+static const int TAB_MARGIN_Y = 8;
+static const int TAB_MARGIN_X = 8;
+
 ///////////////////////////////////////////////////////////////////////////////
 // fOR wINDOWS xP
-static std::pair<UINT, const xl::tchar *> s_extTable[] = {
-	std::make_pair(IDC_CHECKBOX_JPG, _T("jpg;jpeg;jfif")),
-	std::make_pair(IDC_CHECKBOX_PNG, _T("png")),
+
+// tuple <ID, "ext1;ext2;ext3...", "default progid">
+static std::tuple<UINT, const xl::tchar *, const xl::tchar *> s_extTable[] = {
+	std::make_tuple(IDC_CHECKBOX_JPG, _T("jpg;jpeg;jfif"), _T("jpegfile")),
+	std::make_tuple(IDC_CHECKBOX_PNG, _T("png"), _T("pngfile")),
 };
 
 void CFileAssociationDialogXp::_Check4Association () {
 	for (size_t i = 0; i < COUNT_OF(s_extTable); ++ i) {
-		HWND hWnd = GetDlgItem(s_extTable[i].first);
+		HWND hWnd = GetDlgItem(std::get<0>(s_extTable[i]));
 		if (hWnd == NULL) {
 			continue;
 		}
 
-		xl::ExplodeT<xl::tchar>::ValueT exts = xl::explode(_T(";"), s_extTable[i].second);
+		xl::ExplodeT<xl::tchar>::ValueT exts = xl::explode(_T(";"), std::get<1>(s_extTable[i]));
 		bool isDefault = true;
 		for (auto it = exts.begin(); it != exts.end(); ++ it) {
 			if (!isDefault4Xp(*it)) {
@@ -39,6 +47,58 @@ void CFileAssociationDialogXp::_Check4Association () {
 		Button_SetCheck(hWnd, isDefault ? BST_CHECKED : BST_UNCHECKED);
 	}
 }
+
+void CFileAssociationDialogXp::_OnCheckboxChange () {
+	bool changed = false;
+	for (size_t i = 0; i < COUNT_OF(s_extTable); ++ i) {
+		HWND hWnd = GetDlgItem(std::get<0>(s_extTable[i]));
+		if (hWnd == NULL) {
+			continue;
+		}
+
+		xl::ExplodeT<xl::tchar>::ValueT exts = xl::explode(_T(";"), std::get<1>(s_extTable[i]));
+		bool isDefault = true;
+		for (auto it = exts.begin(); it != exts.end(); ++ it) {
+			if (!isDefault4Xp(*it)) {
+				isDefault = false;
+				break;
+			}
+		}
+		bool checked = Button_GetCheck(hWnd) == BST_CHECKED;
+		if (checked != isDefault) {
+			changed = true;
+			break;
+		}
+	}
+
+	HWND hWnd = GetDlgItem(IDC_BUTTON_APPLY);
+	::EnableWindow(hWnd, changed);
+}
+
+void CFileAssociationDialogXp::_OnApply () {
+	for (size_t i = 0; i < COUNT_OF(s_extTable); ++ i) {
+		HWND hWnd = GetDlgItem(std::get<0>(s_extTable[i]));
+		if (hWnd == NULL) {
+			continue;
+		}
+
+		bool checked = Button_GetCheck(hWnd) == BST_CHECKED;
+		xl::ExplodeT<xl::tchar>::ValueT exts = xl::explode(_T(";"), std::get<1>(s_extTable[i]));
+		for (auto it = exts.begin(); it != exts.end(); ++ it) {
+			if (isDefault4Xp(*it) != checked) {
+				if (checked) {
+					setDefault4Xp(*it);
+				} else {
+					restoreDefault4Xp(*it, std::get<2>(s_extTable[i]));
+				}
+			}
+		}
+	}
+
+	HWND hWnd = GetDlgItem(IDC_BUTTON_APPLY);
+	::EnableWindow(hWnd, false);
+}
+
 
 CFileAssociationDialogXp::CFileAssociationDialogXp ()
 	: m_hWndTab(NULL)
@@ -103,7 +163,7 @@ LRESULT CFileAssociationDialogXp::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 
 	CRect rc;
 	GetClientRect(&rc);
-	rc.DeflateRect(8, 20);
+	rc.DeflateRect(TAB_PADDING_X, TAB_PADDING_Y);
 
 	CRect rcStatic;
 	::GetClientRect(hStatic, &rcStatic);
@@ -118,13 +178,15 @@ LRESULT CFileAssociationDialogXp::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 		int y = rc.Height() - rcButton.Height();
 		::MoveWindow(hButton, x, y, rcButton.Width(), rcButton.Height(), TRUE);
 
-		y = 0;
-		std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [&rc, &y](HWND hWnd) {
+		x = TAB_MARGIN_X;
+		y = TAB_MARGIN_Y;
+		int width = rc.Width() - TAB_MARGIN_X - TAB_PADDING_X * 2;
+		std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [=, &rc, &y](HWND hWnd) {
 			CRect rect;
 			::GetWindowRect(hWnd, &rect);
-			rect.MoveToXY(rc.left, rc.top + y);
-			y += rect.Height() + 8;
-			::MoveWindow(hWnd, rect.left, rect.top, rc.Width(), rect.Height(), TRUE);
+			rect.MoveToXY(rc.left + x, rc.top + y);
+			y += rect.Height() + TAB_MARGIN_Y;
+			::MoveWindow(hWnd, rect.left, rect.top, width, rect.Height(), TRUE);
 		});
 	}
 
@@ -138,6 +200,11 @@ LRESULT CFileAssociationDialogXp::OnCommand (UINT, WPARAM wParam, LPARAM, BOOL &
 
 	switch (id) {
 	case IDC_BUTTON_APPLY:
+		_OnApply();
+		break;
+	case IDC_CHECKBOX_JPG:
+	case IDC_CHECKBOX_PNG:
+		_OnCheckboxChange();
 		break;
 	default:
 		bHandled = false;
@@ -251,7 +318,7 @@ LRESULT CFileAssociationDialogVista::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 
 	CRect rc;
 	GetClientRect(&rc);
-	rc.DeflateRect(8, 20);
+	rc.DeflateRect(TAB_PADDING_X, TAB_PADDING_Y);
 
 	CRect rcStatic;
 	::GetClientRect(hStatic, &rcStatic);

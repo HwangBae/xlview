@@ -123,9 +123,6 @@ bool registerApplication () {
 	return true;
 }
 
-// the default application is, on XP
-// HKLM\\Software\\Classes\\.ext
-static const xl::tchar *regClasses = _T("HKLM\\Software\\Classes\\.");
 bool isDefault4Xp (const xl::tstring &ext) {
 	assert(xl::os_is_xp());
 	assert(ext.length() > 0 && ext.at(0) != _T('.'));
@@ -133,7 +130,8 @@ bool isDefault4Xp (const xl::tstring &ext) {
 		return false;
 	}
 
-	xl::tstring keyName = regClasses + ext;
+	// We check it should use HKCR
+	xl::tstring keyName = _T("HKCR\\.") + ext;
 	xl::tstring valueName = _T("");
 	xl::tstring value;
 	if (!xl::CRegistry::getStringValue(keyName, valueName, value)) {
@@ -144,6 +142,7 @@ bool isDefault4Xp (const xl::tstring &ext) {
 }
 
 
+// set our settings into HKCU
 bool setDefault4Xp (const xl::tstring &ext) {
 	assert(xl::os_is_xp());
 	assert(ext.length() > 0 && ext.at(0) != _T('.'));
@@ -151,7 +150,7 @@ bool setDefault4Xp (const xl::tstring &ext) {
 		return false;
 	}
 
-	xl::tstring keyName = regClasses + ext;
+	xl::tstring keyName = _T("HKCU\\Software\\Classes\\.") + ext;
 	xl::tstring valueName = _T("");
 	xl::tstring value = appRegName;
 	return xl::CRegistry::setValue(keyName, valueName, value);
@@ -165,9 +164,18 @@ bool restoreDefault4Xp (const xl::tstring &ext, const xl::tstring &def) {
 		return false;
 	}
 
-	xl::tstring keyName = regClasses + ext;
+	// 1. check for HKLM
+	xl::tstring keyName = _T("HKLM\\Software\\Classes\\.") + ext;
 	xl::tstring valueName = _T("");
-	xl::tstring value = def;
-	return xl::CRegistry::setValue(keyName, valueName, value);
+	xl::tstring value;
+	if (xl::CRegistry::getStringValue(keyName, valueName, value) && value.length() > 0) {
+		// if HKLM has value, just delete ours from HKCU
+		keyName = _T("HKCU\\Software\\Classes\\.") + ext;
+		return xl::CRegistry::deleteKey(keyName);
+	} else {
+		// if HKLM doesn't has value, so we set it into HKLM
+		value = def;
+		return xl::CRegistry::setValue(keyName, valueName, value);
+	}
 }
 
