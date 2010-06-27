@@ -113,6 +113,7 @@
     <ClCompile Include="NavButton.cpp" />
     <ClCompile Include="NavView.cpp" />
     <ClCompile Include="Registry.cpp" />
+    <ClCompile Include="SettingAbout.cpp" />
     <ClCompile Include="SettingFileAssoc.cpp" />
     <ClCompile Include="SettingGesture.cpp" />
     <ClCompile Include="Settings.cpp" />
@@ -140,6 +141,7 @@
     <ClInclude Include="NavView.h" />
     <ClInclude Include="Registry.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="SettingAbout.h" />
     <ClInclude Include="SettingFileAssoc.h" />
     <ClInclude Include="SettingGesture.h" />
     <ClInclude Include="Settings.h" />

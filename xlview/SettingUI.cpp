@@ -45,6 +45,7 @@ void CSettingDialog::_CreateTabs () {
 	hWnd = m_dlgGesture.Create(m_hWnd, 0);
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
 	tabWindow[0] = hWnd;
+
 	if (xl::os_is_vista_or_later()) {
 		hWnd = m_dlgFileAssocVista.Create(m_hWnd);
 	} else {
@@ -54,6 +55,10 @@ void CSettingDialog::_CreateTabs () {
 	}
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
 	tabWindow[1] = hWnd;
+
+	hWnd = m_dlgAbout.Create(m_hWnd);
+	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
+	tabWindow[2] = hWnd;
 }
 
 void CSettingDialog::_SetLanguage () {

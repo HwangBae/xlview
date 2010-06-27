@@ -9,6 +9,7 @@
 #include "resource.h"
 #include "SettingGesture.h"
 #include "SettingFileAssoc.h"
+#include "SettingAbout.h"
 
 class CGestureMap;
 
@@ -21,6 +22,7 @@ class CSettingDialog : public CDialogImpl<CSettingDialog>
 	// std::auto_ptr<CDialogImpl>                     m_pDlgFileAssoc;
 	CFileAssociationDialogXp                       m_dlgFileAssocXp;
 	CFileAssociationDialogVista                    m_dlgFileAssocVista;
+	CAboutDialog                                   m_dlgAbout;
 
 	void _CreateTabs ();
 	void _SetLanguage ();

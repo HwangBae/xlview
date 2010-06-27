@@ -114,7 +114,8 @@ void CFileAssociationDialogXp::setTabWindow (HWND hWndTab) {
 }
 
 LRESULT CFileAssociationDialogXp::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
-	HWND hStatic = GetDlgItem(IDC_STATIC_REINSTALL);
+	bool isRegistered = isAppRegistered();
+	HWND hStatic = GetDlgItem(isRegistered ? IDC_STATIC_FILEASSOC : IDC_STATIC_REINSTALL);
 	assert(hStatic != NULL);
 	DWORD dwStyle = ::GetWindowLong(hStatic, GWL_STYLE);
 	dwStyle |= SS_CENTER;
@@ -133,12 +134,15 @@ LRESULT CFileAssociationDialogXp::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 		m_checkBoxes.push_back(hWnd);
 	}
 
-	bool isRegistered = isAppRegistered();
-	::ShowWindow(hStatic, isRegistered ? SW_HIDE : SW_SHOW);
-	::ShowWindow(hButton, isRegistered ? SW_SHOW : SW_HIDE);
-	std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [=](HWND hWnd) {
-		::ShowWindow(hWnd, isRegistered ? SW_SHOW : SW_HIDE);
-	});
+	if (isRegistered) {
+		::ShowWindow(hStatic, SW_SHOW);
+		::ShowWindow(hButton, SW_SHOW);
+		std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [] (HWND hWnd) {
+			::ShowWindow(hWnd, SW_SHOW);
+		});
+	} else {
+		::ShowWindow(hStatic, SW_SHOW);
+	}
 
 	xl::tchar text[MAX_PATH];
 	xl::CLanguage *pLanguage = xl::CLanguage::getInstance();
@@ -149,6 +153,11 @@ LRESULT CFileAssociationDialogXp::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 		xl::tstring lang = pLanguage->getString(text);
 		::SetWindowText(hWnd, lang.c_str());
 	}
+	std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [=, &text] (HWND hWnd) {
+		::GetWindowText(hWnd, text, MAX_PATH);
+		xl::tstring lang = pLanguage->getString(text);
+		::SetWindowText(hWnd, lang.c_str());
+	});
 
 	_Check4Association();
 
@@ -156,7 +165,8 @@ LRESULT CFileAssociationDialogXp::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 }
 
 LRESULT CFileAssociationDialogXp::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
-	HWND hStatic = GetDlgItem(IDC_STATIC_REINSTALL);
+	bool isRegistered = isAppRegistered();
+	HWND hStatic = GetDlgItem(isRegistered ? IDC_STATIC_FILEASSOC : IDC_STATIC_REINSTALL);
 	assert(hStatic != NULL);
 	HWND hButton = GetDlgItem(IDC_BUTTON_APPLY);
 	assert(hButton);
@@ -171,20 +181,24 @@ LRESULT CFileAssociationDialogXp::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	CRect rcButton;
 	::GetClientRect(hButton, &rcButton);
 
-	if (!isAppRegistered()) {
+	if (!isRegistered) {
 		::MoveWindow(hStatic, rc.left, rc.top, rc.Width(), rc.Height(), TRUE);
 	} else {
 		int x = rc.Width() - rcButton.Width();
 		int y = rc.Height() - rcButton.Height();
 		::MoveWindow(hButton, x, y, rcButton.Width(), rcButton.Height(), TRUE);
 
-		x = TAB_MARGIN_X;
-		y = TAB_MARGIN_Y;
+		x = TAB_MARGIN_X + rc.left;
+		y = TAB_MARGIN_Y + rc.top;
 		int width = rc.Width() - TAB_MARGIN_X - TAB_PADDING_X * 2;
+		::MoveWindow(hStatic, x, y, rcStatic.Width(), rcStatic.Height(), TRUE);
+		y += TAB_MARGIN_Y * 2 + rcStatic.Height();
+		x += TAB_MARGIN_X;
+
 		std::for_each(m_checkBoxes.begin(), m_checkBoxes.end(), [=, &rc, &y](HWND hWnd) {
 			CRect rect;
 			::GetWindowRect(hWnd, &rect);
-			rect.MoveToXY(rc.left + x, rc.top + y);
+			rect.MoveToXY(x, y);
 			y += rect.Height() + TAB_MARGIN_Y;
 			::MoveWindow(hWnd, rect.left, rect.top, width, rect.Height(), TRUE);
 		});
@@ -252,7 +266,7 @@ LRESULT CFileAssociationDialogXp::OnCtlColor (UINT, WPARAM wParam, LPARAM lParam
 				CloseThemeData(hTheme);
 			}
 		}
-	} else if (hCtrl == GetDlgItem(IDC_STATIC_REINSTALL)) {
+	} else if (hCtrl == GetDlgItem(IDC_STATIC_REINSTALL) || hCtrl == GetDlgItem(IDC_STATIC_FILEASSOC)) {
 		::SetBkMode(hdc, TRANSPARENT);
 	}
 	return (LRESULT)::GetStockObject(NULL_BRUSH);
@@ -327,7 +341,7 @@ LRESULT CFileAssociationDialogVista::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	::GetClientRect(hButton, &rcButton);
 
 	if (!isAppRegistered()) {
-		::MoveWindow(hStatic, rc.left, rc.top, rc.Width(), rc.Height(), TRUE);
+		::MoveWindow(hStatic, rc.left, (rc.Height() - rcStatic.Height()) / 2, rc.Width(), rc.Height(), TRUE);
 	} else {
 		int x = (rc.Width() - rcButton.Width()) / 2;
 		int y = (rc.Height() - rcButton.Height()) / 2;

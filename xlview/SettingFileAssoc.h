@@ -5,7 +5,6 @@
 #include <atltypes.h>
 #include <atlapp.h>
 #include <atlwin.h>
-#include "libxl/include/ui/MainWindow.h"
 #include "resource.h"
 
 

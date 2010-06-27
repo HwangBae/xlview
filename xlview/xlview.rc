@@ -132,10 +132,35 @@ STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
 EXSTYLE WS_EX_CONTROLPARENT
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    PUSHBUTTON      "Apply",IDC_BUTTON_APPLY,259,162,50,14,WS_DISABLED
-    CONTROL         "JPEG files",IDC_CHECKBOX_JPG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,28,38,47,10,WS_EX_TRANSPARENT
-    CONTROL         "PNG files",IDC_CHECKBOX_PNG,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,28,55,44,10,WS_EX_TRANSPARENT
+    PUSHBUTTON      "Apply",IDC_BUTTON_APPLY,259,162,50,14,NOT WS_VISIBLE | WS_DISABLED
+    CONTROL         "JPEG files",IDC_CHECKBOX_JPG,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,28,38,47,10,WS_EX_TRANSPARENT
+    CONTROL         "PNG files",IDC_CHECKBOX_PNG,"Button",BS_AUTOCHECKBOX | NOT WS_VISIBLE | WS_TABSTOP,28,55,44,10,WS_EX_TRANSPARENT
     LTEXT           "PleaseReInstall",IDC_STATIC_REINSTALL,19,89,224,34,NOT WS_VISIBLE
+    LTEXT           "SetFileAssociation",IDC_STATIC_FILEASSOC,7,15,273,8,NOT WS_VISIBLE
+END
+
+IDD_SETTING_ABOUT DIALOGEX 0, 0, 270, 159
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_CHILD
+EXSTYLE WS_EX_TRANSPARENT
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT           "CopyRight:",IDC_STATIC_COPYRIGHT,13,16,37,8
+    CONTROL         "<a href=""http://www.xilou.us/"">www.xilou.us</a>",IDC_SYSLINK_COPYRIGHT,
+                    "SysLink",WS_TABSTOP,77,15,114,14,WS_EX_TRANSPARENT
+    LTEXT           "Author:",IDC_STATIC_AUTHOR,12,34,46,8
+    LTEXT           "cyberscorpio",IDC_STATIC_CYBERSCORPIO,79,34,94,8
+    LTEXT           "Twitter:",IDC_STATIC_TWITTER,13,55,46,8
+    CONTROL         "<a href=""http://twitter.com/cyberscorpio"">@cyberscorpio</a>",IDC_SYSLINK_TWITTER,
+                    "SysLink",WS_TABSTOP,85,52,122,14
+    LTEXT           "Project home:",IDC_STATIC_PROJECT_HOME,14,74,46,8
+    CONTROL         "<a href=""http://code.google.com/p/xlview/"">http://code.google.com/p/xlview/</a>",IDC_SYSLINK_PROJECT_HOME,
+                    "SysLink",WS_TABSTOP,81,71,148,14
+    LTEXT           "License:",IDC_STATIC_LICENSE,15,91,46,8
+    CONTROL         "<a href=""http://www.opensource.org/licenses/bsd-license.php"">The BSD License</a>",IDC_SYSLINK_LICENSE,
+                    "SysLink",WS_TABSTOP,80,87,113,14
+    LTEXT           "Thanks:",IDC_STATIC_THANKS,15,110,46,8
+    CONTROL         "<a href=""http://www.ijg.org/"">libjpeg</a> , <a href=""http://www.libpng.org/"">libpng</a>",IDC_SYSLINK_THANKS,
+                    "SysLink",WS_TABSTOP,71,109,128,14
 END
 
 
@@ -185,6 +210,11 @@ BEGIN
         RIGHTMARGIN, 309
         TOPMARGIN, 7
         BOTTOMMARGIN, 176
+    END
+
+    IDD_SETTING_ABOUT, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 156
     END
 END
 #endif    // APSTUDIO_INVOKED
