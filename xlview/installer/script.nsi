@@ -170,6 +170,7 @@ Function writeApplicationKeys
 	Goto write_done
 
 	write_4_vista:
+	ExecWait '"$INSTDIR\xlview.exe" /setdefault'
 	Goto write_done
 
 	write_done:

@@ -20,6 +20,7 @@ public:
 		MESSAGE_HANDLER (WM_ERASEBKGND, OnEraseBkGnd)
 		MESSAGE_HANDLER (WM_CTLCOLORSTATIC, OnCtlColorStatic)
 		MESSAGE_HANDLER (WM_COMMAND, OnCommand)
+		MESSAGE_HANDLER (WM_NOTIFY, OnNotify)
 		MESSAGE_HANDLER (WM_SIZE, OnSize)
 		MESSAGE_HANDLER (WM_INITDIALOG, OnInitDialog)
 		MESSAGE_HANDLER (WM_DESTROY, OnDestroy)
@@ -34,6 +35,7 @@ public:
 	LRESULT OnEraseBkGnd (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnCtlColorStatic (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 	LRESULT OnDestroy (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
+	LRESULT OnNotify (UINT msg, WPARAM wParam, LPARAM lParam, BOOL &bHandled);
 };
 
 

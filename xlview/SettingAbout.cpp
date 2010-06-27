@@ -54,6 +54,28 @@ LRESULT CAboutDialog::OnDestroy (UINT, WPARAM, LPARAM, BOOL &bHandled) {
 	return 0;
 }
 
+LRESULT CAboutDialog::OnNotify (UINT, WPARAM, LPARAM lParam, BOOL &bHandled) {
+	LPNMHDR lpnmh = (LPNMHDR)lParam;
+	assert(lpnmh != NULL);
+	switch (lpnmh->code)
+	{
+	case NM_CLICK:
+	case NM_RETURN:
+		{
+			PNMLINK pNMLink = (PNMLINK)lpnmh;
+			LITEM item = pNMLink->item;
+			::ShellExecute(NULL, _T("open"), item.szUrl, NULL, NULL, SW_SHOW);
+			break;
+		}
+		break;
+	default:
+		bHandled = false;
+		break;
+	}
+
+	return 0;
+}
+
 LRESULT CAboutDialog::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	CRect rc;
 	GetClientRect(&rc);
@@ -90,7 +112,7 @@ LRESULT CAboutDialog::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	return 0;
 }
 
-LRESULT CAboutDialog::OnCommand (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandled) {
+LRESULT CAboutDialog::OnCommand (UINT, WPARAM, LPARAM, BOOL &bHandled) {
 	bHandled = false;
 	return 0;
 }

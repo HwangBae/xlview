@@ -341,7 +341,8 @@ LRESULT CFileAssociationDialogVista::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 	::GetClientRect(hButton, &rcButton);
 
 	if (!isAppRegistered()) {
-		::MoveWindow(hStatic, rc.left, (rc.Height() - rcStatic.Height()) / 2, rc.Width(), rc.Height(), TRUE);
+		int y = (rc.Height() - rcStatic.Height()) / 2;
+		::MoveWindow(hStatic, rc.left, y, rc.Width(), rc.Height(), TRUE);
 	} else {
 		int x = (rc.Width() - rcButton.Width()) / 2;
 		int y = (rc.Height() - rcButton.Height()) / 2;

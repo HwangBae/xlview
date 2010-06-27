@@ -3,8 +3,10 @@
 #include "libxl/include/ui/Application.h"
 #include "libxl/include/ui/ResMgr.h"
 #include "libxl/include/Language.h"
+#include "libxl/include/utilities.h"
 #include "Registry.h"
 #include "MainWindow.h"
+#include "Settings.h"
 #include "resource.h"
 
 #pragma warning (disable:4996)
@@ -31,7 +33,7 @@ public:
 				p = _tgetenv(_T("xlview_test_image"));
 			}
 			if (!p) {
-				::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
+				// ::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
 				return hWnd;
 			}
 			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
@@ -67,10 +69,32 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nC
 	CXLViewApp *pApp = CXLViewApp::getInstance();
 	pApp->initialize(hInstance);
 
+	// 1. test for set default ?
+	if (_tcsicmp(lpstrCmdLine, _T("/setdefault")) == 0) {
+		assert(xl::os_is_vista_or_later());
+		if (!xl::os_is_vista_or_later()) {
+			return -1;
+		}
+		if (!launchAssociationOnVista()) {
+			::MessageBox(NULL, _T("xlview hasn't been installed in your system...\nPlease run xlview.setup.exe first:)"), NULL, MB_OK | MB_ICONERROR);
+		}
+		return 0;
+	}
+
+	// 2. test for multi-instance
+	HANDLE hMutex = ::CreateMutex(NULL, true, _T("xlview::MultiLock - by cyberscorpio@gmail.com"));
+	if (hMutex && ::GetLastError() == ERROR_ALREADY_EXISTS) {
+		::CloseHandle(hMutex);
+		return 0;
+	}
+
+	// 3. the normal way
+
 	nCmdShow = SW_MAXIMIZE;// -- maximize the windows seems a good idea
 	int nRet = pApp->run(lpstrCmdLine, nCmdShow);
 
 	pApp->cleanup();
 
+	::CloseHandle(hMutex);
 	return nRet;
 }
