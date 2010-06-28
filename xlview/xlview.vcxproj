@@ -109,6 +109,7 @@
     <ClCompile Include="ImageLoaderPng.cpp" />
     <ClCompile Include="ImageManager.cpp" />
     <ClCompile Include="ImageView.cpp" />
+    <ClCompile Include="InfoView.cpp" />
     <ClCompile Include="MainWindow.cpp" />
     <ClCompile Include="NavButton.cpp" />
     <ClCompile Include="NavView.cpp" />
@@ -135,6 +136,7 @@
     <ClInclude Include="ImageLoader.h" />
     <ClInclude Include="ImageManager.h" />
     <ClInclude Include="ImageView.h" />
+    <ClInclude Include="InfoView.h" />
     <ClInclude Include="MainWindow.h" />
     <ClInclude Include="MultiLock.h" />
     <ClInclude Include="NavButton.h" />

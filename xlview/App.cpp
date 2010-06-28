@@ -33,12 +33,8 @@ public:
 				p = _tgetenv(_T("xlview_test_image"));
 			}
 			if (!p) {
-				// ::MessageBox(hWnd, _T("Please set env: xlview_test_image to an image"), 0, MB_OK);
 				return hWnd;
 			}
-			// p = _T("C:\\Users\\ddh\\Pictures\\wp\\4.jpg");
-			// p = _T("D:\\test_images\\1\\1.jpg");
-			// p = _T("I:\\test_images\\1266987653527.png");
 			xl::tstring name(p);
 			name.trim(_T("\""));
 			if (!m_wndMain.setFile(name)) {

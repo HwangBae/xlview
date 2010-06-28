@@ -25,6 +25,8 @@ class CMainWindow
 	xl::ui::CControlPtr                            m_toolbar;
 	xl::ui::CControlPtr                            m_slider;
 	xl::ui::CControlPtr                            m_view;
+	xl::ui::CControlPtr                            m_navbtn[2];
+	xl::ui::CControlPtr                            m_naview;
 
 	CDispatch                                     *m_pDispatch;
 	CGestureMap                                    m_gestureMap;

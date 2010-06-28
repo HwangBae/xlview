@@ -10,6 +10,7 @@
 #define ID_VIEW  99
 
 class CNavView;
+class CInfoView;
 //////////////////////////////////////////////////////////////////////////
 // CImageView
 class CImageView 
@@ -22,6 +23,7 @@ class CImageView
 protected:
 	CImageManager     *m_pImageManager;
 	CNavView          *m_pNavView;
+	CInfoView         *m_pInfoView;
 
 	//////////////////////////////////////////////////////////////////////////
 	// for display
@@ -112,6 +114,7 @@ public:
 	void setPtSrc (int x, int y);
 
 	void setNavView (CNavView *);
+	void setInfoView (CInfoView *);
 	//////////////////////////////////////////////////////////////////////////
 	// virtual
 

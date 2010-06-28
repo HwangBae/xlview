@@ -7,6 +7,7 @@
 #include "ImageView.h"
 #include "MainWindow.h"
 #include "NavView.h"
+#include "InfoView.h"
 
 //////////////////////////////////////////////////////////////////////////
 // callback when zooming
@@ -281,7 +282,7 @@ void CImageView::_CheckPtSrc (CPoint &ptSrc) {
 }
 
 void CImageView::_NotifyDisplayChanged () {
-	if (m_pNavView) {
+	if (m_pNavView || m_pInfoView) {
 		CRect rc = getClientRect();
 		CSize szImageReal = m_szReal;
 		CSize szDisplay = m_szDisplay;
@@ -289,7 +290,13 @@ void CImageView::_NotifyDisplayChanged () {
 		CPoint ptSrc = m_ptSrc;
 
 		assert(m_currIndex != -1);
-		m_pNavView->setInfo(m_currIndex, szImageReal, szDisplay, szView, ptSrc);
+		if (m_pNavView) {
+			m_pNavView->setInfo(m_currIndex, szImageReal, szDisplay, szView, ptSrc);
+		}
+
+		if (m_pInfoView) {
+			m_pInfoView->onDisplayInfoChanged(szDisplay);
+		}
 	}
 }
 
@@ -433,6 +440,7 @@ CImageView::CImageView (CImageManager *pImageManager)
 	, CMultiLock(pImageManager)
 	, m_pImageManager(pImageManager)
 	, m_pNavView(NULL)
+	, m_pInfoView(NULL)
 	, m_currIndex(-1)
 	, m_dirty(false)
 	, m_szReal(-1, -1)
@@ -626,6 +634,15 @@ void CImageView::setNavView (CNavView *pNavView) {
 	}
 }
 
+void CImageView::setInfoView (CInfoView *pInfoView) {
+	assert(m_pInfoView == NULL);
+	assert(pInfoView != NULL);
+	m_pInfoView = pInfoView;
+	if (m_currIndex != -1) {
+		_NotifyDisplayChanged();
+	}
+}
+
 void CImageView::onSize () {
 	assert(m_pImageManager != NULL);
 	CRect rc = getClientRect();
@@ -714,6 +731,7 @@ void CImageView::drawMe (HDC hdc) {
 //	_SetCachedBitmap(hdc);
 	_GetCachedBitmap(hdc);
 
+#ifndef NDEBUG
 	// draw debug information
 	{
 		xl::tchar buf[256];
@@ -724,6 +742,7 @@ void CImageView::drawMe (HDC hdc) {
 		rcInfo.bottom = rcInfo.top + 16;
 		dc.DrawText(buf, -1, rcInfo, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 	}
+#endif
 
 	// free the image
 	m_pImageManager->lock();
