@@ -3,6 +3,14 @@
 ; References:
 ; http://nsis.sourceforge.net/Shortcuts_removal_fails_on_Windows_Vista
 ;
+
+; Include the Modern UI
+!include "MUI2.nsh"
+
+; The name of the installer
+Name "xlview"
+
+; The file to write
 OutFile "xlview.setup.exe"
 
 ;-----------------------------------------------------------
@@ -29,15 +37,85 @@ InstallDirRegKey HKLM "Software\xlview" "Install_Dir"
 RequestExecutionLevel admin
 
 ;-----------------------------------------------------------
+!define MUI_ABORTWARNING
+
+;-----------------------------------------------------------
 
 ; Pages
 
-Page components
-Page directory
-Page instfiles
+; Page components
+;
+; Page directory
+; Page instfiles
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
 
-UninstPage uninstConfirm
-UninstPage instfiles
+; UninstPage uninstConfirm
+; UninstPage instfiles
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+
+;-----------------------------------------------------------
+; Languages
+!insertmacro MUI_LANGUAGE "English" ;first language is the default language
+!insertmacro MUI_LANGUAGE "French"
+!insertmacro MUI_LANGUAGE "German"
+!insertmacro MUI_LANGUAGE "Spanish"
+!insertmacro MUI_LANGUAGE "SpanishInternational"
+!insertmacro MUI_LANGUAGE "SimpChinese"
+!insertmacro MUI_LANGUAGE "TradChinese"
+!insertmacro MUI_LANGUAGE "Japanese"
+!insertmacro MUI_LANGUAGE "Korean"
+!insertmacro MUI_LANGUAGE "Italian"
+!insertmacro MUI_LANGUAGE "Dutch"
+!insertmacro MUI_LANGUAGE "Danish"
+!insertmacro MUI_LANGUAGE "Swedish"
+!insertmacro MUI_LANGUAGE "Norwegian"
+!insertmacro MUI_LANGUAGE "NorwegianNynorsk"
+!insertmacro MUI_LANGUAGE "Finnish"
+!insertmacro MUI_LANGUAGE "Greek"
+!insertmacro MUI_LANGUAGE "Russian"
+!insertmacro MUI_LANGUAGE "Portuguese"
+!insertmacro MUI_LANGUAGE "PortugueseBR"
+!insertmacro MUI_LANGUAGE "Polish"
+!insertmacro MUI_LANGUAGE "Ukrainian"
+!insertmacro MUI_LANGUAGE "Czech"
+!insertmacro MUI_LANGUAGE "Slovak"
+!insertmacro MUI_LANGUAGE "Croatian"
+!insertmacro MUI_LANGUAGE "Bulgarian"
+!insertmacro MUI_LANGUAGE "Hungarian"
+!insertmacro MUI_LANGUAGE "Thai"
+!insertmacro MUI_LANGUAGE "Romanian"
+!insertmacro MUI_LANGUAGE "Latvian"
+!insertmacro MUI_LANGUAGE "Macedonian"
+!insertmacro MUI_LANGUAGE "Estonian"
+!insertmacro MUI_LANGUAGE "Turkish"
+!insertmacro MUI_LANGUAGE "Lithuanian"
+!insertmacro MUI_LANGUAGE "Slovenian"
+!insertmacro MUI_LANGUAGE "Serbian"
+!insertmacro MUI_LANGUAGE "SerbianLatin"
+!insertmacro MUI_LANGUAGE "Arabic"
+!insertmacro MUI_LANGUAGE "Farsi"
+!insertmacro MUI_LANGUAGE "Hebrew"
+!insertmacro MUI_LANGUAGE "Indonesian"
+!insertmacro MUI_LANGUAGE "Mongolian"
+!insertmacro MUI_LANGUAGE "Luxembourgish"
+!insertmacro MUI_LANGUAGE "Albanian"
+!insertmacro MUI_LANGUAGE "Breton"
+!insertmacro MUI_LANGUAGE "Belarusian"
+!insertmacro MUI_LANGUAGE "Icelandic"
+!insertmacro MUI_LANGUAGE "Malay"
+!insertmacro MUI_LANGUAGE "Bosnian"
+!insertmacro MUI_LANGUAGE "Kurdish"
+!insertmacro MUI_LANGUAGE "Irish"
+!insertmacro MUI_LANGUAGE "Uzbek"
+!insertmacro MUI_LANGUAGE "Galician"
+!insertmacro MUI_LANGUAGE "Afrikaans"
+!insertmacro MUI_LANGUAGE "Catalan"
+!insertmacro MUI_LANGUAGE "Esperanto"
+
+; Reserve Files
+; !insertmacro MUI_RESERVEFILE_LANGDLL
 
 ;-----------------------------------------------------------
 
@@ -79,13 +157,17 @@ Section "Start Menu Shortcuts"
 
 SectionEnd
 
-section "uninstall"
+; --------------------------------------------------------------
+; Uninstaller Section
+
+section "Uninstall"
+	StrCmp $progId "" var_error
 	StrCmp $appName "" var_error
 
 	; Remove registry keys
-	Call un.deleteUninstallKeys
-	Call un.deleteApplicationKeys
 	Call un.deleteFileAssociation
+	Call un.deleteApplicationKeys
+	Call un.deleteUninstallKeys
 	DeleteRegKey HKLM SOFTWARE\$appName
 
 	; Remove files and uninstaller
@@ -197,13 +279,18 @@ Function un.deleteApplicationKeys
 	Goto write_done
 
 	write_4_xp:
-	WriteRegStr HKCU "Software\Classes\.jpg" "" "jpegfile"
-	WriteRegStr HKCU "Software\Classes\.jpeg" "" "jpegfile"
-	WriteRegStr HKCU "Software\Classes\.jfif" "" "jpegfile"
-	WriteRegStr HKCU "Software\Classes\.png" "" "pngfile"
+;	WriteRegStr HKCU "Software\Classes\.jpg" "" "jpegfile"
+;	WriteRegStr HKCU "Software\Classes\.jpeg" "" "jpegfile"
+;	WriteRegStr HKCU "Software\Classes\.jfif" "" "jpegfile"
+;	WriteRegStr HKCU "Software\Classes\.png" "" "pngfile"
+	DeleteRegKey HKCU "Software\Classes\.jpg"
+	DeleteRegKey HKCU "Software\Classes\.jpeg"
+	DeleteRegKey HKCU "Software\Classes\.jfif"
+	DeleteRegKey HKCU "Software\Classes\.png"
 	Goto write_done
 
 	write_4_vista:
+	ExecWait '"$INSTDIR\xlview.exe" /restoredefault'
 	Goto write_done
 
 	write_done:

@@ -151,7 +151,11 @@ void CNavView::drawMe (HDC hdc) {
 		BLENDFUNCTION bf = {AC_SRC_OVER, 0, 75, 0};
 		dc.AlphaBlend(rcView.left, rcView.top, rcView.Width(), rcView.Height(), mdc, 0, 0, 1, 1, bf);
 		m_dibView->detachFromDC(mdc);
-		dc.drawRectangle(rcView, 1, RGB(32,32,32), PS_SOLID);
+
+		CRect rcEdge = rcView;
+		dc.drawRectangle(rcEdge, 1, RGB(32,32,32), PS_SOLID);
+		rcEdge.DeflateRect(1, 1, 1, 1);
+		dc.drawRectangle(rcEdge, 1, RGB(200,200,200), PS_SOLID);
 	}
 	dc.SetStretchBltMode(oldMode);
 }

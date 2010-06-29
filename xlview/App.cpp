@@ -65,7 +65,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nC
 	CXLViewApp *pApp = CXLViewApp::getInstance();
 	pApp->initialize(hInstance);
 
-	// 1. test for set default ?
+	// 1. test for set default or restoredefault ?
 	if (_tcsicmp(lpstrCmdLine, _T("/setdefault")) == 0) {
 		assert(xl::os_is_vista_or_later());
 		if (!xl::os_is_vista_or_later()) {
@@ -74,6 +74,13 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nC
 		if (!launchAssociationOnVista()) {
 			::MessageBox(NULL, _T("xlview hasn't been installed in your system...\nPlease run xlview.setup.exe first:)"), NULL, MB_OK | MB_ICONERROR);
 		}
+		return 0;
+	} else if (_tcsicmp(lpstrCmdLine, _T("/restoredefault")) == 0) {
+		assert(xl::os_is_vista_or_later());
+		if (!xl::os_is_vista_or_later()) {
+			return -1;
+		}
+		restoreDefault4Vista();
 		return 0;
 	}
 

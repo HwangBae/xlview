@@ -165,7 +165,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	// navbar -> infoview
 	CInfoView *pInfoView = new CInfoView(this);
 	xl::ui::CControlPtr infoview(pInfoView);
-	infoview->setStyle(_T("margin:0; padding:0; width:fill; height:20; background-color:#000000"));
+	infoview->setStyle(_T("margin:0; padding:2 0; width:fill; height:20; background-color:#000000"));
 	m_navbar->insertChild(infoview);
 	pView->setInfoView(pInfoView);
 

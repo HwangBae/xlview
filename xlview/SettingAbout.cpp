@@ -2,6 +2,7 @@
 #include <utility>
 #include "libxl/include/Language.h"
 
+#include "version.h"
 #include "resource.h"
 #include "SettingAbout.h"
 
@@ -43,6 +44,11 @@ LRESULT CAboutDialog::OnInitDialog (UINT, WPARAM, LPARAM, BOOL &) {
 
 	HWND hWnd = GetDlgItem(IDC_SYSLINK_COPYRIGHT);
 	m_brush4SysLink = (HBRUSH)::SetClassLongPtr(hWnd, GCL_HBRBACKGROUND, (LONG_PTR)::GetStockObject(NULL_BRUSH));
+
+	hWnd = GetDlgItem(IDC_STATIC_VERSION);
+	assert(hWnd);
+	_stprintf_s(text, MAX_PATH, _T("xlview 1.0.0.%s (r%s)"), xlview_revision, xlview_revision);
+	::SetWindowText(hWnd, text);
 	return TRUE;
 }
 
@@ -107,6 +113,16 @@ LRESULT CAboutDialog::OnSize (UINT, WPARAM, LPARAM, BOOL &) {
 		::MoveWindow(hWndValue, x + keyWidth + TAB_MARGIN_X, y + offsetValueY, valueWidth, rcValue.Height(), TRUE);
 
 		y += lineHeight + TAB_MARGIN_Y;
+	}
+
+	HWND hWndVersion = GetDlgItem(IDC_STATIC_VERSION);
+	if (hWndVersion) {
+		CRect rcVersion;
+		::GetWindowRect(hWndVersion, &rcVersion);
+		y = rc.bottom - TAB_MARGIN_Y - rcVersion.Height();
+		rcVersion.MoveToXY(x, y);
+		::MoveWindow(hWndVersion, x, y, rc.Width() - TAB_MARGIN_X * 2, rcVersion.Height(), true);
+		y += TAB_MARGIN_Y + rcVersion.Height();
 	}
 
 	return 0;

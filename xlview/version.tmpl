@@ -1,0 +1,17 @@
+// Version template, using SubWCRev
+#include <tchar.h>
+
+TCHAR *xlview_revision = _T("$WCREV$");
+// TCHAR *Modified = _T("$WCMODS?Modified:Not modified$");
+TCHAR *xlview_date     = _T("$WCDATE$");
+// TCHAR *Range    = _T("$WCRANGE$");
+// TCHAR *Mixed    = _T("$WCMIXED?Mixed revision WC:Not mixed$");
+TCHAR *xlview_svn      = _T("$WCURL$");
+
+#if 0
+#if $WCMODS?1:0$
+#error Source is modified
+#endif
+#endif
+
+// End of file

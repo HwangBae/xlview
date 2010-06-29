@@ -25,15 +25,16 @@ void CInfoView::onDetach () {
 }
 
 void CInfoView::drawMe (HDC hdc) {
+	CRect rc = getClientRect();
+
 	xl::ui::CResMgr *pResMgr = xl::ui::CResMgr::getInstance();
-	HFONT font = pResMgr->getSysFont(0, xl::ui::CResMgr::FS_BOLD);
+	HFONT font = pResMgr->getSysFont(rc.Height(), xl::ui::CResMgr::FS_BOLD);
 
 	xl::ui::CDCHandle dc(hdc);
 	COLORREF oldColor = dc.SetTextColor(RGB(255,255,255));
 	int oldMode = dc.SetBkMode(TRANSPARENT);
 	HFONT oldFont = dc.SelectFont(font);
 
-	CRect rc = getClientRect();
 	DWORD flags = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
 	if (m_szImage.cx == -1 || m_szImage.cy == -1) {
 		dc.DrawText(m_fileName.c_str(), m_fileName.length(), rc, flags);

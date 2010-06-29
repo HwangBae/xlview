@@ -30,6 +30,64 @@ bool launchAssociationOnVista () {
 	return false;
 }
 
+bool restoreDefault4Vista (const xl::tstring &ext) {
+	static wchar_t *defaultAppRegName = L"Windows Photo Viewer";
+
+	if (ext.length() == 0) {
+		assert(false);
+		return false;
+	}
+	xl::wstring wext = xl::ts2ws(ext);
+	if (wext.at(0) != _T('.')) {
+		wext = _T(".") + wext;
+	}
+	IApplicationAssociationRegistration *paar = NULL;
+	HRESULT hr = CoCreateInstance(
+	                              CLSID_ApplicationAssociationRegistration,
+	                              NULL,
+	                              CLSCTX_INPROC,
+	                              __uuidof(IApplicationAssociationRegistration),
+	                              (void **)&paar
+	                             );
+	if (SUCCEEDED(hr)) {
+		BOOL isDefault = false;
+		HRESULT hr = paar->QueryAppIsDefault(
+		                                     wext.c_str(),
+		                                     AT_FILEEXTENSION,
+		                                     AL_EFFECTIVE,
+		                                     defaultAppRegName,
+		                                     &isDefault
+		                                    );
+		if (SUCCEEDED(hr)) {
+			if (!isDefault) {
+				hr = paar->SetAppAsDefault(defaultAppRegName, wext.c_str(), AT_FILEEXTENSION);
+			}
+			paar->Release();
+			return SUCCEEDED(hr);
+		} else {
+			paar->Release();
+			return false;
+		}
+	}
+	return false;
+}
+
+bool restoreDefault4Vista () {
+	const xl::tchar *exts[] = {
+		_T("jpg"),
+		_T("jpeg"),
+		_T("jfif"),
+		_T("png"),
+	};
+
+	for (size_t i = 0; i < COUNT_OF(exts); ++ i) {
+		if (!restoreDefault4Vista(exts[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 void launchAssociation () {
 	if (xl::os_is_vista_or_later()) {
 		launchAssociationOnVista();

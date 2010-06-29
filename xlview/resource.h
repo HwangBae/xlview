@@ -42,6 +42,7 @@
 #define IDC_STATIC_THANKS               1025
 #define IDC_STATIC_CYBERSCORPIO         1026
 #define IDC_SYSLINK_THANKS              1027
+#define IDC_STATIC_VERSION              1028
 
 // Next default values for new objects
 // 
@@ -50,7 +51,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        127
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1028
+#define _APS_NEXT_CONTROL_VALUE         1029
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

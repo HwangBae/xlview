@@ -148,7 +148,7 @@ BEGIN
     CONTROL         "<a href=""http://www.xilou.us/"">www.xilou.us</a>",IDC_SYSLINK_COPYRIGHT,
                     "SysLink",WS_TABSTOP,77,15,114,14,WS_EX_TRANSPARENT
     LTEXT           "Author:",IDC_STATIC_AUTHOR,12,34,46,8
-    LTEXT           "cyberscorpio",IDC_STATIC_CYBERSCORPIO,79,34,94,8
+    LTEXT           "cyberscorpio (@gmail.com)",IDC_STATIC_CYBERSCORPIO,79,34,127,8
     LTEXT           "Twitter:",IDC_STATIC_TWITTER,13,55,46,8
     CONTROL         "<a href=""http://twitter.com/cyberscorpio"">@cyberscorpio</a>",IDC_SYSLINK_TWITTER,
                     "SysLink",WS_TABSTOP,85,52,122,14
@@ -161,6 +161,7 @@ BEGIN
     LTEXT           "Thanks:",IDC_STATIC_THANKS,15,110,46,8
     CONTROL         "<a href=""http://www.ijg.org/"">libjpeg</a> , <a href=""http://www.libpng.org/"">libpng</a>",IDC_SYSLINK_THANKS,
                     "SysLink",WS_TABSTOP,71,109,128,14
+    RTEXT           "Static",IDC_STATIC_VERSION,17,6,144,8
 END
 
 
