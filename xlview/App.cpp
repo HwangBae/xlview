@@ -71,7 +71,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR lpstrCmdLine, int nC
 		if (!xl::os_is_vista_or_later()) {
 			return -1;
 		}
-		if (!launchAssociationOnVista()) {
+		if (!setDefault4Vista()) {
 			::MessageBox(NULL, _T("xlview hasn't been installed in your system...\nPlease run xlview.setup.exe first:)"), NULL, MB_OK | MB_ICONERROR);
 		}
 		return 0;

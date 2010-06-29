@@ -6,8 +6,9 @@ bool isAppRegistered ();
 bool registerApplication (); // call it under XP or in administrator mode
 void launchAssociation ();
 bool launchAssociationOnVista ();
-// set default viewer of .ext to L"Windows Photo Viewer"
-bool restoreDefault4Vista (const xl::tstring &ext);
+bool setDefault4Vista (const xl::tstring &ext);
+bool setDefault4Vista ();
+bool restoreDefault4Vista (const xl::tstring &ext);// set default viewer of .ext to L"Windows Photo Viewer"
 bool restoreDefault4Vista ();
 
 bool isDefault4Xp (const xl::tstring &ext);

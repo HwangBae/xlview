@@ -9,6 +9,14 @@ static const wchar_t *appRegName = L"xlview.image.1";
 static const wchar_t *appName = L"xlview";
 static const xl::tchar *appRegNameT = _T("xlview.image.1");
 static const xl::tchar *appNameT = _T("xlview");
+static const xl::tchar *extensions[] = {
+	_T("jpg"),
+	_T("jpeg"),
+	_T("jfif"),
+	_T("png"),
+};
+
+
 
 
 bool launchAssociationOnVista () {
@@ -29,6 +37,60 @@ bool launchAssociationOnVista () {
 
 	return false;
 }
+
+// set
+
+bool setDefault4Vista (const xl::tstring &ext) {
+	if (ext.length() == 0) {
+		assert(false);
+		return false;
+	}
+	xl::wstring wext = xl::ts2ws(ext);
+	if (wext.at(0) != _T('.')) {
+		wext = _T(".") + wext;
+	}
+	IApplicationAssociationRegistration *paar = NULL;
+	HRESULT hr = CoCreateInstance(
+	                              CLSID_ApplicationAssociationRegistration,
+	                              NULL,
+	                              CLSCTX_INPROC,
+	                              __uuidof(IApplicationAssociationRegistration),
+	                              (void **)&paar
+	                             );
+	if (SUCCEEDED(hr)) {
+		BOOL isDefault = false;
+		HRESULT hr = paar->QueryAppIsDefault(
+		                                     wext.c_str(),
+		                                     AT_FILEEXTENSION,
+		                                     AL_EFFECTIVE,
+		                                     appRegName,
+		                                     &isDefault
+		                                    );
+		if (SUCCEEDED(hr)) {
+			if (!isDefault) {
+				hr = paar->SetAppAsDefault(appRegName, wext.c_str(), AT_FILEEXTENSION);
+			}
+			paar->Release();
+			return SUCCEEDED(hr);
+		} else {
+			paar->Release();
+			return false;
+		}
+	}
+	return false;
+}
+
+bool setDefault4Vista () {
+	for (size_t i = 0; i < COUNT_OF(extensions); ++ i) {
+		if (!setDefault4Vista(extensions[i])) {
+			return false;
+		}
+	}
+	return true;
+}
+
+
+// restore
 
 bool restoreDefault4Vista (const xl::tstring &ext) {
 	static wchar_t *defaultAppRegName = L"Windows Photo Viewer";
@@ -73,15 +135,8 @@ bool restoreDefault4Vista (const xl::tstring &ext) {
 }
 
 bool restoreDefault4Vista () {
-	const xl::tchar *exts[] = {
-		_T("jpg"),
-		_T("jpeg"),
-		_T("jfif"),
-		_T("png"),
-	};
-
-	for (size_t i = 0; i < COUNT_OF(exts); ++ i) {
-		if (!restoreDefault4Vista(exts[i])) {
+	for (size_t i = 0; i < COUNT_OF(extensions); ++ i) {
+		if (!restoreDefault4Vista(extensions[i])) {
 			return false;
 		}
 	}
