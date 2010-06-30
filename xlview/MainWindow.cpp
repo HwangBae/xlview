@@ -108,7 +108,7 @@ LRESULT CMainWindow::OnCreate (UINT /*msg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	m_ctrlMain->enableGesture(true);
 	m_ctrlMain->setStyle(_T("background:none"));
 	xl::ui::CControlPtr gestureCtrl = m_ctrlMain->getGestureCtrl();
-	gestureCtrl->setStyle(_T("color:#ff0000"));
+	gestureCtrl->setStyle(_T("color:#ff0000; font-size:16;"));
 #endif
 
 	// the view
@@ -224,12 +224,16 @@ LRESULT CMainWindow::OnKeyDown (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandl
 	XL_PARAMETER_NOT_USED(lParam);
 	assert(m_pDispatch != NULL);
 	switch (wParam) {
+	case 'A':
+	case 'a':
 	case VK_LEFT:
-		m_pDispatch->execute(_T("showNext"));
+		m_pDispatch->execute(_T("showPrev"));
 		break;
+	case 'D':
+	case 'd':
 	case VK_RIGHT:
 	case VK_SPACE:
-		m_pDispatch->execute(_T("showPrev"));
+		m_pDispatch->execute(_T("showNext"));
 		break;
 	case VK_UP:
 		m_pDispatch->execute(_T("showLarger"));
@@ -237,6 +241,8 @@ LRESULT CMainWindow::OnKeyDown (UINT, WPARAM wParam, LPARAM lParam, BOOL &bHandl
 	case VK_DOWN:
 		m_pDispatch->execute(_T("showSmaller"));
 		break;
+	case 'S':
+	case 's':
 	case VK_OEM_5: // '\' and '|'
 		m_pDispatch->execute(_T("showSwitch"));
 		break;
@@ -266,7 +272,7 @@ void CMainWindow::onEvent (CImageManager::IObserver::EVT evt, void *param) {
 		// gestory
 		m_ctrlMain->enableGesture(true);
 		m_ctrlMain->setStyle(_T("background:none"));
-		m_ctrlMain->getGestureCtrl()->setStyle(_T("color:#ff0000"));
+		m_ctrlMain->getGestureCtrl()->setStyle(_T("padding:4 0; color:#ff0000; font-size:16;"));// font-weight:bold;"));
 		break;
 	case CImageManager::EVT_INDEX_CHANGED:
 		{

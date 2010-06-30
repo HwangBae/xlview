@@ -123,6 +123,7 @@
     <ClCompile Include="SettingAbout.cpp" />
     <ClCompile Include="SettingFileAssoc.cpp" />
     <ClCompile Include="SettingGesture.cpp" />
+    <ClCompile Include="SettingKeypad.cpp" />
     <ClCompile Include="Settings.cpp" />
     <ClCompile Include="SettingUI.cpp" />
     <ClCompile Include="Slider.cpp" />
@@ -152,6 +153,7 @@
     <ClInclude Include="SettingAbout.h" />
     <ClInclude Include="SettingFileAssoc.h" />
     <ClInclude Include="SettingGesture.h" />
+    <ClInclude Include="SettingKeypad.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="SettingUI.h" />
     <ClInclude Include="Slider.h" />

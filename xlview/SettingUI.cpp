@@ -8,8 +8,8 @@
 
 ///////////////////////////////////////////////////////////////////////
 // static
-static TCHAR *tabNames[] = {_T("Gesture"), _T("FileAssociation"), _T("About"), };
-static HWND tabWindow[] = {0, 0, 0, };
+static TCHAR *tabNames[] = {_T("Gesture"), _T("Keypad"), _T("FileAssociation"), _T("About"), };
+static HWND tabWindow[] = {0, 0, 0, 0,};
 
 
 
@@ -42,9 +42,14 @@ void CSettingDialog::_CreateTabs () {
 	::ScreenToClient(m_hWnd, &rc.TopLeft());
 	::ScreenToClient(m_hWnd, &rc.BottomRight());
 
+	int idx = 0;
 	hWnd = m_dlgGesture.Create(m_hWnd, 0);
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
-	tabWindow[0] = hWnd;
+	tabWindow[idx ++] = hWnd;
+
+	hWnd = m_dlgKeypad.Create(m_hWnd);
+	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_NOACTIVATE | SWP_NOZORDER);
+	tabWindow[idx ++] = hWnd;
 
 	if (xl::os_is_vista_or_later()) {
 		hWnd = m_dlgFileAssocVista.Create(m_hWnd);
@@ -54,11 +59,11 @@ void CSettingDialog::_CreateTabs () {
 		hWnd = m_dlgFileAssocXp.Create(m_hWnd);
 	}
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
-	tabWindow[1] = hWnd;
+	tabWindow[idx ++] = hWnd;
 
 	hWnd = m_dlgAbout.Create(m_hWnd);
 	::SetWindowPos(hWnd, HWND_TOP, rc.left, rc.top, rc.Width(), rc.Height(), SWP_HIDEWINDOW | SWP_NOACTIVATE | SWP_NOZORDER);
-	tabWindow[2] = hWnd;
+	tabWindow[idx ++] = hWnd;
 }
 
 void CSettingDialog::_SetLanguage () {
@@ -85,6 +90,7 @@ void CSettingDialog::_SetLanguage () {
 		tie.mask |= TCIF_TEXT;
 
 		xl::tstring name = pLanguage->getString(tabNames[i]);
+		name += _T("  ");
 		memset(text, 0, sizeof(text));
 		_tcsncpy_s(text, name.c_str(), MAX_PATH - 1);
 
@@ -112,6 +118,7 @@ void CSettingDialog::_OnTabSelChanged () {
 
 CSettingDialog::CSettingDialog (CGestureMap *gestureMap)
 	: m_dlgGesture(gestureMap)
+	, m_dlgKeypad(gestureMap)
 {
 }
 

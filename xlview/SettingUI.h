@@ -8,6 +8,7 @@
 #include "libxl/include/ui/MainWindow.h"
 #include "resource.h"
 #include "SettingGesture.h"
+#include "SettingKeypad.h"
 #include "SettingFileAssoc.h"
 #include "SettingAbout.h"
 
@@ -19,6 +20,7 @@ class CGestureMap;
 class CSettingDialog : public CDialogImpl<CSettingDialog>
 {
 	CGestureDialog                                 m_dlgGesture;
+	CKeypadDialog                                  m_dlgKeypad;
 	// std::auto_ptr<CDialogImpl>                     m_pDlgFileAssoc;
 	CFileAssociationDialogXp                       m_dlgFileAssocXp;
 	CFileAssociationDialogVista                    m_dlgFileAssocVista;
