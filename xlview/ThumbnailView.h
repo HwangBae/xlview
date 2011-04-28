@@ -55,6 +55,7 @@ public:
 	virtual void onLButtonDown (CPoint, xl::uint);
 	virtual void onMouseMove (CPoint, xl::uint);
 	virtual void onMouseOut (CPoint);
+	virtual void onMouseWheel (CPoint pt, int delta, xl::uint key);
 	virtual void onTimer (xl::uint);
 
 	// CImageManager::IObserver

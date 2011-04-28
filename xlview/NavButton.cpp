@@ -1,4 +1,5 @@
 #include <assert.h>
+#include "libxl/include/ui/CtrlTarget.h"
 #include "CommandId.h"
 #include "NavButton.h"
 #include "resource.h"
@@ -33,4 +34,12 @@ void CNavButton::onMouseMove (CPoint, xl::uint) {
 
 void CNavButton::onMouseOut (CPoint) {
 	::SetCursor(m_curArrow);
+}
+
+void CNavButton::onMouseWheel (CPoint /*pt*/, int delta, xl::uint /*key*/) {
+	if (delta > 0) {
+		_GetTarget()->onCommand(ID_NAV_PREV, shared_from_this());
+	} else {
+		_GetTarget()->onCommand(ID_NAV_NEXT, shared_from_this());
+	}
 }

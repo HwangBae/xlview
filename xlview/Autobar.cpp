@@ -20,7 +20,7 @@ void CAutobar::onMouseInChild (CPoint /*pt*/) {
 	CFadable::fadeIn();
 }
 
-void CAutobar::onMouseOut (CPoint pt) {
+void CAutobar::onMouseOut (CPoint /*pt*/) {
 	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
 	assert(pCtrlMain != NULL);
 	xl::ui::CControlPtr ctrlCapture = pCtrlMain->getCaptureCtrl();
@@ -29,7 +29,7 @@ void CAutobar::onMouseOut (CPoint pt) {
 	}
 }
 
-void CAutobar::onMouseOutChild (CPoint pt) {
+void CAutobar::onMouseOutChild (CPoint /*pt*/) {
 	xl::ui::CCtrlMain *pCtrlMain = _GetMainCtrl();
 	assert(pCtrlMain != NULL);
 	xl::ui::CControlPtr ctrlCapture = pCtrlMain->getCaptureCtrl();

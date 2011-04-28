@@ -53,13 +53,19 @@ void CGestureMap::save () {
 }
 
 xl::tstring CGestureMap::getIniPathName () const {
-	xl::tchar *profileDir = _tgetenv(_T("USERPROFILE"));
-	xl::tstring pathName = profileDir;
-	xl::tchar lastChar = pathName.at(pathName.length() - 1);
-	if (lastChar != _T('\\') && lastChar != _T('/')) {
-		pathName += _T("\\xlview-gesture.ini");
-	} else {
-		pathName += _T("xlview-gesture.ini");
+	xl::tstring pathName;
+	xl::tchar *profileDir = NULL;// = _tgetenv(_T("USERPROFILE"));
+	size_t len = 0;
+	if (!_tdupenv_s(&profileDir, &len, _T("USERPROFILE"))) {
+		pathName = profileDir;
+		free(profileDir);
+		profileDir = NULL;
+		xl::tchar lastChar = pathName.at(pathName.length() - 1);
+		if (lastChar != _T('\\') && lastChar != _T('/')) {
+			pathName += _T("\\xlview-gesture.ini");
+		} else {
+			pathName += _T("xlview-gesture.ini");
+		}
 	}
 
 	return pathName;

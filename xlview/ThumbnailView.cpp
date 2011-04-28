@@ -1,6 +1,8 @@
 #include <assert.h>
 #include "libxl/include/ui/Gdi.h"
 #include "libxl/include/ui/CtrlMain.h"
+#include "libxl/include/ui/CtrlTarget.h"
+#include "CommandId.h"
 #include "ThumbnailView.h"
 
 static const int TV_WIDTH = 60;
@@ -237,6 +239,14 @@ void CThumbnailView::onMouseMove (CPoint pt, xl::uint) {
 	if (hover != m_hoverIndex) {
 		m_hoverIndex = hover;
 		invalidate();
+	}
+}
+
+void CThumbnailView::onMouseWheel (CPoint /*pt*/, int delta, xl::uint /*key*/) {
+	if (delta > 0) {
+		_GetTarget()->onCommand(ID_NAV_PREV, shared_from_this());
+	} else {
+		_GetTarget()->onCommand(ID_NAV_NEXT, shared_from_this());
 	}
 }
 
